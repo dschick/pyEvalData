@@ -45,3 +45,6 @@ Temporary Items
 
 # pycache
 __pycache__/
+
+#ipython checkpoints
+.ipynb_checkpoints/
