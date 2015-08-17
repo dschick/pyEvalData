@@ -531,7 +531,7 @@ class spec(object):
             norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
                                           default is False.
             sequenceType (Optional[str]): Type of the sequence: [fluence, delay, 
-                                          energy, theta] - default is fluence.
+                                          energy, theta, text] - default is fluence.
             labelText (Optional[str])   : Label of the plot - default is none. 
             titleText (Optional[str])   : Title of the figure - default is none. 
             skipPlot (Optional[bool])   : Skip plotting, just return data
@@ -1140,8 +1140,8 @@ class pilatusXPP(spec):
             self.updateSpec()
         
         # check if pilatus images are already stored in hdf5 file               
-        frames = self.readPilatusDataFromHDF5(scanNum, 'PilatusRaw', 'frames')        
-               
+        frames = self.readPilatusDataFromHDF5(scanNum, 'PilatusRaw', 'frames')
+        
         if any(frames) and not self.overwriteHdf5:
             # if the data is present in the HDF5 file and we don't want to 
             # overwrite, read also the other datasets
