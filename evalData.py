@@ -1006,12 +1006,12 @@ class pilatusXPP(spec):
     """
     
     # properties    
-    overwriteHdf5 = False
+    overwriteHDF5 = False
     pilatus       = ''
     hxrd          = ''
     gridder       = ''
     delta         = [0,0,0,0]
-    motorNames    = ['Theta', 'Chi', 'Phi', 'Two_Theta']
+    motorNames    = ['Theta', 'Chi', 'Phi', 'Two Theta']
     customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
     plotLog       = True
        
@@ -1142,7 +1142,7 @@ class pilatusXPP(spec):
         # check if pilatus images are already stored in hdf5 file               
         frames = self.readPilatusDataFromHDF5(scanNum, 'PilatusRaw', 'frames')
         
-        if any(frames) and not self.overwriteHdf5:
+        if any(frames) and not self.overwriteHDF5:
             # if the data is present in the HDF5 file and we don't want to 
             # overwrite, read also the other datasets
             motors   = self.readPilatusDataFromHDF5(scanNum, 'PilatusRaw', 'motors')
