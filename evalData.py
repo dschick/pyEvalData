@@ -992,8 +992,12 @@ class pilatusXPP(spec):
         hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
                                      xrayutilities.
         gridder 
-        (gidder[xrayutilities])    :Instance of the gridder class of the 
-                                    xrayutilities.
+        (gidder[xrayutilities])    : Instance of the gridder class of the 
+                                     xrayutilities.
+        normalizer 
+        (IntensityNormalizer[xrayutilities])
+                                   : Instance of the IntensityNormalizerr class 
+                                     of the xrayutilities.
         delta (List[float])        : Offset angles of the goniometer axis: 
                                      Theta, Psi, Chi, Two_Theta
                                      default is [0,0,0,0].
@@ -1010,6 +1014,7 @@ class pilatusXPP(spec):
     pilatus       = ''
     hxrd          = ''
     gridder       = ''
+    normalizer    = ''
     delta         = [0,0,0,0]
     motorNames    = ['Theta', 'Chi', 'Phi', 'Two Theta']
     customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
@@ -1178,7 +1183,11 @@ class pilatusXPP(spec):
             frames = []
             motors = []
             data = []
-            
+        
+        # if a normalizer is set to the normalization here after reading the data        
+        if self.normalizer and any(frames):
+            frames = self.normalizer(data, ccd=frames)
+        
         return frames, motors, data
     
     
