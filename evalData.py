@@ -24,7 +24,7 @@ import matplotlib as mpl
 import os
 import xrayutilities as xu
 from scipy.stats import binned_statistic
-
+#from ipy_progressbar import ProgressBar
 
 """
 evalData module provide class definitions to read, average, plot, and fit data 
@@ -57,7 +57,8 @@ class spec(object):
                                   determine the unpumped region of the data 
                                   for normalization.
         motorNames (List[str])  : default axis of the goniometer for reading 
-                                  spec files by xrayutilities.   
+                                  spec files by xrayutilities.
+        customCounters (List[str]): List of custom counters - default is []
     
     """
     
@@ -74,7 +75,7 @@ class spec(object):
     xCol             = ''
     t0               = 0
     motorNames       = ['Theta', 'TwoTheta'] # must be the same order as for xu experiment configuration (first sample axis, last detector axis)
-    
+    customCounters   = []
     
     def __init__(self, name, filePath, specFileExt=''):
         """Initialize the class, set all file names and load the spec file. 
@@ -285,7 +286,7 @@ class spec(object):
                     # not to replace it again
                     keys.append(key.group())
                     # the actual replacement
-                    colString = colString.replace(key.group(), 'data[\'' + key.group() + '\']')
+                    colString = colString.replace(key.group(), 'specData[\'' + key.group() + '\']')
                     
         # generate the actual string for evaluation to append the new counter 
         # to the spec data array                     
@@ -336,27 +337,35 @@ class spec(object):
             # traverse the scan list
             try:
                 # try to read the motors and data of this scan
-                motors, data = self.getScanData(scanNum)
+                motors, specData = self.getScanData(scanNum)
             except:
                 print('Scan #' + scanNum + ' not found, skipping')            
             
             # first add custom counters if defined
-            data = self.addCustomCounters(data,scanNum)
+                                 
             
             # get the counters which should be evaluated
             cList = self.getClist()
             # process also the xCol as counter in order to allow for newly defined xCols
             cList.append(self.xCol) 
-            
+            data = array([])
             for col in cList:                 
                 # traverse the counters in the cList
-                if not col in data.dtype.names:
+                if col in specData.dtype.names:
+                    colName = col
+                    colString = col
+                    # append new col to data array
+                    data = eval(self.colString2evalString(colString, colName))
+                elif not col in self.customCounters:
                     # this counter is not in the spec file                      
                     colName = col
                     # replace colString with predefined counters recursively
                     colString = self.resolveCounterName(col)  
                     # append new col to data array
                     data = eval(self.colString2evalString(colString, colName))
+                
+                       
+            data = self.addCustomCounters(data,scanNum)             
             
             if i > 0:
                 # this is not the first scan in the list so append the data to
@@ -373,7 +382,7 @@ class spec(object):
             # if a custom counter was calculated it might have a different length
             # than the spec counters which will result in an error while binning data
             # from a default spec counter and a custom counter.
-        
+            
             xGridReduced, _, _, _, _, _, _, _, _ = binData(concatData[self.xCol],concatData[self.xCol],xGrid)
             
             # create empty arrays for averages, std and errors
@@ -554,6 +563,10 @@ class spec(object):
         labelTexts  = []
         parameters  = scanSequence[:,1] 
         
+#        pb = ProgressBar(len(scanSequence), title='Read Data', key='scanSequence')        
+#        for i in pb:
+#            scanList = scanSequence[i,0]
+#            parameter = scanSequence[i,1]
         for scanList, parameter in scanSequence:
             # traverse the scan sequence
             
@@ -720,7 +733,7 @@ class spec(object):
         
         # initialization of returns
         res = {} # initialize the results dict
-        
+
         for i, counter in enumerate(self.getClist()):        
             # traverse all counters in the counter list to initialize the returns
             
@@ -765,6 +778,10 @@ class spec(object):
         
         # fitting and plotting the data
         l = 1 # counter for singlePlots
+        
+#        pb = ProgressBar(len(parameters), title='Fit Data', key='parameters')        
+#        for i in pb:
+#            parameter = parameters[i]
         for i, parameter in enumerate(parameters):
             # traverse all parameters of the sequence           
             lt          = labelTexts[i]         
@@ -1047,11 +1064,11 @@ class pilatusXPP(spec):
             QxMap = trapz(trapz(Qmap, qy, axis=1), qz, axis=1)#sum(sum(Qmap, axis=1),axis=1)
             QyMap = trapz(trapz(Qmap, qx, axis=0), qz, axis=1)#sum(sum(Qmap, axis=0),axis=1)
             QzMap = trapz(trapz(Qmap, qx, axis=0), qy, axis=0)#sum(sum(Qmap, axis=0),axis=0)
-            
+                       
             for col in set(cList) & set(self.customCounters):
                 # append the custom counters to data array
                 data = append_fields(data, col , data=eval(col) , dtypes=float, asrecarray=True)
-
+            
         return data    
     
     
@@ -1152,12 +1169,12 @@ class pilatusXPP(spec):
             # overwrite, read also the other datasets
             motors   = self.readPilatusDataFromHDF5(scanNum, 'PilatusRaw', 'motors')
             data   = self.readPilatusDataFromHDF5(scanNum, '', 'data')
-            print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
+            #print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
         elif os.path.isfile(formatString.format(scanNum,self.name,1)):
             # data is not present in the HDF5 file but there are Pilatus images
             # on the disk, so read them and save them
         
-            print('Scan #{0:.0f} read from .tiff and saved to HDF5.'.format(scanNum))      
+            #print('Scan #{0:.0f} read from .tiff and saved to HDF5.'.format(scanNum))      
             
             # get the motors and data from the spec scan
             motors, data = self.getScanData(scanNum)
@@ -1318,6 +1335,7 @@ class pilatusXPP(spec):
         subplot(gs[2])
 #        z = sum(data,axis=1)
         z = trapz(data,yaxis, axis=1)
+        
         x = zaxis
         y = xaxis
         contourf(x,y,scaleFunc(z))
