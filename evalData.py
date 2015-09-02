@@ -76,6 +76,9 @@ class spec(object):
     t0               = 0
     motorNames       = ['Theta', 'TwoTheta'] # must be the same order as for xu experiment configuration (first sample axis, last detector axis)
     customCounters   = []
+    mathKeys         = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs', 
+                        'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 
+                        'pi', 'exp', 'log', 'log10']  
     
     def __init__(self, name, filePath, specFileExt=''):
         """Initialize the class, set all file names and load the spec file. 
@@ -274,7 +277,7 @@ class spec(object):
         # search for alphanumeric counter names in colString
         iterator = re.finditer('([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', colString)                   
         # these are keys which should not be replaced but evaluated        
-        keys = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs']           
+        keys = list(self.mathKeys)
         for key in iterator:
             # traverse all found counter names
             if len(key.group()) > 0:
