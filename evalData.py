@@ -225,7 +225,7 @@ class spec(object):
         Args:
             col (str) : Initial counter string.
             
-        Returns:
+        Returns:l
             colString (str): Resolved counter string.
         
         """
@@ -250,7 +250,8 @@ class spec(object):
                     reCall = True
                 # replace the counter definition in the string
                 colString = colString.replace(findcDef, '(' + self.cDef[findcDef] + ')')
-                
+                #break
+
         if reCall:
             # do the recursive call
             colString = self.resolveCounterName(colString)
@@ -584,6 +585,8 @@ class spec(object):
                     lt = str.format('{:.2f}  eV', parameter)
                 elif sequenceType == 'theta':
                     lt = str.format('{:.2f}  deg', parameter)
+                elif sequenceType == 'temperature':
+                    lt = str.format('{:.2f}  K', parameter)
                 else:
                     lt = parameter
             
