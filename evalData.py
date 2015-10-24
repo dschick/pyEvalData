@@ -59,6 +59,10 @@ class spec(object):
         motorNames (List[str])  : default axis of the goniometer for reading 
                                   spec files by xrayutilities.
         customCounters (List[str]): List of custom counters - default is []
+        mathKeys (List[str])    : List of keywords which are not replaced in 
+                                  counter names
+        statisticType  (str)    : 'gauss' for normal averaging, 
+                                  'poisson' for counting statistics
     
     """
     
@@ -78,7 +82,8 @@ class spec(object):
     customCounters   = []
     mathKeys         = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs', 
                         'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 
-                        'pi', 'exp', 'log', 'log10']  
+                        'pi', 'exp', 'log', 'log10']
+    statisticType    = 'gauss'
     
     def __init__(self, name, filePath, specFileExt=''):
         """Initialize the class, set all file names and load the spec file. 
@@ -151,7 +156,7 @@ class spec(object):
             else:
                 # read the data providing the motorNames
                 motors, data = xu.io.geth5_scan(self.filePath + self.h5FileName, scanNum, *self.motorNames)
-            
+                        
             # convert the data array to float64 since lmfit works better
             # is there a smarter way to do so?
             dt = data.dtype
@@ -159,14 +164,17 @@ class spec(object):
             for i, thisType in enumerate(dt):
                 dt[i] = (dt[i][0], 'float64')                
             dt = dtype(dt)
-            data = data.astype(dt)
+            data = data.astype(dt)            
+            
+            # convert list of motors to recarray
+            motors = rec.array(motors, names=self.motorNames)
         except:
             print('Scan #{0:.0f} not present in hdf5 file!'.format(scanNum))
             motors = []
-            data   = []            
-        
+            data   = []
+                
         return motors, data
-    
+          
     
     def getClist(self):
         """Return the list of counters to evaluate as list even if they are 
@@ -368,7 +376,9 @@ class spec(object):
                     # append new col to data array
                     data = eval(self.colString2evalString(colString, colName))
                 
-                       
+            # remove xCol from cList for further treatment
+            cList.remove(self.xCol)
+            
             data = self.addCustomCounters(data,scanNum)             
             
             if i > 0:
@@ -394,11 +404,17 @@ class spec(object):
             stdData=recarray(shape(xGridReduced)[0],dtype=concatData.dtype)
             errData=recarray(shape(xGridReduced)[0],dtype=concatData.dtype)
             
+            if self.statisticType == 'poisson':
+                binStat = 'sum'
+            else: # gauss
+                binStat = 'mean'
             
             for col in cList:
                 # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
-                avgData[col], _, errData[col], _, stdData[col], _, _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced)
                 
+                    avgData[col], avgData[self.xCol], errData[col], errData[self.xCol], stdData[col], stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
+                
+               
         except:
             print('xCol and yCol must have the same length --> probably you try plotting a custom counter together with a spec counter')
             
@@ -1488,7 +1504,7 @@ def edges4grid(grid):
 
 
 def binData(y,x,X,statistic='mean'):
-    """Bin data y(x) on new grid X using a statistics type. """
+    """Bin data y(x) on new grid X using a statistic type. """
         
     y = y.flatten(1)
     x = x.flatten(1)
@@ -1511,7 +1527,7 @@ def binData(y,x,X,statistic='mean'):
         n = n[1:len(X)+1]
     
     
-    if array_equal(x,X): 
+    if array_equal(x,X) and statistic is not 'sum': 
         
         Ystd = zeros_like(Y)
         Xstd = zeros_like(X)
@@ -1519,12 +1535,15 @@ def binData(y,x,X,statistic='mean'):
         Xerr = zeros_like(X)
     else:    
         # calculate the std of X and Y
-        Ystd, _ , _ = binned_statistic(x,y,std,edges)
-        Xstd, _ , _ = binned_statistic(x,x,std,edges)
+        if statistic == 'sum':
+            Ystd = sqrt(Y)                   
+            Yerr = Ystd
+        else:
+            Ystd, _ , _ = binned_statistic(x,y,std,edges)        
+            Yerr        = Ystd/sqrt(n)
         
-        # calculate the errors of X and Y
-        Yerr = Ystd/sqrt(n)
-        Xerr = Xstd/sqrt(n)
+        Xstd, _ , _ = binned_statistic(x,x,std,edges)        
+        Xerr        = Xstd/sqrt(n)
     
     
     #remove NaNs
@@ -1566,4 +1585,5 @@ class Pilatus100k(ImageReader):
 
         ImageReader.__init__(self, 195, 487, hdrlen=4096, dtype=int32,
                              byte_swap=False, **keyargs)
+    
     
