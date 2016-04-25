@@ -561,7 +561,8 @@ class spec(object):
             norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
                                           default is False.
             sequenceType (Optional[str]): Type of the sequence: [fluence, delay, 
-                                          energy, theta, text] - default is fluence.
+                                          energy, theta, position, voltage, none, 
+                                          text] - default is enumeration.
             labelText (Optional[str])   : Label of the plot - default is none. 
             titleText (Optional[str])   : Title of the figure - default is none. 
             skipPlot (Optional[bool])   : Skip plotting, just return data
@@ -710,6 +711,10 @@ class spec(object):
             savetxt('%s/%s_%s.dat' % (path,fileName,"".join(x for x in labelText if x.isalnum())), r_[saveData].T, delimiter = '\t', header=header)
             
     def fitScans(self,scans,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='text', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True):
+        """Fit, plot, and return the data of scans.
+            
+            This is just a wrapper for the fitScanSequence method
+        """
         scanSequence = [[scans, '']]
         return self.fitScanSequence(scanSequence,mod,pars,ylims,xlims,figSize, xGrid, yErr, xErr, norm2one, 'none', labelText, titleText, yText, xText, select, fitReport, showSingle, weights, fitMethod, offsetT0, plotSeparate, gridOn)
         
@@ -1606,5 +1611,3 @@ class Pilatus100k(ImageReader):
 
         ImageReader.__init__(self, 195, 487, hdrlen=4096, dtype=int32,
                              byte_swap=False, **keyargs)
-    
-    
