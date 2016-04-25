@@ -540,7 +540,7 @@ class spec(object):
         return y2plot, x2plot, yerr2plot, xerr2plot, name
             
     
-    def plotScanSequence(self,scanSequence, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std',norm2one=False, sequenceType='fluence', labelText='', titleText='', skipPlot=False, gridOn=True, yText='',xText=''):
+    def plotScanSequence(self,scanSequence, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std',norm2one=False, sequenceType='', labelText='', titleText='', skipPlot=False, gridOn=True, yText='',xText=''):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -582,18 +582,20 @@ class spec(object):
         sequenceData= collections.OrderedDict()  
         names       = []
         labelTexts  = []
-        parameters  = scanSequence[:,1] 
+        parameters  = zeros([len(scanSequence),1])
         
 #        pb = ProgressBar(len(scanSequence), title='Read Data', key='scanSequence')        
 #        for i in pb:
 #            scanList = scanSequence[i,0]
 #            parameter = scanSequence[i,1]
-        for scanList, parameter in scanSequence:
+        for i, (scanList, parameter) in enumerate(scanSequence):
             # traverse the scan sequence
+            
+            parameters[i] = parameter
             
             # format the parameter as label text of this plot if no label text 
             # is given
-            if len(labelText) == 0:            
+            if len(labelText) == 0:
                 if sequenceType == 'fluence':
                     lt = str.format('{:.2f}  mJ/cm²', parameter)
                 elif sequenceType == 'delay':
@@ -604,10 +606,19 @@ class spec(object):
                     lt = str.format('{:.2f}  deg', parameter)
                 elif sequenceType == 'temperature':
                     lt = str.format('{:.2f}  K', parameter)
+                elif sequenceType == 'position':
+                    lt = str.format('{:.2f}  mm', parameter)
+                elif sequenceType == 'voltage':
+                    lt = str.format('{:.2f}  V', parameter)
                 elif sequenceType == 'none':
+                    #no parameter for single scans 
                     lt = ''
-                else:
+                elif sequenceType == 'text':
+                    #parameter is a string
                     lt = parameter
+                else:
+                    #no sequence type is given --> enumerate
+                    lt = str.format('#{}', i+1)
             
             # get the plot data for the scan list
             y2plot, x2plot, yerr2plot, xerr2plot, name = self.plotScans(
@@ -699,11 +710,11 @@ class spec(object):
             savetxt('%s/%s_%s.dat' % (path,fileName,"".join(x for x in labelText if x.isalnum())), r_[saveData].T, delimiter = '\t', header=header)
             
     def fitScans(self,scans,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='text', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True):
-        scanSequence = array([[scans, '']])        
+        scanSequence = [[scans, '']]
         return self.fitScanSequence(scanSequence,mod,pars,ylims,xlims,figSize, xGrid, yErr, xErr, norm2one, 'none', labelText, titleText, yText, xText, select, fitReport, showSingle, weights, fitMethod, offsetT0, plotSeparate, gridOn)
         
     
-    def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='fluence', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True):
+    def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True):
         """Fit, plot, and return the data of a scan sequence.
         
         Args:
