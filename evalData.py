@@ -25,6 +25,7 @@ import os
 import xrayutilities as xu
 from scipy.stats import binned_statistic
 #from ipy_progressbar import ProgressBar
+import re
 
 """
 evalData module provide class definitions to read, average, plot, and fit data 
@@ -252,12 +253,13 @@ class spec(object):
                 
             for findcDef in self.cDef.keys():
                 # check for all predefined counters
-                if colString.find(findcDef) > -1: 
+                searchPattern = r'\b' + findcDef + r'\b'    
+                if re.search(searchPattern,colString) != None:
                     # found a predefined counter 
                     # recursive call if predefined counter must be resolved again
                     reCall = True
                 # replace the counter definition in the string
-                colString = colString.replace(findcDef, '(' + self.cDef[findcDef] + ')')
+                (colString,_) = re.subn(searchPattern, '(' + self.cDef[findcDef] + ')', colString)
                 #break
 
         if reCall:
@@ -282,9 +284,8 @@ class spec(object):
         
         """
         
-        import re #reg. expression
         # search for alphanumeric counter names in colString
-        iterator = re.finditer('([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', colString)                   
+        iterator = re.finditer('([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', colString)                  
         # these are keys which should not be replaced but evaluated        
         keys = list(self.mathKeys)
         for key in iterator:
@@ -297,8 +298,8 @@ class spec(object):
                     # remember this counter name in the key list in order 
                     # not to replace it again
                     keys.append(key.group())
-                    # the actual replacement
-                    colString = colString.replace(key.group(), 'specData[\'' + key.group() + '\']')
+                    # the actual replacement                    
+                    (colString,_) = re.subn(r'\b'+key.group()+r'\b', 'specData[\'' + key.group() + '\']', colString)
                     
         # generate the actual string for evaluation to append the new counter 
         # to the spec data array                     
