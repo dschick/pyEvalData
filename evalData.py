@@ -603,6 +603,8 @@ class spec(object):
                     lt = str.format('{:.2f}  deg', parameter)
                 elif sequenceType == 'temperature':
                     lt = str.format('{:.2f}  K', parameter)
+                elif sequenceType == 'none':
+                    lt = ''
                 else:
                     lt = parameter
             
@@ -695,6 +697,10 @@ class spec(object):
             # save data with header to text file
             savetxt('%s/%s_%s.dat' % (path,fileName,"".join(x for x in labelText if x.isalnum())), r_[saveData].T, delimiter = '\t', header=header)
             
+    def fitScans(self,scans,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='text', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True):
+        scanSequence = array([[scans, '']])        
+        return self.fitScanSequence(scanSequence,mod,pars,ylims,xlims,figSize, xGrid, yErr, xErr, norm2one, 'none', labelText, titleText, yText, xText, select, fitReport, showSingle, weights, fitMethod, offsetT0, plotSeparate, gridOn)
+        
     
     def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='fluence', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True):
         """Fit, plot, and return the data of a scan sequence.
@@ -826,10 +832,13 @@ class spec(object):
                 if j >= 2 and j%2 == 0:
                     
                     # add the counter name to the label for not seperate plots
-                    if plotSeparate or numSubplots == 1:
-                        _lt = lt
+                    if sequenceType == 'none':
+                        _lt = counter
                     else:
-                         _lt = lt + ' | ' + counter
+                        if plotSeparate or numSubplots == 1:
+                            _lt = lt
+                        else:
+                             _lt = lt + ' | ' + counter
                     
                     # get the fit models and fit parameters if they are lists/tupels
                     if isinstance(mod, (list, tuple)):  
