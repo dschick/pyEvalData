@@ -24,7 +24,6 @@ import matplotlib as mpl
 import os
 import xrayutilities as xu
 from scipy.stats import binned_statistic
-#from ipy_progressbar import ProgressBar
 import re
 
 """
@@ -824,9 +823,6 @@ class spec(object):
         # fitting and plotting the data
         l = 1 # counter for singlePlots
         
-#        pb = ProgressBar(len(parameters), title='Fit Data', key='parameters')        
-#        for i in pb:
-#            parameter = parameters[i]
         for i, parameter in enumerate(parameters):
             # traverse all parameters of the sequence           
             lt          = labelTexts[i]         
