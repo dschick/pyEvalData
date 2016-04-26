@@ -44,7 +44,8 @@ class spec(object):
         name (str)              : Name of the spec file.
         specFileName (str)      : Full file name of the spec file.
         h5FileName (str)        : Full file name of the HDF5 file.
-        filePath (str)          : Base path of the spec and HDF5 files.
+        filePath (str)          : Base path of the spec file.
+        hdf5Path (str)          : Base path of the HDF5 file.
         specFile (object)       : specFile object of xrayutility package.
         updateBeforeRead (bool) : Boolean to force an update of the spec file 
                                   prior reading each scan.
@@ -71,6 +72,7 @@ class spec(object):
     specFileName     = ''
     h5FileName       = ''
     filePath         = './'
+    hdf5Path         = './'
     specFile         = '' 
     updateBeforeRead = False
     overwriteHDF5    = False
@@ -106,7 +108,7 @@ class spec(object):
     def loadSpec(self):
         """Load the spec data either from the hdf5 or from the spec file."""
         # check if the hdf5 file exists        
-        if not os.path.exists(self.filePath + self.h5FileName):
+        if not os.path.exists(self.hdf5Path + self.h5FileName):
             # no hdf5 file found --> read the spec file            
             self.updateSpec()
             
@@ -124,10 +126,10 @@ class spec(object):
             self.specFile = xu.io.SPECFile(self.specFileName, path=self.filePath)
             self.specFile.Update() 
             
-        if not os.path.exists(self.filePath + self.h5FileName) or self.overwriteHDF5:
+        if not os.path.exists(self.hdf5Path + self.h5FileName) or self.overwriteHDF5:
             # save the new or changed spec file content to the hdf5 file
             # if it does not exist
-            self.specFile.Save2HDF5(self.filePath + self.h5FileName)
+            self.specFile.Save2HDF5(self.hdf5Path + self.h5FileName)
         
     
     def getScanData(self,scanNum):
