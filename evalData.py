@@ -583,7 +583,7 @@ class spec(object):
         sequenceData= collections.OrderedDict()  
         names       = []
         labelTexts  = []
-        parameters  = zeros([len(scanSequence),1])
+        parameters  = []
         
 #        pb = ProgressBar(len(scanSequence), title='Read Data', key='scanSequence')        
 #        for i in pb:
@@ -592,7 +592,7 @@ class spec(object):
         for i, (scanList, parameter) in enumerate(scanSequence):
             # traverse the scan sequence
             
-            parameters[i] = parameter
+            parameters.append(parameter)
             
             # format the parameter as label text of this plot if no label text 
             # is given
