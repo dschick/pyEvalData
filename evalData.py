@@ -126,10 +126,10 @@ class spec(object):
             self.specFile = xu.io.SPECFile(self.specFileName, path=self.filePath)
             self.specFile.Update() 
             
-        if not os.path.exists(self.hdf5Path + self.h5FileName) or self.overwriteHDF5:
+        if not os.path.exists(os.path.join(self.hdf5Path, self.h5FileName)) or self.overwriteHDF5:
             # save the new or changed spec file content to the hdf5 file
             # if it does not exist
-            self.specFile.Save2HDF5(self.hdf5Path + self.h5FileName)
+            self.specFile.Save2HDF5(os.path.join(self.hdf5Path, self.h5FileName))
         
     
     def getScanData(self,scanNum):
@@ -153,11 +153,11 @@ class spec(object):
             # if no motorNames are given motors are set as empty array
             if len(self.motorNames) == 0:
                 # read the data
-                data = xu.io.geth5_scan(self.filePath + self.h5FileName, scanNum)
+                data = xu.io.geth5_scan(os.path.join(self.hdf5Path, self.h5FileName), scanNum)
                 motors = []
             else:
                 # read the data providing the motorNames
-                motors, data = xu.io.geth5_scan(self.filePath + self.h5FileName, scanNum, *self.motorNames)
+                motors, data = xu.io.geth5_scan(os.path.join(self.hdf5Path, self.h5FileName), scanNum, *self.motorNames)
                         
             # convert the data array to float64 since lmfit works better
             # is there a smarter way to do so?
