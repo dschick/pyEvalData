@@ -1017,7 +1017,7 @@ class spec(object):
                     if fitReport > 1:
                         # for full fit reporting
                         print('_'*40)
-                        print((out.fit_report(_pars)))
+                        print(out.fit_report())
                     
                     # add the fit results to the returns
                     for pname, par in _pars.items():
