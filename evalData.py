@@ -1011,7 +1011,7 @@ class spec(object):
                     
                         if gridOn:
                             grid(True)                           
-                        show()
+#                        show()
                         
                         l += 1
                     if fitReport > 1:
