@@ -1026,7 +1026,7 @@ class spec(object):
                         res[counter][pname + 'Err'] = append(res[counter][pname + 'Err'], out.params[pname].stderr)
                         
                     res[counter]['chisqr'] = append(res[counter]['chisqr'], out.chisqr)
-                    res[counter]['redchi'] = append(res[counter]['redchi'], out.chisqr)
+                    res[counter]['redchi'] = append(res[counter]['redchi'], out.redchi)
                     res[counter]['CoM']    = append(res[counter]['CoM'], sum(y2plot*x2plot)/sum(y2plot))
                     res[counter]['int']    = append(res[counter]['int'], sum(y2plot))
                     res[counter]['fit']    = append(res[counter]['fit'], out)
