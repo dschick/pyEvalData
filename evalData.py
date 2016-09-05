@@ -794,7 +794,8 @@ class spec(object):
                         
             for pname, par in _pars.items():
                 # add a dict key for each fit parameter in the result dict
-                res[counter][pname] = []  
+                res[counter][pname] = []
+                res[counter][pname + 'Err'] = []   
             
             # add some more results
             res[counter]['chisqr'] = []
@@ -1022,6 +1023,7 @@ class spec(object):
                     # add the fit results to the returns
                     for pname, par in _pars.items():
                         res[counter][pname] = append(res[counter][pname], out.best_values[pname])
+                        res[counter][pname + 'Err'] = append(res[counter][pname + 'Err'], out.params[pname].stderr)
                         
                     res[counter]['chisqr'] = append(res[counter]['chisqr'], out.chisqr)
                     res[counter]['redchi'] = append(res[counter]['redchi'], out.chisqr)
