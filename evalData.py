@@ -1177,6 +1177,7 @@ class areaDetector(spec):
     hxrd          = ''
     gridder       = ''
     normalizer    = ''
+    UB            = ''
     delta         = [0, 0]
     motorNames    = ['Theta', 'TwoTheta']
     customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
@@ -1327,6 +1328,22 @@ class areaDetector(spec):
             xaxis (ndarray)  : qx qxis.
             yaxis (ndarray)  : qy qxis.
             zaxis (ndarray)  : qz qxis.
+        
+        """
+        # stub
+        return
+        
+    def convAreaScan2HKL(self, scanNum):
+        """Convert the area detector data for a given scan number to q-space.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            
+        Returns:
+            data (ndarray)   : area detector data in q-space.
+            xaxis (ndarray)  : h qxis.
+            yaxis (ndarray)  : k qxis.
+            zaxis (ndarray)  : l qxis.
         
         """
         # stub
@@ -1503,6 +1520,178 @@ class areaDetector(spec):
         
         gs.tight_layout(fig)
         show()
+        
+        
+    def plotAreaScanHKL(self, scanNum, levels=100, setGrid=True):
+        """Plot the area detector data for a given scan number in q-space.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+        
+        """
+        
+        if self.plotLog:
+            scaleType = 'log'
+            scaleFunc = lambda x: log10(x)
+        else:
+            scaleType = 'linear'
+            scaleFunc = lambda x: x
+        
+        
+        from matplotlib import gridspec        
+        
+        # get the data to plot
+        data, xaxis, yaxis, zaxis = self.convAreaScan2HKL(scanNum)
+        
+        # do the plotting
+        fig = figure()
+        # qy qx Map
+        gs = gridspec.GridSpec(2, 2,
+                               width_ratios=[3,1],
+                               height_ratios=[1,3]
+                               )
+        
+        
+        subplot(gs[2])
+        
+        #z = sum(data,axis=2)
+        z = trapz(data,zaxis, axis=2)
+        
+        x = yaxis
+        y = xaxis
+        contourf(x,y,scaleFunc(z),levels)
+        xlabel(r'$K$',size=18)
+        ylabel(r'$H$',size=18)
+        xlim([min(x),max(x)])
+        ylim([min(y),max(y)])
+        grid(setGrid)
+        
+        ax = subplot(gs[3])        
+#        temp = sum(z,axis=1)
+        temp = trapz(z,yaxis,axis=1)
+        plot(temp,y, '-')
+        ax.set_xscale(scaleType)
+            
+        ylim([min(y),max(y)])
+        grid(setGrid)
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
+        ylabel(r'$H$',size=18, )
+        
+        ax = subplot(gs[0])
+#        temp = sum(z,axis=0)
+        temp = trapz(z,xaxis, axis=0)
+        plot(x,temp, '-')
+        ax.set_yscale(scaleType)
+        
+        xlim([min(x),max(x)])
+        xlabel(r'$K$',size=18)
+        grid(setGrid)
+        ax.xaxis.tick_top()
+        ax.xaxis.set_label_position("top")
+        
+        
+        gs.tight_layout(fig)
+        show()
+        
+        #####################################################################
+        fig=figure()
+        # qz qx Map
+        gs = gridspec.GridSpec(2, 2,
+                               width_ratios=[3,1],
+                               height_ratios=[1,3]
+                               )
+        
+        subplot(gs[2])
+#        z = sum(data,axis=1)
+        z = trapz(data,yaxis, axis=1)
+        
+        x = zaxis
+        y = xaxis
+        contourf(x,y,scaleFunc(z),levels)
+        xlabel(r'$L$',size=18)
+        ylabel(r'$H$',size=18)
+        xlim([min(x),max(x)])
+        ylim([min(y),max(y)])
+        grid(setGrid)
+        
+        ax = subplot(gs[3])
+#        temp = sum(z,axis=1)
+        temp = trapz(z,zaxis, axis=1)          
+        plot(temp,y)
+        ax.set_xscale(scaleType)
+            
+            
+        ylim([min(y),max(y)])
+        grid(setGrid)
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
+        ylabel(r'$H$',size=18, )
+        
+        ax = subplot(gs[0])  
+#        temp = sum(z,axis=0)
+        temp = trapz(z,xaxis, axis=0)
+        plot(x,temp)
+        ax.set_yscale(scaleType)
+        
+        xlim([min(x),max(x)])
+        xlabel(r'$L$',size=18)
+        grid(setGrid)
+        ax.xaxis.tick_top()
+        ax.xaxis.set_label_position("top")
+        
+        gs.tight_layout(fig)
+        show()
+        
+        
+        #####################################################################
+        fig=figure()
+        # qz qy Map
+        gs = gridspec.GridSpec(2, 2,
+                               width_ratios=[3,1],
+                               height_ratios=[1,3]
+                               )
+        
+        subplot(gs[2])
+#        z = sum(data,axis=0)
+        z = trapz(data,xaxis, axis=0)
+        x = zaxis
+        y = yaxis
+        contourf(x,y,scaleFunc(z),levels)
+        xlabel(r'$L$',size=18)
+        ylabel(r'$K$',size=18)
+        xlim([min(x),max(x)])
+        ylim([min(y),max(y)])
+        grid(setGrid)
+        
+        ax = subplot(gs[3])
+#        temp = sum(z,axis=1)
+        temp = trapz(z,zaxis, axis=1)         
+        plot(temp,y)
+        ax.set_xscale(scaleType)
+            
+        
+        ylim([min(y),max(y)])
+        grid(setGrid)
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
+        ylabel(r'$K$',size=18, )
+        
+        ax = subplot(gs[0])
+#        temp = sum(z,axis=0)
+        temp = trapz(z,yaxis, axis=0)           
+        plot(x,temp)
+        ax.set_yscale(scaleType)
+            
+        
+        xlim([min(x),max(x)])
+        xlabel(r'$L$',size=18)
+        grid(setGrid)
+        ax.xaxis.tick_top()
+        ax.xaxis.set_label_position("top")
+        
+        gs.tight_layout(fig)
+        show()
 
 ###########################
         
@@ -1620,6 +1809,34 @@ class princtonPM3(areaDetector):
     
         # convert data to rectangular grid in reciprocal space using the gridder
         self.gridder(qx, qy, qz, frames[:,:,:])
+        
+        data = (self.gridder.data)
+        
+        return data, self.gridder.xaxis, self.gridder.yaxis, self.gridder.zaxis
+        
+    def convAreaScan2HKL(self, scanNum):
+        """Convert the area detector data for a given scan number to q-space.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            
+        Returns:
+            data (ndarray)   : area detector data in q-space.
+            xaxis (ndarray)  : h qxis.
+            yaxis (ndarray)  : k qxis.
+            zaxis (ndarray)  : l qxis.
+        
+        """
+        # read the frames, motors and data        
+        frames, motors, data = self.readAreaScan(scanNum)   
+        
+        
+        
+        # convert the data to q-space using the HXRD instance            
+        h, k, l = self.hxrd.Ang2Q.area(motors['Theta'], motors['TwoTheta'], UB=self.UB, delta=self.delta)    
+    
+        # convert data to rectangular grid in reciprocal space using the gridder
+        self.gridder(h, k, l, frames[:,:,:])
         
         data = (self.gridder.data)
         
