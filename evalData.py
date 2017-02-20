@@ -170,7 +170,8 @@ class spec(object):
             
             # convert list of motors to recarray
             motors = rec.array(motors, names=self.motorNames)
-        except:
+        except Exception as e: 
+            print(e)
             print('Scan #{0:.0f} not present in hdf5 file!'.format(scanNum))
             motors = []
             data   = []
@@ -1044,16 +1045,113 @@ class spec(object):
 
 # sub classes of evalData.spec
 
-class pilatusXPP(spec):
-    """Inherit from spec and add capabilities to read Pilatus images from the 
-    BESSY II XPP beamline with its specific goniometer setup.
+
+
+# helper functions
+      
+      
+def edges4grid(grid):
+    """Creates a vector of the corresponding edges for a grid vector. """
+    binwidth = diff(grid);
+    edges    = hstack([grid[0]-binwidth[0]/2, grid[0:-1]+binwidth/2, grid[-1]+binwidth[-1]/2]);
+    
+    return edges, binwidth
+
+
+def binData(y,x,X,statistic='mean'):
+    """Bin data y(x) on new grid X using a statistic type. """
+        
+    y = y.flatten(1)
+    x = x.flatten(1)
+    X = sort(X.flatten(1))
+    
+    # create bins for the grid
+    edges, _ = edges4grid(X);    
+    
+    if array_equal(x,X): 
+        # no binning since the new grid is the same as the old one
+        Y = y
+        bins = ones_like(Y)        
+        n    = ones_like(Y)
+    else:    
+        # do the binning and get the Y results 
+        Y, _ , bins = binned_statistic(x,y,statistic,edges)
+        bins = bins.astype(int_)
+        
+        n = bincount(bins[bins > 0],minlength=len(X)+1)  
+        n = n[1:len(X)+1]
+    
+    
+    if array_equal(x,X) and statistic is not 'sum': 
+        
+        Ystd = zeros_like(Y)
+        Xstd = zeros_like(X)
+        Yerr = zeros_like(Y)
+        Xerr = zeros_like(X)
+    else:    
+        # calculate the std of X and Y
+        if statistic == 'sum':
+            Ystd = sqrt(Y)                   
+            Yerr = Ystd
+        else:
+            Ystd, _ , _ = binned_statistic(x,y,std,edges)        
+            Yerr        = Ystd/sqrt(n)
+        
+        Xstd, _ , _ = binned_statistic(x,x,std,edges)        
+        Xerr        = Xstd/sqrt(n)
+    
+    
+    #remove NaNs
+    Y    = Y[n > 0]
+    X    = X[n > 0]
+    Yerr = Yerr[n > 0]
+    Xerr = Xerr[n > 0]
+    Ystd = Ystd[n > 0]
+    Xstd = Xstd[n > 0]       
+    
+    return Y, X, Yerr, Xerr, Ystd, Xstd, edges, bins, n
+
+
+# xrayutilities child classes
+
+from xrayutilities.io.imagereader import ImageReader
+class Pilatus100k(ImageReader):
+
+    """
+    parse Dectris Pilatus 100k frames (*.tiff) to numpy arrays
+    Ignore the header since it seems to contain no useful data
+    """
+
+    def __init__(self, **keyargs):
+        """
+        initialize the Piulatus100k reader, which includes setting the dimension of
+        the images as well as defining the data used for flat- and darkfield
+        correction!
+
+        Parameter
+        ---------
+         optional keywords arguments keyargs:
+          flatfield: filename or data for flatfield correction. supported file
+                     types include (*.bin *.bin.xz and *.npy files). otherwise
+                     a 2D numpy array should be given
+          darkfield: filename or data for darkfield correction. same types as
+                     for flat field are supported.
+        """
+
+        ImageReader.__init__(self, 195, 487, hdrlen=4096, dtype=int32,
+                             byte_swap=False, **keyargs)
+        
+        
+
+###########################
+
+class areaDetector(spec):
+    """Inherit from spec and add capabilities to read and evaluate area 
+    detector frames from its specific goniometer setup to reciprocal space.
     
     Attributes:
         overwriteHdf5 (bool)       : Boolean to force overwriting the HDF5 file
-                                     default False.
-        pilatus 
-        (Pilatus100k[ImageReader]) : Instance of the Pilatus100k class
-                                     to read the actual detector frames.
+                                     default False.                                     
         hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
                                      xrayutilities.
         gridder 
@@ -1064,24 +1162,23 @@ class pilatusXPP(spec):
                                    : Instance of the IntensityNormalizerr class 
                                      of the xrayutilities.
         delta (List[float])        : Offset angles of the goniometer axis: 
-                                     Theta, Psi, Chi, Two_Theta
-                                     default is [0,0,0,0].
+                                     Theta, Two_Theta
+                                     default is [0,0].
         motorNames (List[str])     : List of goniometer motor names - default 
-                                     is ['Theta', 'Chi', 'Phi', 'Two_Theta']
+                                     is ['Theta', 'Two_Theta']
         customCounters (List[str]) : List of custom counters - default is 
                                      ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
-        plotLog (bool)             : Boolean if subplots of RMS are log or lin
+        plotLog (bool)             : Boolean if subplots of RSM are log or lin
     
     """
     
     # properties    
     overwriteHDF5 = False
-    pilatus       = ''
     hxrd          = ''
     gridder       = ''
     normalizer    = ''
-    delta         = [0,0,0,0]
-    motorNames    = ['Theta', 'Chi', 'Phi', 'Two Theta']
+    delta         = [0, 0]
+    motorNames    = ['Theta', 'TwoTheta']
     customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
     plotLog       = True
        
@@ -1106,7 +1203,7 @@ class pilatusXPP(spec):
         if set(cList) & set(self.customCounters):
             
             # calculate the Q data for the current scan number            
-            Qmap, qx, qy, qz = self.convPilatusScan2Q(scanNum)
+            Qmap, qx, qy, qz = self.convAreaScan2Q(scanNum)
             
             # do the integration along the different axises
             QxMap = trapz(trapz(Qmap, qy, axis=1), qz, axis=1)#sum(sum(Qmap, axis=1),axis=1)
@@ -1120,8 +1217,8 @@ class pilatusXPP(spec):
         return data    
     
     
-    def writePilatusData2HDF5(self, scanNum, childName, data, dataName):   
-        """Write Pilatus data for a given scan number to the HDF5 file.
+    def writeAreaData2HDF5(self, scanNum, childName, data, dataName):   
+        """Write area detector data for a given scan number to the HDF5 file.
         
         Args:
             scanNum (int)   : Scan number of the spec scan.
@@ -1132,13 +1229,12 @@ class pilatusXPP(spec):
         """
         
         # open the HDF5 file
-        with xu.io.helper.xu_h5open(self.filePath + self.h5FileName, mode='a') as h5:
+        with xu.io.helper.xu_h5open(os.path.join(self.hdf5Path, self.h5FileName), mode='a') as h5:
         
             h5g = h5.get(list(h5.keys())[0]) # get the root
-            
-            scan = h5g.get("scan_%d" % scanNum) # get the current scan   
+            scan = h5g.get("scan_%d" % scanNum) # get the current scan
             try:
-                # try to create the new subgroup for the Pilatus data
+                # try to create the new subgroup for the area detector data
                 scan.create_group(childName)
             except:
                 void
@@ -1154,8 +1250,8 @@ class pilatusXPP(spec):
             h5.flush() # write the data to the file
                     
     
-    def readPilatusDataFromHDF5(self, scanNum, childName, dataName):   
-        """Read Pilatus data for a given scan number from the HDF5 file.
+    def readAreaDataFromHDF5(self, scanNum, childName, dataName):   
+        """Read area detector data for a given scan number from the HDF5 file.
         
         Args:
             scanNum (int)   : Scan number of the spec scan.
@@ -1168,11 +1264,10 @@ class pilatusXPP(spec):
         """
         
         # open the HDF5 file
-        with xu.io.helper.xu_h5open(self.filePath + self.h5FileName, mode='a') as h5:
+        with xu.io.helper.xu_h5open(os.path.join(self.hdf5Path, self.h5FileName), mode='a') as h5:
+            h5g = h5.get(list(h5.keys())[0]) # get the root 
             
-            h5g = h5.get(list(h5.keys())[0]) # get the root                      
-            
-            try:
+            try:                
                 scan = h5g.get("scan_%d" % scanNum) # get the current scan 
                 # access the child if a childName is given
                 if len(childName) == 0:
@@ -1187,78 +1282,10 @@ class pilatusXPP(spec):
             
         return data
     
-    
-    def readPilatusScan(self, scanNum):
-        """Read the complete data of a Pilatus scan including the frames, 
-        motors, and spec data.
         
-        Args:
-            scanNum (int)   : Scan number of the spec scan.
-            
-        Returns:
-            frames (ndarray): Data array from the Pilatus data.
-            motors (ndarray): Data array from the spec motors.
-            data (ndarray)  : Data array from the spec scan.
-        
-        """
-        
-        # this is the file path to access the Pilatus images
-        formatString = self.filePath + '/pilatus/S{0:0>5d}/{1}_{0:.0f}_{2:.0f}.tif'
-        
-        # update the spec file
-        if self.updateBeforeRead:
-            self.updateSpec()
-        
-        # check if pilatus images are already stored in hdf5 file               
-        frames = self.readPilatusDataFromHDF5(scanNum, 'PilatusRaw', 'frames')
-        
-        if any(frames) and not self.overwriteHDF5:
-            # if the data is present in the HDF5 file and we don't want to 
-            # overwrite, read also the other datasets
-            motors   = self.readPilatusDataFromHDF5(scanNum, 'PilatusRaw', 'motors')
-            data   = self.readPilatusDataFromHDF5(scanNum, '', 'data')
-            #print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
-        elif os.path.isfile(formatString.format(scanNum,self.name,1)):
-            # data is not present in the HDF5 file but there are Pilatus images
-            # on the disk, so read them and save them
-        
-            #print('Scan #{0:.0f} read from .tiff and saved to HDF5.'.format(scanNum))      
-            
-            # get the motors and data from the spec scan
-            motors, data = self.getScanData(scanNum)
-            
-            numPoints = len(data) #  number of points in the scan
-           
-            # initilize the frames array
-            frames = zeros([numPoints,self.pilatus.nop1,self.pilatus.nop2], dtype=int32)
-            
-            for i in range(1, numPoints, 1):
-                # traverse all points in the scan
-                pfile = formatString.format(scanNum,self.name,i) # format the pilatus image path
-                img = self.pilatus.readImage(pfile) # read the image
-                frames[i,:,:] = img # save the image in the return array
-                
-            # write the frames and motors to the HDF5 file
-            self.writePilatusData2HDF5(scanNum, 'PilatusRaw', motors  , 'motors')
-            self.writePilatusData2HDF5(scanNum, 'PilatusRaw', frames, 'frames')
-            
-        else:
-            # no pilatus imagers for this scna
-            print('Scan #{0:.0f} includes no Pilatus images!'.format(scanNum))
-            frames = []
-            motors = []
-            data = []
-        
-        # if a normalizer is set to the normalization here after reading the data        
-        if self.normalizer and any(frames):
-            frames = self.normalizer(data, ccd=frames)
-        
-        return frames, motors, data
-    
-    
-    def writeAllPilatusScans2HDF5(self):
+    def writeAllAreaScans2HDF5(self):
         """Use this function with caution. It might take some time.
-        Reads all scans from the spec file and save the Pilatus data, 
+        Reads all scans from the spec file and save the area detector frames, 
         if present, to the HDF5 file.
         Currently it allways overwrite the whole hdf5 file
         
@@ -1269,11 +1296,28 @@ class pilatusXPP(spec):
         
         for i , scan in enumerate(self.specFile.scan_list):
             # iterate over all scan in the specFile
-            self.readPilatusScan(i+1) # read (and write) the pilatus data
+            self.readAreaScan(i+1) # read (and write) the pilatus data
         
+    def readAreaScan(self, scanNum):
+        """Read the complete data of a area ndetector scan including the frames, 
+        motors, and spec data.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            
+        Returns:
+            frames (ndarray): Data array from the area detector data.
+            motors (ndarray): Data array from the spec motors.
+            data (ndarray)  : Data array from the spec scan.
+        
+        """
+        
+        # stub
+        return
     
-    def convPilatusScan2Q(self, scanNum):
-        """Convert the Pilatus data for a given scan number to q-space.
+    
+    def convAreaScan2Q(self, scanNum):
+        """Convert the area detector data for a given scan number to q-space.
         
         Args:
             scanNum (int)   : Scan number of the spec scan.
@@ -1285,23 +1329,12 @@ class pilatusXPP(spec):
             zaxis (ndarray)  : qz qxis.
         
         """
-        
-        # read the frames, motors and data        
-        frames, motors, data = self.readPilatusScan(scanNum)   
-        
-        # convert the data to q-space using the HXRD instance            
-        qx, qy, qz = self.hxrd.Ang2Q.area(motors[0] , motors[1] , motors[2] , motors[3], delta=self.delta)    
-    
-        # convert data to rectangular grid in reciprocal space using the gridder
-        self.gridder(qx, qy, qz, frames[:,:,:])
-        
-        data = (self.gridder.data)
-        
-        return data, self.gridder.xaxis, self.gridder.yaxis, self.gridder.zaxis
+        # stub
+        return
         
         
-    def plotPilatusScanQ(self, scanNum):
-        """Plot the Pilatus data for a given scan number in q-space.
+    def plotAreaScanQ(self, scanNum):
+        """Plot the area detector data for a given scan number in q-space.
         
         Args:
             scanNum (int)   : Scan number of the spec scan.
@@ -1319,7 +1352,7 @@ class pilatusXPP(spec):
         from matplotlib import gridspec        
         
         # get the data to plot
-        data, xaxis, yaxis, zaxis = self.convPilatusScan2Q(scanNum)
+        data, xaxis, yaxis, zaxis = self.convAreaScan2Q(scanNum)
         
         # do the plotting
         fig = figure()
@@ -1470,144 +1503,264 @@ class pilatusXPP(spec):
         
         gs.tight_layout(fig)
         show()
-        
-    
-#    def plotPilatusScanSequenceQ(self, scanSequence, figSize=[]):
-#        """Plot the Pilatus data for a given scan number in q-space.
-#        
-#        Args:
-#            scanNum (int)   : Scan number of the spec scan.
-#        
-#        """
-#        
-#        allData = list()        
-#        
-#        for scanNum, parameter in scanSequence:
-#            if isinstance(scanNum, (list, tuple, ndarray)):
-#                scanNum = scanNum[0]
-#            
-#            # format the parameter as label text of this plot if no label text 
-#            data, xaxis, yaxis, zaxis = self.convPilatusScan2Q(scanNum)
-#            
-#            temp = [xaxis, sum(sum(data,2),1), yaxis, sum(sum(data,2),0), zaxis, sum(sum(data,0),0)]
-#            
-#            allData.append(temp)
-#        
-#        figure(figsize = figSize)
-#        for i, thisData in enumerate(allData):
-#            subplot(3,1,1)
-#            semilogy(thisData[0], thisData[1])
-#            xlabel(r'$Q_x$')  
-#            ylabel('Intensity')
-#            grid(True)
-#            
-#            subplot(3,1,2)
-#            semilogy(thisData[2], thisData[3])
-#            xlabel(r'$Q_y$')
-#            ylabel('Intensity')
-#            grid(True)
-#            
-#            subplot(3,1,3)
-#            semilogy(thisData[4], thisData[5])
-#            xlabel(r'$Q_z$')
-#            ylabel('Intensity')
-#            grid(True)
-#            
-#        show()
-#        
-#        return allData
 
-
-# helper functions
-      
-      
-def edges4grid(grid):
-    """Creates a vector of the corresponding edges for a grid vector. """
-    binwidth = diff(grid);
-    edges    = hstack([grid[0]-binwidth[0]/2, grid[0:-1]+binwidth/2, grid[-1]+binwidth[-1]/2]);
-    
-    return edges, binwidth
-
-
-def binData(y,x,X,statistic='mean'):
-    """Bin data y(x) on new grid X using a statistic type. """
+###########################
         
-    y = y.flatten(1)
-    x = x.flatten(1)
-    X = sort(X.flatten(1))
+class princtonPM3(areaDetector):
+    """Inherit from areaDetector and add specfic routins for reading data files
+    of princton instruments SPE files and goniometer setup at BESSY II PM3
     
-    # create bins for the grid
-    edges, _ = edges4grid(X);    
+    Attributes:
+        overwriteHdf5 (bool)       : Boolean to force overwriting the HDF5 file
+                                     default False.                                     
+        hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
+                                     xrayutilities.
+        gridder 
+        (gidder[xrayutilities])    : Instance of the gridder class of the 
+                                     xrayutilities.
+        normalizer 
+        (IntensityNormalizer[xrayutilities])
+                                   : Instance of the IntensityNormalizerr class 
+                                     of the xrayutilities.
+        delta (List[float])        : Offset angles of the goniometer axis: 
+                                     Theta, Two_Theta
+                                     default is [0,0].
+        motorNames (List[str])     : List of goniometer motor names - default 
+                                     is ['Theta', 'Two_Theta']
+        customCounters (List[str]) : List of custom counters - default is 
+                                     ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
+        plotLog (bool)             : Boolean if subplots of RSM are log or lin
     
-    if array_equal(x,X): 
-        # no binning since the new grid is the same as the old one
-        Y = y
-        bins = ones_like(Y)        
-        n    = ones_like(Y)
-    else:    
-        # do the binning and get the Y results 
-        Y, _ , bins = binned_statistic(x,y,statistic,edges)
-        bins = bins.astype(int_)
+    """
+    
+    # properties
+    delta         = [0, 0]
+    motorNames    = ['Theta', 'TwoTheta']
+    
+    
+    
+    def readAreaScan(self, scanNum):
+        """Read the complete data of a area ndetector scan including the frames, 
+        motors, and spec data.
         
-        n = bincount(bins[bins > 0],minlength=len(X)+1)  
-        n = n[1:len(X)+1]
-    
-    
-    if array_equal(x,X) and statistic is not 'sum': 
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            
+        Returns:
+            frames (ndarray): Data array from the area detector data.
+            motors (ndarray): Data array from the spec motors.
+            data (ndarray)  : Data array from the spec scan.
         
-        Ystd = zeros_like(Y)
-        Xstd = zeros_like(X)
-        Yerr = zeros_like(Y)
-        Xerr = zeros_like(X)
-    else:    
-        # calculate the std of X and Y
-        if statistic == 'sum':
-            Ystd = sqrt(Y)                   
-            Yerr = Ystd
+        """
+        
+        from winspec import SpeFile
+        
+        # this is the file path to access the Pilatus images
+        formatString = self.filePath + '/ccd/' + self.specFileName + '_{0:0>4d}.SPE'
+        
+        # update the spec file
+        if self.updateBeforeRead:
+            self.updateSpec()
+        
+        # check if frames are already stored in hdf5 file               
+        frames = self.readAreaDataFromHDF5(scanNum, 'AreaRaw', 'frames')
+        
+        if any(frames) and not self.overwriteHDF5:
+            # if the data is present in the HDF5 file and we don't want to 
+            # overwrite, read also the other datasets
+            motors   = self.readAreaDataFromHDF5(scanNum, 'AreaRaw', 'motors')
+            data   = self.readAreaDataFromHDF5(scanNum, '', 'data')
+            #print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
+        elif os.path.isfile(formatString.format(scanNum,self.name,1)):
+            # data is not present in the HDF5 file but there are frames
+            # on the disk, so read them and save them
+        
+            #print('Scan #{0:.0f} read from files and saved to HDF5.'.format(scanNum))      
+            
+            # get the motors and data from the spec scan
+            motors, data = self.getScanData(scanNum)
+                                
+            frames = SpeFile(formatString.format(scanNum)).data
+                
+            # write the frames and motors to the HDF5 file
+            self.writeAreaData2HDF5(scanNum, 'AreaRaw', motors  , 'motors')
+            self.writeAreaData2HDF5(scanNum, 'AreaRaw', frames, 'frames')
+            
         else:
-            Ystd, _ , _ = binned_statistic(x,y,std,edges)        
-            Yerr        = Ystd/sqrt(n)
+            # no pilatus imagers for this scna
+            print('Scan #{0:.0f} includes no area detector frames!'.format(scanNum))
+            frames = []
+            motors, data = self.getScanData(scanNum)
         
-        Xstd, _ , _ = binned_statistic(x,x,std,edges)        
-        Xerr        = Xstd/sqrt(n)
+        # if a normalizer is set to the normalization here after reading the data        
+        if self.normalizer and any(frames):
+            frames = self.normalizer(data, ccd=frames)
+        
+        return frames, motors, data
+        
     
-    
-    #remove NaNs
-    Y    = Y[n > 0]
-    X    = X[n > 0]
-    Yerr = Yerr[n > 0]
-    Xerr = Xerr[n > 0]
-    Ystd = Ystd[n > 0]
-    Xstd = Xstd[n > 0]       
-    
-    return Y, X, Yerr, Xerr, Ystd, Xstd, edges, bins, n
-
-
-# xrayutilities child classes
-
-from xrayutilities.io.imagereader import ImageReader
-class Pilatus100k(ImageReader):
-
-    """
-    parse Dectris Pilatus 100k frames (*.tiff) to numpy arrays
-    Ignore the header since it seems to contain no useful data
-    """
-
-    def __init__(self, **keyargs):
+    def convAreaScan2Q(self, scanNum):
+        """Convert the area detector data for a given scan number to q-space.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            
+        Returns:
+            data (ndarray)   : Pilatus data in q-space.
+            xaxis (ndarray)  : qx qxis.
+            yaxis (ndarray)  : qy qxis.
+            zaxis (ndarray)  : qz qxis.
+        
         """
-        initialize the Piulatus100k reader, which includes setting the dimension of
-        the images as well as defining the data used for flat- and darkfield
-        correction!
+        # read the frames, motors and data        
+        frames, motors, data = self.readAreaScan(scanNum)   
+        
+        # convert the data to q-space using the HXRD instance            
+        qx, qy, qz = self.hxrd.Ang2Q.area(motors['Theta'], motors['TwoTheta'], delta=self.delta)    
+    
+        # convert data to rectangular grid in reciprocal space using the gridder
+        self.gridder(qx, qy, qz, frames[:,:,:])
+        
+        data = (self.gridder.data)
+        
+        return data, self.gridder.xaxis, self.gridder.yaxis, self.gridder.zaxis
+        
+        
+########################################
 
-        Parameter
-        ---------
-         optional keywords arguments keyargs:
-          flatfield: filename or data for flatfield correction. supported file
-                     types include (*.bin *.bin.xz and *.npy files). otherwise
-                     a 2D numpy array should be given
-          darkfield: filename or data for darkfield correction. same types as
-                     for flat field are supported.
+class pilatusXPP(areaDetector):
+    """Inherit from spec and add capabilities to read Pilatus images from the 
+    BESSY II XPP beamline with its specific goniometer setup.
+    
+    Attributes:
+        overwriteHdf5 (bool)       : Boolean to force overwriting the HDF5 file
+                                     default False.
+        pilatus 
+        (Pilatus100k[ImageReader]) : Instance of the Pilatus100k class
+                                     to read the actual detector frames.
+        hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
+                                     xrayutilities.
+        gridder 
+        (gidder[xrayutilities])    : Instance of the gridder class of the 
+                                     xrayutilities.
+        normalizer 
+        (IntensityNormalizer[xrayutilities])
+                                   : Instance of the IntensityNormalizerr class 
+                                     of the xrayutilities.
+        delta (List[float])        : Offset angles of the goniometer axis: 
+                                     Theta, Psi, Chi, Two_Theta
+                                     default is [0,0,0,0].
+        motorNames (List[str])     : List of goniometer motor names - default 
+                                     is ['Theta', 'Chi', 'Phi', 'Two_Theta']
+        customCounters (List[str]) : List of custom counters - default is 
+                                     ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
+        plotLog (bool)             : Boolean if subplots of RMS are log or lin
+    
+    """
+    
+    # properties    
+    overwriteHDF5 = False
+    pilatus       = ''
+    hxrd          = ''
+    gridder       = ''
+    normalizer    = ''
+    delta         = [0,0,0,0]
+    motorNames    = ['Theta', 'Chi', 'Phi', 'Two Theta']
+    customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
+    plotLog       = True 
+    
+    def readAreaScan(self, scanNum):
+        """Read the complete data of a Pilatus scan including the frames, 
+        motors, and spec data.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            
+        Returns:
+            frames (ndarray): Data array from the Pilatus data.
+            motors (ndarray): Data array from the spec motors.
+            data (ndarray)  : Data array from the spec scan.
+        
         """
-
-        ImageReader.__init__(self, 195, 487, hdrlen=4096, dtype=int32,
-                             byte_swap=False, **keyargs)
+        
+        # this is the file path to access the Pilatus images
+        formatString = self.filePath + '/pilatus/S{0:0>5d}/{1}_{0:.0f}_{2:.0f}.tif'
+        
+        # update the spec file
+        if self.updateBeforeRead:
+            self.updateSpec()
+        
+        # check if area detector framess are already stored in hdf5 file               
+        frames = self.readAreaDataFromHDF5(scanNum, 'AreaRaw', 'frames')
+        
+        if any(frames) and not self.overwriteHDF5:
+            # if the data is present in the HDF5 file and we don't want to 
+            # overwrite, read also the other datasets
+            motors   = self.readAreaDataFromHDF5(scanNum, 'AreaRaw', 'motors')
+            data   = self.readAreaDataFromHDF5(scanNum, '', 'data')
+            #print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
+        elif os.path.isfile(formatString.format(scanNum,self.name,1)):
+            # data is not present in the HDF5 file but there are Pilatus images
+            # on the disk, so read them and save them
+        
+            #print('Scan #{0:.0f} read from .tiff and saved to HDF5.'.format(scanNum))      
+            
+            # get the motors and data from the spec scan
+            motors, data = self.getScanData(scanNum)
+            
+            numPoints = len(data) #  number of points in the scan
+           
+            # initilize the frames array
+            frames = zeros([numPoints,self.pilatus.nop1,self.pilatus.nop2], dtype=int32)
+            
+            for i in range(1, numPoints, 1):
+                # traverse all points in the scan
+                pfile = formatString.format(scanNum,self.name,i) # format the pilatus image path
+                img = self.pilatus.readImage(pfile) # read the image
+                frames[i,:,:] = img # save the image in the return array
+                
+            # write the frames and motors to the HDF5 file
+            self.writePilatusData2HDF5(scanNum, 'PilatusRaw', motors  , 'motors')
+            self.writePilatusData2HDF5(scanNum, 'PilatusRaw', frames, 'frames')
+            
+        else:
+            # no pilatus imagers for this scna
+            print('Scan #{0:.0f} includes no Pilatus images!'.format(scanNum))
+            frames = []
+            motors, data = self.getScanData(scanNum)
+        
+        # if a normalizer is set to the normalization here after reading the data        
+        if self.normalizer and any(frames):
+            frames = self.normalizer(data, ccd=frames)
+        
+        return frames, motors, data
+    
+    
+    def convAreaScan2Q(self, scanNum):
+        """Convert the area detector data for a given scan number to q-space.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            
+        Returns:
+            data (ndarray)   : area detector data in q-space.
+            xaxis (ndarray)  : qx qxis.
+            yaxis (ndarray)  : qy qxis.
+            zaxis (ndarray)  : qz qxis.
+        
+        """
+        
+        # read the frames, motors and data        
+        frames, motors, data = self.readAreaScan(scanNum)   
+        
+        # convert the data to q-space using the HXRD instance            
+        qx, qy, qz = self.hxrd.Ang2Q.area(motors['Theta'] , motors['Chi'] , motors['Phi'] , motors['Two Theta'], delta=self.delta)    
+    
+        # convert data to rectangular grid in reciprocal space using the gridder
+        self.gridder(qx, qy, qz, frames[:,:,:])
+        
+        data = (self.gridder.data)
+        
+        return data, self.gridder.xaxis, self.gridder.yaxis, self.gridder.zaxis
+        
+        
