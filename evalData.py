@@ -422,7 +422,74 @@ class spec(object):
             print('xCol and yCol must have the same length --> probably you try plotting a custom counter together with a spec counter')
             
         return avgData, stdData, errData, name
-
+    
+        
+    def writeData2HDF5(self, scanNum, childName, data, dataName):   
+        """Write data for a given scan number to the HDF5 file.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            childName (str) : Name of the child where to save the data to.
+            data (ndarray)  : Data array from the Pilatus data
+            dataName (str)  : Name of the dataset.
+        
+        """
+        
+        # open the HDF5 file
+        with xu.io.helper.xu_h5open(os.path.join(self.hdf5Path, self.h5FileName), mode='a') as h5:
+        
+            h5g = h5.get(list(h5.keys())[0]) # get the root
+            scan = h5g.get("scan_%d" % scanNum) # get the current scan
+            try:
+                # try to create the new subgroup for the area detector data
+                scan.create_group(childName)
+            except:
+                void
+            
+            g5 = scan[childName] # this is the new group
+            
+            try:
+                # add the data to the group
+                g5.create_dataset(dataName, data=data, compression="gzip", compression_opts=9)
+            except:
+                void
+                
+            h5.flush() # write the data to the file
+                    
+    
+    def readDataFromHDF5(self, scanNum, childName, dataName):   
+        """Read data for a given scan number from the HDF5 file.
+        
+        Args:
+            scanNum (int)   : Scan number of the spec scan.
+            childName (str) : Name of the child where to save the data to.
+            dataName (str)  : Name of the dataset.
+            
+        Returns:
+            data (ndarray): Data array from the spec scan.
+        
+        """
+        
+        # open the HDF5 file
+        with xu.io.helper.xu_h5open(os.path.join(self.hdf5Path, self.h5FileName), mode='a') as h5:
+            h5g = h5.get(list(h5.keys())[0]) # get the root 
+            
+            try:                
+                scan = h5g.get("scan_%d" % scanNum) # get the current scan 
+                # access the child if a childName is given
+                if len(childName) == 0:
+                    g5 = scan
+                else:               
+                    g5 = scan[childName]
+                    
+                data =  g5[dataName][:] # get the actual dataset
+            except:
+                # if no data is available return False
+                data = False
+            
+        return data
+        
+        
     def plotScans(self,scanList, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, labelText='', titleText='', skipPlot=False, gridOn=True, yText='', xText=''):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
@@ -1225,74 +1292,7 @@ class areaDetector(spec):
         
         """
         #stub
-        return
-        
-        
-    def writeAreaData2HDF5(self, scanNum, childName, data, dataName):   
-        """Write area detector data for a given scan number to the HDF5 file.
-        
-        Args:
-            scanNum (int)   : Scan number of the spec scan.
-            childName (str) : Name of the child where to save the data to.
-            data (ndarray)  : Data array from the Pilatus data
-            dataName (str)  : Name of the dataset.
-        
-        """
-        
-        # open the HDF5 file
-        with xu.io.helper.xu_h5open(os.path.join(self.hdf5Path, self.h5FileName), mode='a') as h5:
-        
-            h5g = h5.get(list(h5.keys())[0]) # get the root
-            scan = h5g.get("scan_%d" % scanNum) # get the current scan
-            try:
-                # try to create the new subgroup for the area detector data
-                scan.create_group(childName)
-            except:
-                void
-            
-            g5 = scan[childName] # this is the new group
-            
-            try:
-                # add the data to the group
-                g5.create_dataset(dataName, data=data, compression="gzip", compression_opts=9)
-            except:
-                void
-                
-            h5.flush() # write the data to the file
-                    
-    
-    def readAreaDataFromHDF5(self, scanNum, childName, dataName):   
-        """Read area detector data for a given scan number from the HDF5 file.
-        
-        Args:
-            scanNum (int)   : Scan number of the spec scan.
-            childName (str) : Name of the child where to save the data to.
-            dataName (str)  : Name of the dataset.
-            
-        Returns:
-            data (ndarray): Data array from the spec scan.
-        
-        """
-        
-        # open the HDF5 file
-        with xu.io.helper.xu_h5open(os.path.join(self.hdf5Path, self.h5FileName), mode='a') as h5:
-            h5g = h5.get(list(h5.keys())[0]) # get the root 
-            
-            try:                
-                scan = h5g.get("scan_%d" % scanNum) # get the current scan 
-                # access the child if a childName is given
-                if len(childName) == 0:
-                    g5 = scan
-                else:               
-                    g5 = scan[childName]
-                    
-                data =  g5[dataName][:] # get the actual dataset
-            except:
-                # if no data is available return False
-                data = False
-            
-        return data
-    
+        return    
         
     def writeAllAreaScans2HDF5(self):
         """Use this function with caution. It might take some time.
@@ -1328,13 +1328,13 @@ class areaDetector(spec):
             self.updateSpec()
         
         # check if frames are already stored in hdf5 file               
-        frames = self.readAreaDataFromHDF5(scanNum, 'AreaRaw', 'frames')
+        frames = self.readDataFromHDF5(scanNum, 'AreaRaw', 'frames')
         
         if any(frames) and not self.overwriteHDF5:
             # if the data is present in the HDF5 file and we don't want to 
             # overwrite, read also the other datasets
-            motors   = self.readAreaDataFromHDF5(scanNum, 'AreaRaw', 'motors')
-            data   = self.readAreaDataFromHDF5(scanNum, '', 'data')
+            motors   = self.readDataFromHDF5(scanNum, 'AreaRaw', 'motors')
+            data   = self.readDataFromHDF5(scanNum, '', 'data')
             #print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
         elif os.path.isfile(self.rawDataPath.format(scanNum,1)):
             # data is not present in the HDF5 file but there are frames
@@ -1348,8 +1348,8 @@ class areaDetector(spec):
             frames = self.readRawScan(scanNum)
                 
             # write the frames and motors to the HDF5 file
-            self.writeAreaData2HDF5(scanNum, 'AreaRaw', motors  , 'motors')
-            self.writeAreaData2HDF5(scanNum, 'AreaRaw', frames, 'frames')
+            self.writeData2HDF5(scanNum, 'AreaRaw', motors  , 'motors')
+            self.writeData2HDF5(scanNum, 'AreaRaw', frames, 'frames')
             
         else:
             # no pilatus imagers for this scna
