@@ -1216,9 +1216,7 @@ class areaDetector(spec):
     """Inherit from spec and add capabilities to read and evaluate area 
     detector frames from its specific goniometer setup to reciprocal space.
     
-    Attributes:
-        overwriteHdf5 (bool)       : Boolean to force overwriting the HDF5 file
-                                     default False.                                     
+    Attributes:                                    
         hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
                                      xrayutilities.
         gridder 
@@ -1240,7 +1238,6 @@ class areaDetector(spec):
     """
     
     # properties    
-    overwriteHDF5 = False
     rawDataPath   = ''
     hxrd          = ''
     gridder       = ''
@@ -1645,27 +1642,9 @@ class princtonPM3(areaDetector):
     """Inherit from areaDetector and add specfic routins for reading data files
     of princton instruments SPE files and goniometer setup at BESSY II PM3
     
-    Attributes:
-        overwriteHdf5 (bool)       : Boolean to force overwriting the HDF5 file
-                                     default False.                                     
-        hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
-                                     xrayutilities.
-        gridder 
-        (gidder[xrayutilities])    : Instance of the gridder class of the 
-                                     xrayutilities.
-        normalizer 
-        (IntensityNormalizer[xrayutilities])
-                                   : Instance of the IntensityNormalizerr class 
-                                     of the xrayutilities.
-        delta (List[float])        : Offset angles of the goniometer axis: 
-                                     Theta, Two_Theta
-                                     default is [0,0].
-        motorNames (List[str])     : List of goniometer motor names - default 
-                                     is ['Theta', 'Two_Theta']
-        customCounters (List[str]) : List of custom counters - default is 
-                                     ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
-        plotLog (bool)             : Boolean if subplots of RSM are log or lin
-    
+    Attributes:                                    
+        inherited from area detector    
+        
     """
     
     # properties
@@ -1696,26 +1675,9 @@ class pilatusXPP(areaDetector):
     """Inherit from spec and add capabilities to read Pilatus images from the 
     BESSY II XPP beamline with its specific goniometer setup.
     
-    Attributes:
-        overwriteHdf5 (bool)       : Boolean to force overwriting the HDF5 file
-                                     default False.                                     
-        hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
-                                     xrayutilities.
-        gridder 
-        (gidder[xrayutilities])    : Instance of the gridder class of the 
-                                     xrayutilities.
-        normalizer 
-        (IntensityNormalizer[xrayutilities])
-                                   : Instance of the IntensityNormalizerr class 
-                                     of the xrayutilities.
-        delta (List[float])        : Offset angles of the goniometer axis: 
-                                     Theta, Two_Theta
-                                     default is [0,0].
-        motorNames (List[str])     : List of goniometer motor names - default 
-                                     is ['Theta', 'Two_Theta']
-        customCounters (List[str]) : List of custom counters - default is 
-                                     ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
-        plotLog (bool)             : Boolean if subplots of RSM are log or lin
+    Attributes:                                   
+        inherited from areaDetector
+        pilatus (ImageReader(xrayutilities)): Pilatus100k-object for reading frames
     
     """
     
@@ -1748,3 +1710,4 @@ class pilatusXPP(areaDetector):
             frames[i,:,:] = img # save the image in the return array
 
         return frames
+
