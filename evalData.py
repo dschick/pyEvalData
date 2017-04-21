@@ -607,6 +607,74 @@ class spec(object):
                 grid(True)   
         
         return y2plot, x2plot, yerr2plot, xerr2plot, name
+        
+        
+    def plotMeshScan(self, scanNum, skipPlot=False, gridOn=False, yText='', xText='', levels = 20, cBar = True):
+        """Plot a single mesh scan from the spec file.
+        Various plot parameters are provided.
+        The plotted data are returned.
+        
+        Args:
+            scanNum (int)               : Scan number of the spec scan.
+            skipPlot (Optional[bool])   : Skip plotting, just return data
+                                          default is False.
+            gridOn (Optional[bool])     : Add grid to plot - default is False.
+            yText (Optional[str])       : y-Label of the plot - defaults is none. 
+            xText (Optional[str])       : x-Label of the plot - defaults is none. 
+            levels (Optional[int])      : levels of contour plot - defaults is 20. 
+            cBar (Optional[bool])       : Add colorbar to plot - default is True.
+            
+        Returns:
+            xx, yy, zz              : x,y,z data which was plotted
+        
+        """
+        
+        # read data from spec file
+        try:
+            # try to read the motors and data of this scan
+            motors, specData = self.getScanData(scanNum)
+        except:
+            print('Scan #' + scanNum + ' not found, skipping')  
+        
+        dt = specData.dtype
+        dt = dt.descr
+        
+        
+        xMotor = dt[0][0]
+        yMotor = dt[1][0]
+        
+        X = unique(specData[xMotor])
+        Y = unique(specData[yMotor])
+        
+        cList = self.getClist()
+        
+        if len(cList) > 1:
+            print('WARNING: Only the first counter of the cList is plotted.')
+        
+        Z = specData[cList[0]]
+        
+        xx, yy = np.meshgrid(X, Y)
+        zz = Z.reshape(xx.shape)
+        
+        if not skipPlot:
+            contourf(xx,yy,zz, levels, cmap='viridis')
+            
+            xlabel(xMotor)
+            ylabel(yMotor)
+            
+            if len(xText) > 0:
+                xlabel(xText)
+                
+            if len(yText) > 0:
+                ylabel(yText)
+                
+            if gridOn:
+                grid(True) 
+                
+            if cBar:
+                colorbar()
+            
+        return xx, yy, zz
             
     
     def plotScanSequence(self,scanSequence, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std',norm2one=False, sequenceType='', labelText='', titleText='', skipPlot=False, gridOn=True, yText='',xText=''):
