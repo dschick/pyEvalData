@@ -629,6 +629,9 @@ class spec(object):
         
         """
         
+        from matplotlib.mlab import griddata
+        from matplotlib import gridspec
+        
         # read data from spec file
         try:
             # try to read the motors and data of this scan
@@ -637,14 +640,17 @@ class spec(object):
             print('Scan #' + scanNum + ' not found, skipping')  
         
         dt = specData.dtype
-        dt = dt.descr
-        
+        dt = dt.descr        
         
         xMotor = dt[0][0]
         yMotor = dt[1][0]
         
-        X = unique(specData[xMotor])
-        Y = unique(specData[yMotor])
+        
+        X = specData[xMotor]
+        Y = specData[yMotor]
+        
+        xx = sort(unique(X))
+        yy = sort(unique(Y))
         
         cList = self.getClist()
         
@@ -652,11 +658,38 @@ class spec(object):
             print('WARNING: Only the first counter of the cList is plotted.')
         
         Z = specData[cList[0]]
-        
-        xx, yy = np.meshgrid(X, Y)
-        zz = Z.reshape(xx.shape)
+                
+        zz = griddata(X,Y,Z,xx,yy, interp='linear')
         
         if not skipPlot:
+            
+            if cBar:
+                gs = gridspec.GridSpec(4, 2,
+                width_ratios=[3,1],
+                height_ratios=[0.2,0.1,1,3]                
+                )
+                k = 4
+            else:
+                gs = gridspec.GridSpec(2, 2,
+                width_ratios=[3,1],
+                height_ratios=[1,3]                
+                )
+                k= 0
+
+            ax1 = subplot(gs[0+k])
+            
+            plot(xx, mean(zz,0), label='mean')
+            
+            plot(xx, zz[argmax(mean(zz,1)),:], label='peak')
+            
+            xlim([min(xx), max(xx)])
+            legend(loc=0)
+            ax1.xaxis.tick_top()
+            if gridOn:
+                grid(True)
+            
+            ax3 = subplot(gs[2+k])
+            
             contourf(xx,yy,zz, levels, cmap='viridis')
             
             xlabel(xMotor)
@@ -672,7 +705,21 @@ class spec(object):
                 grid(True) 
                 
             if cBar:
-                colorbar()
+                cb = colorbar(cax=subplot(gs[0]), orientation='horizontal')
+                cb.ax.xaxis.set_ticks_position('top')
+                cb.ax.xaxis.set_label_position('top')
+            
+            
+            ax4 = subplot(gs[3+k])
+            
+            plot(mean(zz,1),yy)
+            plot(zz[:,argmax(mean(zz,0))], yy)
+            ylim([min(yy), max(yy)])
+            
+            ax4.yaxis.tick_right()
+            if gridOn:
+                grid(True)
+            
             
         return xx, yy, zz
             
