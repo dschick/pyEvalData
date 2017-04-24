@@ -64,6 +64,7 @@ class spec(object):
                                   counter names
         statisticType  (str)    : 'gauss' for normal averaging, 
                                   'poisson' for counting statistics
+        propagateErrors  (bool) : whether to propagate errors or not
     
     """
     
@@ -86,6 +87,7 @@ class spec(object):
                         'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 
                         'pi', 'exp', 'log', 'log10']
     statisticType    = 'gauss'
+    propagateErrors  = True
     
     def __init__(self, name, filePath, specFileExt=''):
         """Initialize the class, set all file names and load the spec file. 
@@ -195,7 +197,7 @@ class spec(object):
         else:
             cList = list(self.cList)
                
-        return cList
+        return list(set(cList))
     
     
     def getLastFigNumber(self):
@@ -229,7 +231,37 @@ class spec(object):
         return self.getLastFigNumber() + 1
     
     
-    def resolveCounterName(self, col):
+    def traverseCounters(self, cList, specCols=''):
+        """Traverse all counters and replace all predefined counter definitions.
+        Returns also the included spec base counters for error propagation.
+
+        Args:
+            cList    (list) : Initial counter list.
+            specCols (list) : Counters in spec file.
+            
+        Returns:
+            resolvedCounters (list): Resolved counters.
+            baseCounters (list)    : Base counters.
+        
+        """
+                
+        resolvedCounters = []
+        baseCounters     = []
+        
+        
+        
+        for col in cList:
+            colString, resBaseCounters = self.resolveCounterName(col, specCols) 
+            
+            resolvedCounters.append(colString)
+            baseCounters.extend(resBaseCounters)
+        
+        
+        # remove duplicates using list(set())  
+        return resolvedCounters, list(set(baseCounters))
+    
+        
+    def resolveCounterName(self, col, specCols=''):
         """Replace all predefined counter definitions in a counter name.
         The function works recursively.
 
@@ -240,10 +272,16 @@ class spec(object):
             colString (str): Resolved counter string.
         
         """
-        
+                
         reCall = False # boolean to stop recursive calls
         
-        if col in self.cDef.keys(): 
+        baseCounters = []
+        
+        if col in specCols:
+            # the counter is a base spec counter
+            colString = col
+            baseCounters.append(colString)
+        elif col in self.cDef.keys(): 
             # its a predefinded counter so use the definition
             colString = self.cDef[col]  
             # recursive call if predefined counter must be resolved again
@@ -257,18 +295,28 @@ class spec(object):
                 # check for all predefined counters
                 searchPattern = r'\b' + findcDef + r'\b'    
                 if re.search(searchPattern,colString) != None:
+                    if self.cDef[findcDef] in specCols:
+                        # this counter definition is a base spec counter
+                        baseCounters.append(self.cDef[findcDef])
                     # found a predefined counter 
                     # recursive call if predefined counter must be resolved again
                     reCall = True
-                # replace the counter definition in the string
-                (colString,_) = re.subn(searchPattern, '(' + self.cDef[findcDef] + ')', colString)
-                #break
+                    # replace the counter definition in the string
+                    (colString,_) = re.subn(searchPattern, '(' + self.cDef[findcDef] + ')', colString)                
+                    #break
+                    
+            for findcDef in specCols:
+                # check for all base spec counters
+                searchPattern = r'\b' + findcDef + r'\b'    
+                if re.search(searchPattern,colString) != None:
+                    baseCounters.append(findcDef)
 
         if reCall:
             # do the recursive call
-            colString = self.resolveCounterName(colString)
-        
-        return colString
+            colString, recBaseCounters = self.resolveCounterName(colString, specCols)           
+            baseCounters.extend(recBaseCounters)
+            
+        return colString, baseCounters
         
     
     def colString2evalString(self, colString, colName):
@@ -308,7 +356,7 @@ class spec(object):
         evalString = 'append_fields(data,\'' + colName + '\',data=(' + colString + '), dtypes=float, asrecarray=True)'        
         
         return evalString
-        
+                
     
     def addCustomCounters(self, data, scanNum):
         """Add custom counters to the spec data array.
@@ -345,6 +393,9 @@ class spec(object):
         
         """
         
+#        import * from uncertainties
+        from uncertainties import unumpy
+        
         # generate the name of the data set from the spec file name and scanList
         name= self.specFileName + "_{0:03d}".format(scanList[0])
         
@@ -362,28 +413,31 @@ class spec(object):
             # get the counters which should be evaluated
             cList = self.getClist()
             # process also the xCol as counter in order to allow for newly defined xCols
-            cList.append(self.xCol) 
-            data = array([])
-            for col in cList:                 
-                # traverse the counters in the cList
-                if col in specData.dtype.names:
-                    colName = col
-                    colString = col
-                    # append new col to data array
-                    data = eval(self.colString2evalString(colString, colName))
-                elif not col in self.customCounters:
-                    # this counter is not in the spec file                      
-                    colName = col
-                    # replace colString with predefined counters recursively
-                    colString = self.resolveCounterName(col)  
-                    # append new col to data array
-                    data = eval(self.colString2evalString(colString, colName))
+            if not self.xCol in cList:
+                cList.append(self.xCol) 
                 
+            specCols = specData.dtype.names
+            
+            data = array([])            
+                    
+            resolvedCounters, baseCounters = self.traverseCounters(cList, specCols)
+                        
+            colNames   = cList + baseCounters            
+            colStrings = resolvedCounters + baseCounters
+            
+            
+            
+            for j, colString in enumerate(colStrings):                 
+                # traverse the counters in the cList    
+                if j == 0 or not colNames[j] in data.dtype.names:
+                    data = eval(self.colString2evalString(colString, colNames[j]))
+
             # remove xCol from cList for further treatment
             cList.remove(self.xCol)
+            resolvedCounters.remove(self.xCol)
             
             data = self.addCustomCounters(data,scanNum)             
-            
+                        
             if i > 0:
                 # this is not the first scan in the list so append the data to
                 # the concatenated data array
@@ -394,6 +448,7 @@ class spec(object):
                 if len(xGrid) == 0:
                   # if no xGrid is given we use the xData of the first scan instead
                   xGrid =  concatData[self.xCol]    
+        
         try:
             # bin the concatenated data to the xGrid
             # if a custom counter was calculated it might have a different length
@@ -407,18 +462,69 @@ class spec(object):
             stdData=recarray(shape(xGridReduced)[0],dtype=concatData.dtype)
             errData=recarray(shape(xGridReduced)[0],dtype=concatData.dtype)
             
+            uncData= {}
+            
             if self.statisticType == 'poisson':
                 binStat = 'sum'
             else: # gauss
                 binStat = 'mean'
             
-            for col in cList:
-                # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
+            
+            print(baseCounters)
                 
+            if self.statisticType == 'poisson' or self.propagateErrors:
+                # propagate errors using the uncertainties package
+                                
+                for col in baseCounters:
+                    # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
+#                    avgData[col], avgData[self.xCol], errData[col], errData[self.xCol], stdData[col], stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
+                    
+                    y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
+                    
+                    uncData[col] = unumpy.uarray(y, yStd)
+                
+                
+                                        
+                for k, col in enumerate(cList):
+                    print(col + ' : ' + resolvedCounters[k])
+                    
+                    colString = resolvedCounters[k]
+                    iterator = re.finditer('([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', colString)                  
+                    # these are keys which should not be replaced but evaluated        
+                    keys = list(self.mathKeys)
+                    for key in iterator:
+                        # traverse all found counter names
+                        if len(key.group()) > 0:
+                            # the match is > 0
+                            if not key.group() in keys:
+                                # the counter name is not in the keys list
+                            
+                                # remember this counter name in the key list in order 
+                                # not to replace it again
+                                keys.append(key.group())
+                                # the actual replacement                    
+                                (colString,_) = re.subn(r'\b'+key.group()+r'\b', 'uncData[\'' + key.group() + '\']', colString)
+                    
+                    evalString = colString
+                    print(evalString)
+                    
+                    temp = eval(evalString)
+                                        
+                    avgData[col] = unumpy.nominal_values(temp)
+                    errData[col] = unumpy.std_devs(temp)
+                    stdData[col] = unumpy.std_devs(temp)
+                
+                
+            else:
+                # no error propagation but averaging of individual scans                
+                
+                for col in cList:
+                    # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
                     avgData[col], avgData[self.xCol], errData[col], errData[self.xCol], stdData[col], stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
                 
                
         except:
+            raise
             print('xCol and yCol must have the same length --> probably you try plotting a custom counter together with a spec counter')
             
         return avgData, stdData, errData, name
