@@ -25,6 +25,7 @@ import os
 import xrayutilities as xu
 from scipy.stats import binned_statistic
 import re
+from uncertainties import unumpy
 
 """
 evalData module provide class definitions to read, average, plot, and fit data 
@@ -304,13 +305,12 @@ class spec(object):
         return colString, baseCounters
         
     
-    def colString2evalString(self, colString, colName, arrayName='specData'):
+    def colString2evalString(self, colString, arrayName='specData'):
         """Use regular expressions in order to generate an evaluateable string
         from the counter string in order to append the new counter to the 
         spec data.
         
         Args:
-            colName (str)   : Name of the counter.
             colString (str) : Definition of the counter.
             mode (int)      : Flag for different modes
             
@@ -336,15 +336,8 @@ class spec(object):
                     keys.append(key.group())
                     # the actual replacement
                     (colString,_) = re.subn(r'\b'+key.group()+r'\b', arrayName + '[\'' + key.group() + '\']', colString)
-                                        
-        # generate the actual string for evaluation to append the new counter 
-        # to the spec data array                     
-        if arrayName == 'specData':
-            evalString = 'append_fields(data,\'' + colName + '\',data=(' + colString + '), dtypes=float, asrecarray=True)' 
-        else:
-            evalString = colString
-        
-        return evalString
+                                                
+        return colString
                 
     
     def addCustomCounters(self, data, scanNum):
@@ -381,14 +374,10 @@ class spec(object):
             name (str)        : Name of the data set.
         
         """
-        
-        from uncertainties import unumpy
-        
+               
         # generate the name of the data set from the spec file name and scanList
         name= self.specFileName + "_{0:03d}".format(scanList[0])
-        
-        N = len(scanList)
-        
+                
         # get the counters which should be evaluated
         cList = self.getClist()
         # process also the xCol as counter in order to allow for newly defined xCols
@@ -396,6 +385,7 @@ class spec(object):
             cList.append(self.xCol)
         
         specCols = []
+        concatData = array([])
             
         for i, scanNum in enumerate(scanList):
             # traverse the scan list and read data
@@ -438,8 +428,12 @@ class spec(object):
             for colString, colName in zip(colStrings, colNames):                 
                 # traverse the counters in the cList and append to data if not
                 # already present
-                if len(data) == 0 or not colName in data.dtype.names:
-                    data = eval(self.colString2evalString(colString, colName, arrayName='specData'))                
+                evalString = self.colString2evalString(colString, arrayName='specData')
+#                print(evalString)
+                if len(data) == 0:
+                    data = array(eval(evalString), dtype=[(colName, float)])
+                elif not colName in data.dtype.names:
+                    data = eval('append_fields(data,\'' + colName + '\',data=(' + evalString + '), dtypes=float, asrecarray=True, usemask=False)')  
             
             # add custom counters if defined
             data = self.addCustomCounters(data,scanNum)             
@@ -487,20 +481,20 @@ class spec(object):
                 for col in baseCounters:
                     # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
                     y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
-                    # add spec base counters to uncData array
-                                        
-                    uncDataStd[col] = unumpy.uarray(y, yStd)
-                    uncDataErr[col] = unumpy.uarray(y, yErr)
+                    # add spec base counters to uncData arrays
+                    
+                    uncDataStd[col] = unumpy.uarray(y, yStd+1)
+                    uncDataErr[col] = unumpy.uarray(y, yErr+1)
                                         
                 for colName, colString in zip(cList, resolvedCounters):
                     
-                    evalString = self.colString2evalString(colString, colName, arrayName='uncDataErr')
+                    evalString = self.colString2evalString(colString, arrayName='uncDataErr')
                     temp = eval(evalString)                                        
                     
                     avgData[colName] = unumpy.nominal_values(temp)
                     errData[colName] = unumpy.std_devs(temp)
                     
-                    evalString = self.colString2evalString(colString, colName, arrayName='uncDataStd')
+                    evalString = self.colString2evalString(colString, arrayName='uncDataStd')
                     temp = eval(evalString) 
                     stdData[colName] = unumpy.std_devs(temp)         
                 
@@ -637,8 +631,7 @@ class spec(object):
         elif xErr == 'err':
             xErrData = errData
         else:
-            xErrData = stdData
-            xErrData[:] = 0
+            xErrData = zeros_like(stdData)
             
         if yErr == 'std':
             yErrData = stdData
@@ -663,7 +656,7 @@ class spec(object):
             if norm2one:
                 # normalize the y-data to 1 for t < t0
                 # just makes sense for delay scans
-                beforeZero = y2plot[col][x2plot <= self.t0]
+                beforeZero      = y2plot[col][x2plot <= self.t0]
                 y2plot[col]     = y2plot[col]/mean(beforeZero)
                 yerr2plot[col]  = yerr2plot[col]/mean(beforeZero)
             
