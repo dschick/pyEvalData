@@ -481,25 +481,28 @@ class spec(object):
                 # propagate errors using the uncertainties package
                 
                 # create empty dict for uncertainties data arrays
-                uncData = {}                
+                uncDataErr = {}                
+                uncDataStd = {} 
                 
                 for col in baseCounters:
                     # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
                     y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
                     # add spec base counters to uncData array
                                         
-                    uncData[col] = unumpy.uarray(y, yStd)
+                    uncDataStd[col] = unumpy.uarray(y, yStd)
+                    uncDataErr[col] = unumpy.uarray(y, yErr)
                                         
                 for colName, colString in zip(cList, resolvedCounters):
                     
-                    evalString = self.colString2evalString(colString, colName, arrayName='uncData')
+                    evalString = self.colString2evalString(colString, colName, arrayName='uncDataErr')
                     temp = eval(evalString)                                        
                     
                     avgData[colName] = unumpy.nominal_values(temp)
                     errData[colName] = unumpy.std_devs(temp)
-                    stdData[colName] = unumpy.std_devs(temp)
                     
-                
+                    evalString = self.colString2evalString(colString, colName, arrayName='uncDataStd')
+                    temp = eval(evalString) 
+                    stdData[colName] = unumpy.std_devs(temp)         
                 
             else:
                 # no error propagation but averaging of individual scans               
@@ -535,6 +538,7 @@ class spec(object):
                 # try to create the new subgroup for the area detector data
                 scan.create_group(childName)
             except:
+                raise
                 void
             
             g5 = scan[childName] # this is the new group
@@ -543,6 +547,7 @@ class spec(object):
                 # add the data to the group
                 g5.create_dataset(dataName, data=data, compression="gzip", compression_opts=9)
             except:
+                raise
                 void
                 
             h5.flush() # write the data to the file
@@ -575,6 +580,7 @@ class spec(object):
                     
                 data =  g5[dataName][:] # get the actual dataset
             except:
+                raise
                 # if no data is available return False
                 data = False
             
