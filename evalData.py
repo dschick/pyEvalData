@@ -249,12 +249,11 @@ class spec(object):
         resolvedCounters = []
         baseCounters     = []       
         
-        for col in cList:
-            colString, resBaseCounters = self.resolveCounterName(col, specCols) 
+        for colName in cList:
+            colString, resBaseCounters = self.resolveCounterName(colName, specCols) 
             
             resolvedCounters.append(colString)
             baseCounters.extend(resBaseCounters)
-        
         
         # remove duplicates using list(set())  
         return resolvedCounters, list(set(baseCounters))
@@ -340,20 +339,22 @@ class spec(object):
         return colString
                 
     
-    def addCustomCounters(self, data, scanNum):
+    def addCustomCounters(self, specData, scanNum, baseCounters):
         """Add custom counters to the spec data array.
         This is a stub for child classes.
         
         Args:
-            data (ndarray) : Data array from the spec scan.
+            specData (ndarray) : Data array from the spec scan.
             scanNum (int)  : Scan number of the spec scan.
+            baseCounters list(str) : List of the base spec and custom counters
+                                     from the cList and xCol.
             
         Returns:
-            data (ndarray): Data array from the spec scan.
+            specData (ndarray): Updated data array from the spec scan.
         
         """
         
-        return data
+        return specData
     
     
     def avgNbinScans(self,scanList,xGrid=array([])):
@@ -395,14 +396,18 @@ class spec(object):
             except:
                 raise
                 print('Scan #' + scanNum + ' not found, skipping')
-            
+                            
             if i == 0 or len(specCols) == 0: # we need to evaluate this only once
-                # these are the base spec counters which are present in the data file
-                specCols = specData.dtype.names            
+                # these are the base spec counters which are present in the data 
+                # file plus custom counters
+                specCols = list(set(list(specData.dtype.names) + self.customCounters))
                           
                 # resolve the cList and retrieve the resolves counters and the 
                 # necessary base spec counters for error propagation
                 resolvedCounters, baseCounters = self.traverseCounters(cList, specCols)
+                
+                # add custom counters if defined
+                specData = self.addCustomCounters(specData, scanNum, baseCounters) 
                 
                 # counter names and resolved strings for further calculations
                 if self.statisticType == 'poisson' or self.propagateErrors:
@@ -422,22 +427,19 @@ class spec(object):
                 dtypes = []
                 for colName in cList:
                     dtypes.append((colName, '<f8'))
-                                        
+            
             data = array([])  
             # read data into data array
             for colString, colName in zip(colStrings, colNames):                 
                 # traverse the counters in the cList and append to data if not
                 # already present
                 evalString = self.colString2evalString(colString, arrayName='specData')
-#                print(evalString)
+
                 if len(data) == 0:
                     data = array(eval(evalString), dtype=[(colName, float)])
                 elif not colName in data.dtype.names:
-                    data = eval('append_fields(data,\'' + colName + '\',data=(' + evalString + '), dtypes=float, asrecarray=True, usemask=False)')  
+                    data = eval('append_fields(data,\'' + colName + '\',data=(' + evalString + '), dtypes=float, asrecarray=True, usemask=False)')     
             
-            # add custom counters if defined
-            data = self.addCustomCounters(data,scanNum)             
-                        
             if i > 0:
                 # this is not the first scan in the list so append the data to
                 # the concatenated data array
@@ -446,13 +448,13 @@ class spec(object):
                 concatData = data
                 
                 if len(xGrid) == 0:
-                  # if no xGrid is given we use the xData of the first scan instead
-                  xGrid =  concatData[self.xCol]    
+                    # if no xGrid is given we use the xData of the first scan instead
+                    xGrid =  concatData[self.xCol]    
         
         # remove xCol from cList and resolved counters for further treatment
         del resolvedCounters[cList.index(self.xCol)]
         cList.remove(self.xCol)
-                  
+                
         try:
             # bin the concatenated data to the xGrid
             # if a custom counter was calculated it might have a different length
@@ -460,7 +462,7 @@ class spec(object):
             # from a default spec counter and a custom counter.
             
             xGridReduced, _, _, _, _, _, _, _, _ = binData(concatData[self.xCol],concatData[self.xCol],xGrid)
-            
+                        
             # create empty arrays for averages, std and errors
             avgData=recarray(shape(xGridReduced)[0],dtype=dtypes)
             stdData=recarray(shape(xGridReduced)[0],dtype=dtypes)
@@ -481,10 +483,9 @@ class spec(object):
                 for col in baseCounters:
                     # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
                     y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
-                    # add spec base counters to uncData arrays
-                    
-                    uncDataStd[col] = unumpy.uarray(y, yStd+1)
-                    uncDataErr[col] = unumpy.uarray(y, yErr+1)
+                    # add spec base counters to uncData arrays                  
+                    uncDataStd[col] = unumpy.uarray(y, yStd)
+                    uncDataErr[col] = unumpy.uarray(y, yErr)
                                         
                 for colName, colString in zip(cList, resolvedCounters):
                     
@@ -518,7 +519,7 @@ class spec(object):
         Args:
             scanNum (int)   : Scan number of the spec scan.
             childName (str) : Name of the child where to save the data to.
-            data (ndarray)  : Data array from the Pilatus data
+            data (ndarray)  : Data array
             dataName (str)  : Name of the dataset.
         
         """
@@ -532,7 +533,6 @@ class spec(object):
                 # try to create the new subgroup for the area detector data
                 scan.create_group(childName)
             except:
-                raise
                 void
             
             g5 = scan[childName] # this is the new group
@@ -541,7 +541,6 @@ class spec(object):
                 # add the data to the group
                 g5.create_dataset(dataName, data=data, compression="gzip", compression_opts=9)
             except:
-                raise
                 void
                 
             h5.flush() # write the data to the file
@@ -574,7 +573,6 @@ class spec(object):
                     
                 data =  g5[dataName][:] # get the actual dataset
             except:
-                raise
                 # if no data is available return False
                 data = False
             
@@ -1431,6 +1429,8 @@ class areaDetector(spec):
         (IntensityNormalizer[xrayutilities])
                                    : Instance of the IntensityNormalizerr class 
                                      of the xrayutilities.
+        UB (ndarray[float])        : Transformation matrix UB for 
+                                     q-hkl tranformation in xrayutilities
         delta (List[float])        : Offset angles of the goniometer axis: 
                                      Theta, Two_Theta
                                      default is [0,0].
@@ -1450,44 +1450,82 @@ class areaDetector(spec):
     UB            = ''
     delta         = [0, 0]
     motorNames    = ['Theta', 'TwoTheta']
-    customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
+    customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap', 'H', 'K', 'L', 'HMap', 'KMap', 'LMap']
     plotLog       = True
     
     def __init__(self, name, filePath, specFileExt=''):
         super().__init__(name, filePath, specFileExt)
     
-    def addCustomCounters(self,data,scanNum):
+    def addCustomCounters(self, specData, scanNum, baseCounters):
         """Add custom counters to the spec data array.
-        Here we add the Qx, Qy, Qz maps and axises.
+        Here we add the Qx, Qy, Qz maps and axises which by default have a 
+        different length than the spec data array. In this case all default 
+        spec counters are removed and only custom counters are given.
         
         Args:
-            data (ndarray) : Data array from the spec scan.
-            scanNum (int)  : Scan number of the spec scan.
+            specData (ndarray)     : Data array from the spec scan.
+            scanNum (int)          : Scan number of the spec scan.
+            baseCounters list(str) : List of the base spec and custom counters
+                                     from the cList and xCol.
             
         Returns:
-            data (ndarray): Data array from the spec scan.
+            specData (ndarray): Updated data array from the spec scan.
         
         """
         
-        cList = self.getClist() # get the current counter list        
-        cList.append(self.xCol) # process also the xCol        
-        
-        #check if any custom counter is in cList + xCol
-        if set(cList) & set(self.customCounters):
+        #check if any custom counter is in the baseCounters list
+        usedCustomCounters = set(baseCounters) & set(self.customCounters)
+        if usedCustomCounters:
             
-            # calculate the Q data for the current scan number            
-            Qmap, qx, qy, qz = self.convAreaScan2Q(scanNum)
+            if usedCustomCounters & set(['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']):
+                # calculate the Q data for the current scan number            
+                Qmap, qx, qy, qz = self.convAreaScan2Q(scanNum)
+                
+                # do the integration along the different axises
+                QxMap = trapz(trapz(Qmap, qy, axis=1), qz, axis=1)
+                QyMap = trapz(trapz(Qmap, qx, axis=0), qz, axis=1)
+                QzMap = trapz(trapz(Qmap, qx, axis=0), qy, axis=0)
             
-            # do the integration along the different axises
-            QxMap = trapz(trapz(Qmap, qy, axis=1), qz, axis=1)#sum(sum(Qmap, axis=1),axis=1)
-            QyMap = trapz(trapz(Qmap, qx, axis=0), qz, axis=1)#sum(sum(Qmap, axis=0),axis=1)
-            QzMap = trapz(trapz(Qmap, qx, axis=0), qy, axis=0)#sum(sum(Qmap, axis=0),axis=0)
-                       
-            for col in set(cList) & set(self.customCounters):
-                # append the custom counters to data array
-                data = append_fields(data, col , data=eval(col) , dtypes=float, asrecarray=True)
+            if usedCustomCounters & set(['H', 'K', 'L', 'HMap', 'KMap', 'LMap']):
+                # calculate the HKL data for the current scan number 
+                HKLmap, H, K, L = self.convAreaScan2HKL(scanNum)
+                
+                # do the integration along the different axises
+                HMap = trapz(trapz(HKLmap, K, axis=1), L, axis=1)
+                KMap = trapz(trapz(HKLmap, H, axis=0), L, axis=1)
+                LMap = trapz(trapz(HKLmap, H, axis=0), K, axis=0)
             
-        return data    
+            sizeValid = True
+            
+            for customCounter in usedCustomCounters:
+                
+                if len(eval(customCounter)) != len(specData):
+                    # the length of the custom counters is different from the
+                    # spec data array, so we cannot append and need to init an
+                    # empty spec data array
+                    sizeValid = False
+            
+            if not sizeValid:
+                specData = array([])
+                print('Custom counter has a different length than the spec scan!')
+                print('Cannot use default spec counters anymore!')
+            
+            for customCounter in usedCustomCounters:
+                if len(specData) == 0:
+                    specData = array(eval(customCounter), dtype=[(customCounter, float)])
+                else:
+                    try:
+                        # in case the custom counter has the same name as a
+                        # default spec base counter
+                        specData[customCounter] = eval(customCounter)
+                    except:
+                        if len(eval(customCounter)) == len(specData):
+                            # append the custom counters to data array
+                            specData = append_fields(specData, customCounter , data=eval(customCounter) , dtypes=float, asrecarray=True, usemask=False)
+                        else:
+                            print('Adding a custom counter with a different length does not work!')
+
+        return specData    
     
     def readRawScan(self,scanNum):
         """Read the raw data of an area detector scan including.
