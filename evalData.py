@@ -1450,7 +1450,7 @@ class areaDetector(spec):
     UB            = ''
     delta         = [0, 0]
     motorNames    = ['Theta', 'TwoTheta']
-    customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap', 'H', 'K', 'L', 'HMap', 'KMap', 'LMap']
+    customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap', 'Hs', 'Ks', 'Ls', 'HMap', 'KMap', 'LMap']
     plotLog       = True
     
     def __init__(self, name, filePath, specFileExt=''):
@@ -1486,14 +1486,14 @@ class areaDetector(spec):
                 QyMap = trapz(trapz(Qmap, qx, axis=0), qz, axis=1)
                 QzMap = trapz(trapz(Qmap, qx, axis=0), qy, axis=0)
             
-            if usedCustomCounters & set(['H', 'K', 'L', 'HMap', 'KMap', 'LMap']):
+            if usedCustomCounters & set(['Hs', 'Ks', 'Ls', 'HMap', 'KMap', 'LMap']):
                 # calculate the HKL data for the current scan number 
-                HKLmap, H, K, L = self.convAreaScan2HKL(scanNum)
+                HKLmap, Hs, Ks, Ls = self.convAreaScan2HKL(scanNum)
                 
                 # do the integration along the different axises
-                HMap = trapz(trapz(HKLmap, K, axis=1), L, axis=1)
-                KMap = trapz(trapz(HKLmap, H, axis=0), L, axis=1)
-                LMap = trapz(trapz(HKLmap, H, axis=0), K, axis=0)
+                HMap = trapz(trapz(HKLmap, Ks, axis=1), Ls, axis=1)
+                KMap = trapz(trapz(HKLmap, Hs, axis=0), Ls, axis=1)
+                LMap = trapz(trapz(HKLmap, Hs, axis=0), Ks, axis=0)
             
             sizeValid = True
             
