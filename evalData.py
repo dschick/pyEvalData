@@ -1264,8 +1264,6 @@ class spec(object):
                         ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1, color=plt[0].get_color())
                         ax2.errorbar(x2plot-offsetX,y2plot,fmt='o', xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
                         legend(frameon=True,loc=0,numpoints=1)
-                        xlabel('Delay [ps]')
-                        ylabel('Rel. Change')
                         
                         if xlims:
                             xlim(xlims)
