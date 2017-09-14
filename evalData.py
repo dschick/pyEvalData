@@ -579,7 +579,7 @@ class spec(object):
         return data
         
         
-    def plotScans(self,scanList, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, labelText='', titleText='', skipPlot=False, gridOn=True, yText='', xText=''):
+    def plotScans(self,scanList, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, labelText='', titleText='', skipPlot=False, gridOn=True, yText='', xText='', fmt='-o'):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -605,6 +605,7 @@ class spec(object):
             gridOn (Optional[bool])     : Add grid to plot - default is True.
             yText (Optional[str])       : y-Label of the plot - defaults is none. 
             xText (Optional[str])       : x-Label of the plot - defaults is none. 
+            fmt (Optional[str])         : format string of the plot - defaults is -o. 
             
         Returns:
             y2plot (OrderedDict)    : y-data which was plotted.
@@ -671,7 +672,7 @@ class spec(object):
             
             if not skipPlot:
                 # plot the errorbar for each counter
-                errorbar(x2plot,y2plot[col],fmt='-o',label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
+                errorbar(x2plot,y2plot[col],fmt=fmt,label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
         
         if not skipPlot:
             # add a legend, labels, title and set the limits and grid
@@ -812,7 +813,7 @@ class spec(object):
         return xx, yy, zz
             
     
-    def plotScanSequence(self,scanSequence, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std',norm2one=False, sequenceType='', labelText='', titleText='', skipPlot=False, gridOn=True, yText='',xText=''):
+    def plotScanSequence(self,scanSequence, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std',norm2one=False, sequenceType='', labelText='', titleText='', skipPlot=False, gridOn=True, yText='',xText='', fmt='-o'):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -842,6 +843,7 @@ class spec(object):
             gridOn (Optional[bool])     : Add grid to plot - default is True.
             yText (Optional[str])       : y-Label of the plot - defaults is none.
             xText (Optional[str])       : x-Label of the plot - defaults is none.
+            fmt (Optional[str])         : format string of the plot - defaults is -o. 
             
         Returns:
             sequenceData (OrderedDict) : Dictionary of the averaged scan data.
@@ -883,6 +885,8 @@ class spec(object):
                     lt = str.format('{:.2f}  mm', parameter)
                 elif sequenceType == 'voltage':
                     lt = str.format('{:.2f}  V', parameter)
+                elif sequenceType == 'scans':
+                    lt = str(scanList)
                 elif sequenceType == 'none':
                     #no parameter for single scans 
                     lt = ''
@@ -908,7 +912,8 @@ class spec(object):
                                                             skipPlot=skipPlot,
                                                             gridOn=gridOn,
                                                             yText=yText,
-                                                            xText=xText
+                                                            xText=xText,
+                                                            fmt=fmt
                                                             )
                                                             
             if self.xCol not in sequenceData.keys():
@@ -991,7 +996,7 @@ class spec(object):
         return self.fitScanSequence(scanSequence,mod,pars,ylims,xlims,figSize, xGrid, yErr, xErr, norm2one, 'none', labelText, titleText, yText, xText, select, fitReport, showSingle, weights, fitMethod, offsetT0, plotSeparate, gridOn)
         
     
-    def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True):
+    def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True, lastResAsPar=False, sequenceData=[]):
         """Fit, plot, and return the data of a scan sequence.
         
         Args:
@@ -1031,6 +1036,10 @@ class spec(object):
             plotSeparate (Optional[bool]):A single plot for each counter
                                           default False.
             gridOn (Optional[bool])     : Add grid to plot - default is True.
+            lastResAsPar (Optional[bool]): Use the last fit result as start 
+                                           values for next fit - default is False.
+            sequenceData (Optional[ndarray]): actual exp. data are externally given.
+                                              default is empty
             
             
         Returns:
@@ -1076,20 +1085,36 @@ class spec(object):
             res[counter]['fit']    = []
         
         
-        # get the sequence data and parameters
-        sequenceData, parameters, names, labelTexts = self.plotScanSequence(
-                                            scanSequence, 
-                                            ylims = ylims, 
-                                            xlims = xlims, 
-                                            figSize = figSize, 
-                                            xGrid = xGrid, 
-                                            yErr = yErr, 
-                                            xErr = xErr,
-                                            norm2one = norm2one, 
-                                            sequenceType = sequenceType, 
-                                            labelText = labelText, 
-                                            titleText = titleText, 
-                                            skipPlot=True)        
+        if len(sequenceData) > 0:
+            # get only the parameters
+            _, parameters, names, labelTexts = self.plotScanSequence(
+                                                scanSequence, 
+                                                ylims = ylims, 
+                                                xlims = xlims, 
+                                                figSize = figSize, 
+                                                xGrid = xGrid, 
+                                                yErr = yErr, 
+                                                xErr = xErr,
+                                                norm2one = norm2one, 
+                                                sequenceType = sequenceType, 
+                                                labelText = labelText, 
+                                                titleText = titleText, 
+                                                skipPlot=True)  
+        else:
+            # get the sequence data and parameters
+            sequenceData, parameters, names, labelTexts = self.plotScanSequence(
+                                                scanSequence, 
+                                                ylims = ylims, 
+                                                xlims = xlims, 
+                                                figSize = figSize, 
+                                                xGrid = xGrid, 
+                                                yErr = yErr, 
+                                                xErr = xErr,
+                                                norm2one = norm2one, 
+                                                sequenceType = sequenceType, 
+                                                labelText = labelText, 
+                                                titleText = titleText, 
+                                                skipPlot=True)        
         
         # this is the number of different counters        
         numSubplots = len(self.getClist()) 
@@ -1132,12 +1157,19 @@ class spec(object):
                         _mod = mod[k-1]
                     else:
                         _mod = mod
-                        
-                    if isinstance(pars, (list, tuple)):  
-                        _pars = pars[k-1]
-                    else:
-                        _pars = pars
                     
+                    
+                    if lastResAsPar and i > 0:
+                        # use last results as start values for pars
+                        _pars = pars
+                        for pname, par in pars.items():
+                            _pars[pname].value  = res[counter][pname][i-1]
+                    else:
+                        if isinstance(pars, (list, tuple)):  
+                            _pars = pars[k-1]
+                        else:
+                            _pars = pars
+                        
                     # get the actual y-data and -errors for plotting and fitting
                     y2plot = sequenceData[counter][i]
                     yerr2plot = sequenceData[counter + 'Err'][i]
