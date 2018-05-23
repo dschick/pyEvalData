@@ -48,3 +48,5 @@ __pycache__/
 
 #ipython checkpoints
 .ipynb_checkpoints/
+
+*egg-info*
