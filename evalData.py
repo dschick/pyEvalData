@@ -357,7 +357,7 @@ class spec(object):
         return specData
     
     
-    def avgNbinScans(self,scanList,xGrid=array([])):
+    def avgNbinScans(self,scanList,xGrid=array([]), binning=True):
         """Averages data defined by the cunter list, cList, onto an optional 
         xGrid. If no xGrid is given the x-axis data of the first scan in the 
         list is used instead.
@@ -460,9 +460,10 @@ class spec(object):
             # if a custom counter was calculated it might have a different length
             # than the spec counters which will result in an error while binning data
             # from a default spec counter and a custom counter.
-            
-            xGridReduced, _, _, _, _, _, _, _, _ = binData(concatData[self.xCol],concatData[self.xCol],xGrid)
-                        
+            if binning:
+                xGridReduced, _, _, _, _, _, _, _, _ = binData(concatData[self.xCol],concatData[self.xCol],xGrid)
+            else:
+                xGridReduced = xGrid
             # create empty arrays for averages, std and errors
             avgData=recarray(shape(xGridReduced)[0],dtype=dtypes)
             stdData=recarray(shape(xGridReduced)[0],dtype=dtypes)
@@ -472,39 +473,48 @@ class spec(object):
                 binStat = 'sum'
             else: # gauss
                 binStat = 'mean'
-                            
-            if self.statisticType == 'poisson' or self.propagateErrors:
-                # propagate errors using the uncertainties package
-                
-                # create empty dict for uncertainties data arrays
-                uncDataErr = {}                
-                uncDataStd = {} 
-                
-                for col in baseCounters:
-                    # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
-                    y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
-                    # add spec base counters to uncData arrays                  
-                    uncDataStd[col] = unumpy.uarray(y, yStd)
-                    uncDataErr[col] = unumpy.uarray(y, yErr)
-                                        
-                for colName, colString in zip(cList, resolvedCounters):
+            
+            if binning:                
+                if self.statisticType == 'poisson' or self.propagateErrors:
+                    # propagate errors using the uncertainties package
                     
-                    evalString = self.colString2evalString(colString, arrayName='uncDataErr')
-                    temp = eval(evalString)                                        
+                    # create empty dict for uncertainties data arrays
+                    uncDataErr = {}                
+                    uncDataStd = {}                     
                     
-                    avgData[colName] = unumpy.nominal_values(temp)
-                    errData[colName] = unumpy.std_devs(temp)
                     
-                    evalString = self.colString2evalString(colString, arrayName='uncDataStd')
-                    temp = eval(evalString) 
-                    stdData[colName] = unumpy.std_devs(temp)         
-                
+                    for col in baseCounters:
+                        # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
+                        y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
+                        # add spec base counters to uncData arrays                  
+                        uncDataStd[col] = unumpy.uarray(y, yStd)
+                        uncDataErr[col] = unumpy.uarray(y, yErr)
+                                            
+                    for colName, colString in zip(cList, resolvedCounters):
+                        
+                        evalString = self.colString2evalString(colString, arrayName='uncDataErr')
+                        temp = eval(evalString)                                        
+                        
+                        avgData[colName] = unumpy.nominal_values(temp)
+                        errData[colName] = unumpy.std_devs(temp)
+                        
+                        evalString = self.colString2evalString(colString, arrayName='uncDataStd')
+                        temp = eval(evalString) 
+                        stdData[colName] = unumpy.std_devs(temp)         
+                    
+                else:
+                    # no error propagation but averaging of individual scans
+                    for col in cList:
+                        # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
+                        avgData[col], avgData[self.xCol], errData[col], errData[self.xCol], stdData[col], stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
             else:
-                # no error propagation but averaging of individual scans               
-                for col in cList:
-                    # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
-                    avgData[col], avgData[self.xCol], errData[col], errData[self.xCol], stdData[col], stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
-                
+                for col in cList:      
+                    avgData[col] = concatData[col]
+                    avgData[self.xCol] = concatData[self.xCol]
+                    errData[col] = 0
+                    errData[self.xCol] = 0
+                    stdData[col] = 0
+                    stdData[self.xCol] = 0
                
         except:
             raise
@@ -579,7 +589,10 @@ class spec(object):
         return data
         
         
-    def plotScans(self,scanList, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, labelText='', titleText='', skipPlot=False, gridOn=True, yText='', xText='', fmt='-o'):
+    def plotScans(self,scanList, ylims=[], xlims=[], figSize=[], xGrid=[], 
+                  yErr='std', xErr = 'std', norm2one=False, binning=True, 
+                  labelText='', titleText='', skipPlot=False, gridOn=True, 
+                  yText='', xText='', fmt='-o'):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -622,7 +635,8 @@ class spec(object):
         yerr2plot = collections.OrderedDict()
         
         # get the averaged data, stds and errors for the scan list and the xGrid
-        avgData, stdData, errData, name = self.avgNbinScans(scanList, xGrid=xGrid)
+        avgData, stdData, errData, name = self.avgNbinScans(
+                                        scanList, xGrid=xGrid, binning=binning)
         
         # set the error data
         if xErr == 'std':
@@ -813,7 +827,11 @@ class spec(object):
         return xx, yy, zz
             
     
-    def plotScanSequence(self,scanSequence, ylims=[], xlims=[], figSize=[], xGrid=[], yErr='std', xErr = 'std',norm2one=False, sequenceType='', labelText='', titleText='', skipPlot=False, gridOn=True, yText='',xText='', fmt='-o'):
+    def plotScanSequence(self,scanSequence, ylims=[], xlims=[], figSize=[], 
+                         xGrid=[], yErr='std', xErr = 'std',norm2one=False, 
+                         binning=True, sequenceType='', labelText='', 
+                         titleText='', skipPlot=False, gridOn=True, yText='',
+                         xText='', fmt='-o'):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -906,7 +924,8 @@ class spec(object):
                                                             xGrid=xGrid, 
                                                             yErr=yErr, 
                                                             xErr=xErr, 
-                                                            norm2one=norm2one, 
+                                                            norm2one=norm2one,
+                                                            binning=binning,
                                                             labelText=lt,
                                                             titleText=titleText, 
                                                             skipPlot=skipPlot,
@@ -943,7 +962,8 @@ class spec(object):
         return sequenceData, parameters, names, labelTexts
             
             
-    def exportScanSequence(self,scanSequence,path,fileName, yErr='std', xErr = 'std', xGrid=[], norm2one=False):
+    def exportScanSequence(self,scanSequence,path,fileName, yErr='std', 
+                           xErr = 'std', xGrid=[], norm2one=False, binning=True):
         """Exports spec data for each scan list in the sequence as individual file.
         
         Args:
@@ -969,6 +989,7 @@ class spec(object):
                                                     yErr = yErr,
                                                     xErr = xErr,
                                                     norm2one = norm2one,
+                                                    binning=binning,
                                                     skipPlot = True)
         
         for i, labelText in enumerate(labelTexts): 
@@ -987,16 +1008,33 @@ class spec(object):
             # save data with header to text file
             savetxt('%s/%s_%s.dat' % (path,fileName,"".join(x for x in labelText if x.isalnum())), r_[saveData].T, delimiter = '\t', header=header)
             
-    def fitScans(self,scans,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='text', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True):
+    def fitScans(self,scans,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], 
+                 yErr='std', xErr = 'std', norm2one=False, binning=True, 
+                 sequenceType='text', labelText='', titleText='', yText='', 
+                 xText='', select='', fitReport=0, showSingle=False, 
+                 weights=False, fitMethod='leastsq', offsetT0 = False, 
+                 plotSeparate = False, gridOn = True):
         """Fit, plot, and return the data of scans.
             
             This is just a wrapper for the fitScanSequence method
         """
         scanSequence = [[scans, '']]
-        return self.fitScanSequence(scanSequence,mod,pars,ylims,xlims,figSize, xGrid, yErr, xErr, norm2one, 'none', labelText, titleText, yText, xText, select, fitReport, showSingle, weights, fitMethod, offsetT0, plotSeparate, gridOn)
+        return self.fitScanSequence(scanSequence,mod,pars,ylims,xlims,figSize, 
+                                    xGrid, yErr, xErr, norm2one, binning, 
+                                    'none', labelText, titleText, yText, 
+                                    xText, select, fitReport, showSingle, 
+                                    weights, fitMethod, offsetT0, plotSeparate, 
+                                    gridOn)
         
     
-    def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], yErr='std', xErr = 'std', norm2one=False, sequenceType='', labelText='', titleText='', yText='', xText='', select='', fitReport=0, showSingle=False, weights=False, fitMethod='leastsq', offsetT0 = False, plotSeparate = False, gridOn = True, lastResAsPar=False, sequenceData=[]):
+    def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], 
+                        xGrid=[], yErr='std', xErr = 'std', norm2one=False, 
+                        binning=True, sequenceType='', labelText='', 
+                        titleText='', yText='', xText='', select='', 
+                        fitReport=0, showSingle=False, weights=False, 
+                        fitMethod='leastsq', offsetT0 = False, 
+                        plotSeparate = False, gridOn = True, 
+                        lastResAsPar=False, sequenceData=[]):
         """Fit, plot, and return the data of a scan sequence.
         
         Args:
@@ -1096,6 +1134,7 @@ class spec(object):
                                                 yErr = yErr, 
                                                 xErr = xErr,
                                                 norm2one = norm2one, 
+                                                binning = True, 
                                                 sequenceType = sequenceType, 
                                                 labelText = labelText, 
                                                 titleText = titleText, 
@@ -1111,6 +1150,7 @@ class spec(object):
                                                 yErr = yErr, 
                                                 xErr = xErr,
                                                 norm2one = norm2one, 
+                                                binning = True,
                                                 sequenceType = sequenceType, 
                                                 labelText = labelText, 
                                                 titleText = titleText, 
