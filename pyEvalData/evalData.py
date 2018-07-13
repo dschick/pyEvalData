@@ -885,7 +885,6 @@ class spec(object):
             # traverse the scan sequence
             
             parameters.append(parameter)
-            
             # format the parameter as label text of this plot if no label text 
             # is given
             if len(labelText) == 0:
@@ -903,6 +902,8 @@ class spec(object):
                     lt = str.format('{:.2f}  mm', parameter)
                 elif sequenceType == 'voltage':
                     lt = str.format('{:.2f}  V', parameter)
+                elif sequenceType == 'current':
+                    lt = str.format('{:.2f}  A', parameter)
                 elif sequenceType == 'scans':
                     lt = str(scanList)
                 elif sequenceType == 'none':
