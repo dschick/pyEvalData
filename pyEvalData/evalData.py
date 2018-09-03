@@ -1019,7 +1019,7 @@ class spec(object):
                  sequenceType='text', labelText='', titleText='', yText='', 
                  xText='', select='', fitReport=0, showSingle=False, 
                  weights=False, fitMethod='leastsq', offsetT0 = False, 
-                 plotSeparate = False, gridOn = True, fmt='-o'):
+                 plotSeparate = False, gridOn = True, fmt='o'):
         """Fit, plot, and return the data of scans.
             
             This is just a wrapper for the fitScanSequence method
@@ -1040,7 +1040,7 @@ class spec(object):
                         fitReport=0, showSingle=False, weights=False, 
                         fitMethod='leastsq', offsetT0 = False, 
                         plotSeparate = False, gridOn = True, 
-                        lastResAsPar=False, sequenceData=[], fmt='-o'):
+                        lastResAsPar=False, sequenceData=[], fmt='o'):
         """Fit, plot, and return the data of a scan sequence.
         
         Args:
