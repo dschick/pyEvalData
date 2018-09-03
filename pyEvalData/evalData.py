@@ -89,6 +89,8 @@ class spec(object):
                         'pi', 'exp', 'log', 'log10']
     statisticType    = 'gauss'
     propagateErrors  = True
+    removeOutliners  = False
+    sigmaOutliners   = 0.1
     
     def __init__(self, name, filePath, specFileExt=''):
         """Initialize the class, set all file names and load the spec file. 
@@ -358,7 +360,7 @@ class spec(object):
     
     
     def avgNbinScans(self,scanList,xGrid=array([]), binning=True):
-        """Averages data defined by the cunter list, cList, onto an optional 
+        """Averages data defined by the counter list, cList, onto an optional 
         xGrid. If no xGrid is given the x-axis data of the first scan in the 
         list is used instead.
         
@@ -686,7 +688,10 @@ class spec(object):
             
             if not skipPlot:
                 # plot the errorbar for each counter
-                errorbar(x2plot,y2plot[col],fmt=fmt,label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
+                if (xErr == 'none') & (yErr == 'none'):
+                    plot(x2plot,y2plot[col],fmt,label=lt)
+                else:
+                    errorbar(x2plot,y2plot[col],fmt=fmt,label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
         
         if not skipPlot:
             # add a legend, labels, title and set the limits and grid
