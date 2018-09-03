@@ -1019,7 +1019,7 @@ class spec(object):
                  sequenceType='text', labelText='', titleText='', yText='', 
                  xText='', select='', fitReport=0, showSingle=False, 
                  weights=False, fitMethod='leastsq', offsetT0 = False, 
-                 plotSeparate = False, gridOn = True):
+                 plotSeparate = False, gridOn = True, fmt='-o'):
         """Fit, plot, and return the data of scans.
             
             This is just a wrapper for the fitScanSequence method
@@ -1030,7 +1030,7 @@ class spec(object):
                                     'none', labelText, titleText, yText, 
                                     xText, select, fitReport, showSingle, 
                                     weights, fitMethod, offsetT0, plotSeparate, 
-                                    gridOn)
+                                    gridOn, fmt=fmt)
         
     
     def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], 
@@ -1040,7 +1040,7 @@ class spec(object):
                         fitReport=0, showSingle=False, weights=False, 
                         fitMethod='leastsq', offsetT0 = False, 
                         plotSeparate = False, gridOn = True, 
-                        lastResAsPar=False, sequenceData=[]):
+                        lastResAsPar=False, sequenceData=[], fmt='-o'):
         """Fit, plot, and return the data of a scan sequence.
         
         Args:
@@ -1084,6 +1084,7 @@ class spec(object):
                                            values for next fit - default is False.
             sequenceData (Optional[ndarray]): actual exp. data are externally given.
                                               default is empty
+            fmt (Optional[str])         : format string of the plot - defaults is -o. 
             
             
         Returns:
@@ -1268,7 +1269,7 @@ class spec(object):
                     # plot the fit and the data as errorbars
                     x2plotFit = linspace(min(x2plot), max(x2plot), 1000)
                     plt = plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1)
-                    errorbar(x2plot-offsetX,y2plot,fmt='o', xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
+                    errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
                     
                     if len(parameters) > 5:
                         # move the legend outside the plot for more than 
@@ -1340,7 +1341,7 @@ class spec(object):
                         ax2 = subplot(gs[1])
                         x2plotFit = linspace(min(x2plot), max(x2plot), 1000)
                         ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1, color=plt[0].get_color())
-                        ax2.errorbar(x2plot-offsetX,y2plot,fmt='o', xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
+                        ax2.errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
                         legend(frameon=True,loc=0,numpoints=1)
                         
                         if xlims:
