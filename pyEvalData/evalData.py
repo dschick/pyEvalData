@@ -86,7 +86,7 @@ class spec(object):
     customCounters   = []
     mathKeys         = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs', 
                         'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 
-                        'pi', 'exp', 'log', 'log10']
+                        'pi', 'exp', 'log', 'log10', 'sqrt']
     statisticType    = 'gauss'
     propagateErrors  = True
     removeOutliners  = False
@@ -383,7 +383,13 @@ class spec(object):
                 
         # get the counters which should be evaluated
         cList = self.getClist()
+        if not cList:
+            raise Exception('No cList is defined. Do not know what to plot!')
+            return
         # process also the xCol as counter in order to allow for newly defined xCols
+        if not self.xCol:
+            raise Exception('No xCol is defined. Do not know what to plot!')
+            return
         if not self.xCol in cList:
             cList.append(self.xCol)
         
@@ -1267,7 +1273,7 @@ class spec(object):
                         subplot( (numSubplots+numSubplots%2)/2,2,k)
                     
                     # plot the fit and the data as errorbars
-                    x2plotFit = linspace(min(x2plot), max(x2plot), 1000)
+                    x2plotFit = linspace(min(x2plot), max(x2plot), 10000)
                     plt = plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1)
                     errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
                     
