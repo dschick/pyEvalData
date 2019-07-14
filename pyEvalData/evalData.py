@@ -38,9 +38,10 @@ Pilatus ((C) Dectris Ltd.) .tiff files and further convert them to q-space
 using the xrayutility package.
 """
 
+
 class spec(object):
     """Read, average, plot, and fit spec data.    
-    
+
     Attributes:
         name (str)              : Name of the spec file.
         specFileName (str)      : Full file name of the spec file.
@@ -66,175 +67,172 @@ class spec(object):
         statisticType  (str)    : 'gauss' for normal averaging, 
                                   'poisson' for counting statistics
         propagateErrors  (bool) : whether to propagate errors or not
-    
+
     """
-    
+
     # properties
-    name             = ''
-    specFileName     = ''
-    h5FileName       = ''
-    filePath         = './'
-    hdf5Path         = './'
-    specFile         = '' 
+    name = ''
+    specFileName = ''
+    h5FileName = ''
+    filePath = './'
+    hdf5Path = './'
+    specFile = ''
     updateBeforeRead = False
-    overwriteHDF5    = False
-    cList            = []
-    cDef             = {}
-    xCol             = ''
-    t0               = 0
-    motorNames       = ['Theta', 'TwoTheta'] # must be the same order as for xu experiment configuration (first sample axis, last detector axis)
-    customCounters   = []
-    mathKeys         = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs', 
-                        'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 
+    overwriteHDF5 = False
+    cList = []
+    cDef = {}
+    xCol = ''
+    t0 = 0
+    # must be the same order as for xu experiment configuration (first sample axis, last detector axis)
+    motorNames = ['Theta', 'TwoTheta']
+    customCounters = []
+    mathKeys = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs',
+                        'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
                         'pi', 'exp', 'log', 'log10', 'sqrt']
-    statisticType    = 'gauss'
-    propagateErrors  = True
-    removeOutliners  = False
-    sigmaOutliners   = 0.1
-    
+    statisticType = 'gauss'
+    propagateErrors = True
+    removeOutliners = False
+    sigmaOutliners = 0.1
+
     def __init__(self, name, filePath, specFileExt=''):
         """Initialize the class, set all file names and load the spec file. 
-        
+
         Args:
             name (str)                  : Name of the spec file.
             filePath (str)              : Base path of the spec and HDF5 files.
             specFileExt (Optional[str]) : File extension of the spec file, 
                                           default is none.        
-        
+
         """
-        self.name         = name
+        self.name = name
         self.specFileName = self.name + specFileExt
-        self.h5FileName   = self.name + '.h5'
-        self.filePath     = filePath
-        # load the spec data        
-        self.loadSpec()        
-        
-    
+        self.h5FileName = self.name + '.h5'
+        self.filePath = filePath
+        # load the spec data
+        self.loadSpec()
+
     def loadSpec(self):
         """Load the spec data either from the hdf5 or from the spec file."""
-        # check if the hdf5 file exists        
+        # check if the hdf5 file exists
         if not os.path.exists(self.hdf5Path + self.h5FileName):
-            # no hdf5 file found --> read the spec file            
+            # no hdf5 file found --> read the spec file
             self.updateSpec()
-            
-    
+
     def updateSpec(self):
         """Update the current spec file if already in memory.
         Otherwise read it and write its content to the hdf5 file.
-        
+
         """
         try:
             # try if spec file object already exist
-            self.specFile.Update()  
+            self.specFile.Update()
         except:
             # load the spec file from disc
-            self.specFile = xu.io.SPECFile(self.specFileName, path=self.filePath)
-            self.specFile.Update() 
-            
+            self.specFile = xu.io.SPECFile(
+                self.specFileName, path=self.filePath)
+            self.specFile.Update()
+
         if not os.path.exists(os.path.join(self.hdf5Path, self.h5FileName)) or self.overwriteHDF5:
             # save the new or changed spec file content to the hdf5 file
             # if it does not exist
-            self.specFile.Save2HDF5(os.path.join(self.hdf5Path, self.h5FileName))
-        
-    
-    def getScanData(self,scanNum):
+            self.specFile.Save2HDF5(os.path.join(
+                self.hdf5Path, self.h5FileName))
+
+    def getScanData(self, scanNum):
         """Read the spec data for a given scan number from the hdf5 file. 
-        
+
         Args:
             scanNum (int) : Number of the spec scan.
-            
+
         Returns:
             motors (ndarray): Motors of the spec scan.
             data   (ndarray): Counters of the spec scan.
-        
+
         """
-        
+
         # if set, update the spec and hdf5 files before reading the scan data
         if self.updateBeforeRead:
-            self.updateSpec()   
-            
+            self.updateSpec()
+
         # read the scan from the hdf5 file
         try:
             # if no motorNames are given motors are set as empty array
             if len(self.motorNames) == 0:
                 # read the data
-                data = xu.io.geth5_scan(os.path.join(self.hdf5Path, self.h5FileName), scanNum)
+                data = xu.io.geth5_scan(os.path.join(
+                    self.hdf5Path, self.h5FileName), scanNum)
                 motors = []
             else:
                 # read the data providing the motorNames
                 motors, data = xu.io.geth5_scan(os.path.join(self.hdf5Path, self.h5FileName),
                                                 scanNum, *self.motorNames)
-                        
+
             # convert the data array to float64 since lmfit works better
             # is there a smarter way to do so?
             dt = data.dtype
             dt = dt.descr
             for i, thisType in enumerate(dt):
-                dt[i] = (dt[i][0], 'float64')                
+                dt[i] = (dt[i][0], 'float64')
             dt = np.dtype(dt)
-            data = data.astype(dt)            
-            
+            data = data.astype(dt)
+
             # convert list of motors to recarray
             motors = np.rec.array(motors, names=self.motorNames)
-        except Exception as e: 
+        except Exception as e:
             print(e)
             print('Scan #{0:.0f} not present in hdf5 file!'.format(scanNum))
             motors = []
-            data   = []
-                
+            data = []
+
         return motors, data
-          
-    
+
     def getClist(self):
         """Return the list of counters to evaluate as list even if they are 
         provided as Dict by the user.
         This method is only for backward compatibility to older versions.
-            
+
         Returns:
             cList (List[str]): List of counter names to evaluate.
-        
+
         """
-        
-        if isinstance(self.cList,dict):
+
+        if isinstance(self.cList, dict):
             # the cList property is a dict, so retrun its keys as list
             cList = list(self.cList.keys())
         else:
             cList = list(self.cList)
-               
+
         return list(set(cList))
-    
-    
+
     def getLastFigNumber(self):
         """Return the last figure number of all opened figures for plotting
         data in the same figure during for-loops.
-            
+
         Returns:
             figNumber (int): Last figure number of all opened figures.
-        
+
         """
-        
+
         try:
             # get the number of all opened figures
             figNumber = mpl._pylab_helpers.Gcf.get_active().num
         except:
             # there are no figures open
             figNumber = 1
-            
-        return figNumber   
-    
-    
+
+        return figNumber
+
     def getNextFigNumber(self):
         """Return the number of the next figure for plotting data in the 
         same figure during for-loops.
-            
+
         Returns:
             nextFigureNum (int): Next figure number of all opened figures.
-        
+
         """
-            
+
         return self.getLastFigNumber() + 1
-    
-    
+
     def traverseCounters(self, cList, specCols=''):
         """Traverse all counters and replace all predefined counter definitions.
         Returns also the included spec base counters for error propagation.
@@ -242,89 +240,91 @@ class spec(object):
         Args:
             cList    (list) : Initial counter list.
             specCols (list) : Counters in spec file.
-            
+
         Returns:
             resolvedCounters (list): Resolved counters.
             baseCounters (list)    : Base counters.
-        
+
         """
-                
+
         resolvedCounters = []
-        baseCounters     = []       
-        
+        baseCounters = []
+
         for colName in cList:
-            colString, resBaseCounters = self.resolveCounterName(colName, specCols) 
-            
+            colString, resBaseCounters = self.resolveCounterName(
+                colName, specCols)
+
             resolvedCounters.append(colString)
             baseCounters.extend(resBaseCounters)
-        
-        # remove duplicates using list(set())  
+
+        # remove duplicates using list(set())
         return resolvedCounters, list(set(baseCounters))
-    
-        
+
     def resolveCounterName(self, colName, specCols=''):
         """Replace all predefined counter definitions in a counter name.
         The function works recursively.
 
         Args:
             colName (str) : Initial counter string.
-            
+
         Returns:l
             colString (str): Resolved counter string.
-        
+
         """
-                
-        reCall = False # boolean to stop recursive calls
-        
+
+        reCall = False  # boolean to stop recursive calls
+
         baseCounters = []
-        
+
         colString = colName
-            
+
         for findcDef in self.cDef.keys():
             # check for all predefined counters
-            searchPattern = r'\b' + findcDef + r'\b'    
-            if re.search(searchPattern,colString) != None:
+            searchPattern = r'\b' + findcDef + r'\b'
+            if re.search(searchPattern, colString) != None:
                 if self.cDef[findcDef] in specCols:
                     # this counter definition is a base spec counter
                     baseCounters.append(self.cDef[findcDef])
-                # found a predefined counter 
+                # found a predefined counter
                 # recursive call if predefined counter must be resolved again
                 reCall = True
                 # replace the counter definition in the string
-                (colString,_) = re.subn(searchPattern, '(' + self.cDef[findcDef] + ')', colString)                
-                
+                (colString, _) = re.subn(searchPattern,
+                                         '(' + self.cDef[findcDef] + ')', colString)
+
         if reCall:
             # do the recursive call
-            colString, recBaseCounters = self.resolveCounterName(colString, specCols)           
+            colString, recBaseCounters = self.resolveCounterName(
+                colString, specCols)
             baseCounters.extend(recBaseCounters)
-            
+
         for findcDef in specCols:
             # check for all base spec counters
-            searchPattern = r'\b' + findcDef + r'\b'    
-            if re.search(searchPattern,colString) != None:
+            searchPattern = r'\b' + findcDef + r'\b'
+            if re.search(searchPattern, colString) != None:
                 baseCounters.append(findcDef)
-            
+
         return colString, baseCounters
-        
-    
+
     def colString2evalString(self, colString, arrayName='specData'):
         """Use regular expressions in order to generate an evaluateable string
         from the counter string in order to append the new counter to the 
         spec data.
-        
+
         Args:
             colString (str) : Definition of the counter.
             mode (int)      : Flag for different modes
-            
+
         Returns:
             evalString (str): Evaluateable string to add the new counter 
                               to the spec data.
-        
+
         """
-                
+
         # search for alphanumeric counter names in colString
-        iterator = re.finditer('([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', colString)                  
-        # these are keys which should not be replaced but evaluated        
+        iterator = re.finditer(
+            '([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', colString)
+        # these are keys which should not be replaced but evaluated
         keys = list(self.mathKeys)
         for key in iterator:
             # traverse all found counter names
@@ -332,56 +332,55 @@ class spec(object):
                 # the match is > 0
                 if not key.group() in keys:
                     # the counter name is not in the keys list
-                
-                    # remember this counter name in the key list in order 
+
+                    # remember this counter name in the key list in order
                     # not to replace it again
                     keys.append(key.group())
                     # the actual replacement
-                    (colString,_) = re.subn(r'\b'+key.group()+r'\b', arrayName + '[\'' + key.group() + '\']', colString)
-                                                
+                    (colString, _) = re.subn(r'\b'+key.group()+r'\b',
+                                             arrayName + '[\'' + key.group() + '\']', colString)
+
         return colString
-                
-    
+
     def addCustomCounters(self, specData, scanNum, baseCounters):
         """Add custom counters to the spec data array.
         This is a stub for child classes.
-        
+
         Args:
             specData (ndarray) : Data array from the spec scan.
             scanNum (int)  : Scan number of the spec scan.
             baseCounters list(str) : List of the base spec and custom counters
                                      from the cList and xCol.
-            
+
         Returns:
             specData (ndarray): Updated data array from the spec scan.
-        
+
         """
-        
+
         return specData
-    
-    
-    def avgNbinScans(self,scanList,xGrid=np.array([]), binning=True):
+
+    def avgNbinScans(self, scanList, xGrid=np.array([]), binning=True):
         """Averages data defined by the counter list, cList, onto an optional 
         xGrid. If no xGrid is given the x-axis data of the first scan in the 
         list is used instead.
-        
+
         Args:
             scanList (List[int])      : List of scan numbers.
             xGrid (Optional[ndarray]) : Grid to bin the data to - 
                                         default in empty so use the 
                                         x-axis of the first scan.
-            
+
         Returns:
             avgData (ndarray) : Averaged data for the scan list.
             stdData (ndarray) : Standart derivation of the data for the scan list.
             errData (ndarray) : Error of the data for the scan list.
             name (str)        : Name of the data set.
-        
+
         """
-               
+
         # generate the name of the data set from the spec file name and scanList
-        name= self.specFileName + "_{0:03d}".format(scanList[0])
-                
+        name = self.specFileName + "_{0:03d}".format(scanList[0])
+
         # get the counters which should be evaluated
         cList = self.getClist()
         if not cList:
@@ -393,10 +392,10 @@ class spec(object):
             return
         if not self.xCol in cList:
             cList.append(self.xCol)
-        
+
         specCols = []
         concatData = np.array([])
-            
+
         for i, scanNum in enumerate(scanList):
             # traverse the scan list and read data
             try:
@@ -405,207 +404,214 @@ class spec(object):
             except:
                 raise
                 print('Scan #' + scanNum + ' not found, skipping')
-                            
-            if i == 0 or len(specCols) == 0: # we need to evaluate this only once
-                # these are the base spec counters which are present in the data 
+
+            if i == 0 or len(specCols) == 0:  # we need to evaluate this only once
+                # these are the base spec counters which are present in the data
                 # file plus custom counters
-                specCols = list(set(list(specData.dtype.names) + self.customCounters))
-                          
-                # resolve the cList and retrieve the resolves counters and the 
+                specCols = list(
+                    set(list(specData.dtype.names) + self.customCounters))
+
+                # resolve the cList and retrieve the resolves counters and the
                 # necessary base spec counters for error propagation
-                resolvedCounters, baseCounters = self.traverseCounters(cList, specCols)
-                
+                resolvedCounters, baseCounters = self.traverseCounters(
+                    cList, specCols)
+
                 # add custom counters if defined
-                specData = self.addCustomCounters(specData, scanNum, baseCounters) 
-                
+                specData = self.addCustomCounters(
+                    specData, scanNum, baseCounters)
+
                 # counter names and resolved strings for further calculations
                 if self.statisticType == 'poisson' or self.propagateErrors:
                     # for error propagation we just need the base spec counters
                     # and the xCol
-                    colNames   = baseCounters[:]
+                    colNames = baseCounters[:]
                     colStrings = baseCounters[:]
                     # add the xCol to both lists
                     colNames.append(self.xCol)
                     colStrings.append(resolvedCounters[cList.index(self.xCol)])
                 else:
                     # we need to average the resolved counters
-                    colNames   = cList[:]         
+                    colNames = cList[:]
                     colStrings = resolvedCounters[:]
-                    
+
                 # create the dtype of the return array
                 dtypes = []
                 for colName in cList:
                     dtypes.append((colName, '<f8'))
-            
-            data = np.array([])  
+
+            data = np.array([])
             # read data into data array
-            for colString, colName in zip(colStrings, colNames):                 
+            for colString, colName in zip(colStrings, colNames):
                 # traverse the counters in the cList and append to data if not
                 # already present
-                evalString = self.colString2evalString(colString, arrayName='specData')
+                evalString = self.colString2evalString(
+                    colString, arrayName='specData')
 
                 if len(data) == 0:
                     data = np.array(eval(evalString), dtype=[(colName, float)])
                 elif not colName in data.dtype.names:
-                    data = eval('recfuncs.append_fields(data,\'' + colName + '\',data=(' + evalString + '), dtypes=float, asrecarray=True, usemask=False)')     
-            
+                    data = eval('recfuncs.append_fields(data,\'' + colName + '\',data=(' +
+                                evalString + '), dtypes=float, asrecarray=True, usemask=False)')
+
             if i > 0:
                 # this is not the first scan in the list so append the data to
                 # the concatenated data array
-                concatData = np.concatenate((concatData,data), axis=0)           
+                concatData = np.concatenate((concatData, data), axis=0)
             else:
                 concatData = data
-                
+
                 if len(xGrid) == 0:
                     # if no xGrid is given we use the xData of the first scan instead
-                    xGrid =  concatData[self.xCol]    
-        
+                    xGrid = concatData[self.xCol]
+
         # remove xCol from cList and resolved counters for further treatment
         del resolvedCounters[cList.index(self.xCol)]
         cList.remove(self.xCol)
-                
+
         try:
             # bin the concatenated data to the xGrid
             # if a custom counter was calculated it might have a different length
             # than the spec counters which will result in an error while binning data
             # from a default spec counter and a custom counter.
             if binning:
-                xGridReduced, _, _, _, _, _, _, _, _ = binData(concatData[self.xCol],concatData[self.xCol],xGrid)
+                xGridReduced, _, _, _, _, _, _, _, _ = binData(
+                    concatData[self.xCol], concatData[self.xCol], xGrid)
             else:
                 xGridReduced = xGrid
             # create empty arrays for averages, std and errors
-            avgData=np.recarray(np.shape(xGridReduced)[0],dtype=dtypes)
-            stdData=np.recarray(np.shape(xGridReduced)[0],dtype=dtypes)
-            errData=np.recarray(np.shape(xGridReduced)[0],dtype=dtypes)
-                       
+            avgData = np.recarray(np.shape(xGridReduced)[0], dtype=dtypes)
+            stdData = np.recarray(np.shape(xGridReduced)[0], dtype=dtypes)
+            errData = np.recarray(np.shape(xGridReduced)[0], dtype=dtypes)
+
             if self.statisticType == 'poisson':
                 binStat = 'sum'
-            else: # gauss
+            else:  # gauss
                 binStat = 'mean'
-            
-            if binning:                
+
+            if binning:
                 if self.statisticType == 'poisson' or self.propagateErrors:
                     # propagate errors using the uncertainties package
-                    
+
                     # create empty dict for uncertainties data arrays
-                    uncDataErr = {}                
-                    uncDataStd = {}                     
-                    
-                    
+                    uncDataErr = {}
+                    uncDataStd = {}
+
                     for col in baseCounters:
                         # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
-                        y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
-                        # add spec base counters to uncData arrays                  
+                        y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(
+                            concatData[col], concatData[self.xCol], xGridReduced, statistic=binStat)
+                        # add spec base counters to uncData arrays
                         uncDataStd[col] = unumpy.uarray(y, yStd)
                         uncDataErr[col] = unumpy.uarray(y, yErr)
-                                            
+
                     for colName, colString in zip(cList, resolvedCounters):
-                        
-                        evalString = self.colString2evalString(colString, arrayName='uncDataErr')
-                        temp = eval(evalString)                                        
-                        
+
+                        evalString = self.colString2evalString(
+                            colString, arrayName='uncDataErr')
+                        temp = eval(evalString)
+
                         avgData[colName] = unumpy.nominal_values(temp)
                         errData[colName] = unumpy.std_devs(temp)
-                        
-                        evalString = self.colString2evalString(colString, arrayName='uncDataStd')
-                        temp = eval(evalString) 
-                        stdData[colName] = unumpy.std_devs(temp)         
-                    
+
+                        evalString = self.colString2evalString(
+                            colString, arrayName='uncDataStd')
+                        temp = eval(evalString)
+                        stdData[colName] = unumpy.std_devs(temp)
+
                 else:
                     # no error propagation but averaging of individual scans
                     for col in cList:
                         # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
-                        avgData[col], avgData[self.xCol], errData[col], errData[self.xCol], stdData[col], stdData[self.xCol], _, _, _ = binData(concatData[col],concatData[self.xCol],xGridReduced, statistic=binStat)
+                        avgData[col], avgData[self.xCol], errData[col], errData[self.xCol], stdData[col], stdData[self.xCol], _, _, _ = binData(
+                            concatData[col], concatData[self.xCol], xGridReduced, statistic=binStat)
             else:
-                for col in cList:      
+                for col in cList:
                     avgData[col] = concatData[col]
                     avgData[self.xCol] = concatData[self.xCol]
                     errData[col] = 0
                     errData[self.xCol] = 0
                     stdData[col] = 0
                     stdData[self.xCol] = 0
-               
+
         except:
             raise
             print('xCol and yCol must have the same length --> probably you try plotting a custom counter together with a spec counter')
-            
+
         return avgData, stdData, errData, name
-    
-        
-    def writeData2HDF5(self, scanNum, childName, data, dataName):   
+
+    def writeData2HDF5(self, scanNum, childName, data, dataName):
         """Write data for a given scan number to the HDF5 file.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
             childName (str) : Name of the child where to save the data to.
             data (ndarray)  : Data array
             dataName (str)  : Name of the dataset.
-        
+
         """
-        
+
         # open the HDF5 file
         with xu.io.helper.xu_h5open(os.path.join(self.hdf5Path, self.h5FileName), mode='a') as h5:
-        
-            h5g = h5.get(list(h5.keys())[0]) # get the root
-            scan = h5g.get("scan_%d" % scanNum) # get the current scan
+
+            h5g = h5.get(list(h5.keys())[0])  # get the root
+            scan = h5g.get("scan_%d" % scanNum)  # get the current scan
             try:
                 # try to create the new subgroup for the area detector data
                 scan.create_group(childName)
             except:
                 np.void
-            
-            g5 = scan[childName] # this is the new group
-            
+
+            g5 = scan[childName]  # this is the new group
+
             try:
                 # add the data to the group
-                g5.create_dataset(dataName, data=data, compression="gzip", compression_opts=9)
+                g5.create_dataset(dataName, data=data,
+                                  compression="gzip", compression_opts=9)
             except:
                 np.void
-                
-            h5.flush() # write the data to the file
-                    
-    
-    def readDataFromHDF5(self, scanNum, childName, dataName):   
+
+            h5.flush()  # write the data to the file
+
+    def readDataFromHDF5(self, scanNum, childName, dataName):
         """Read data for a given scan number from the HDF5 file.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
             childName (str) : Name of the child where to save the data to.
             dataName (str)  : Name of the dataset.
-            
+
         Returns:
             data (ndarray): Data array from the spec scan.
-        
+
         """
-        
+
         # open the HDF5 file
         with xu.io.helper.xu_h5open(os.path.join(self.hdf5Path, self.h5FileName), mode='a') as h5:
-            h5g = h5.get(list(h5.keys())[0]) # get the root 
-            
-            try:                
-                scan = h5g.get("scan_%d" % scanNum) # get the current scan 
+            h5g = h5.get(list(h5.keys())[0])  # get the root
+
+            try:
+                scan = h5g.get("scan_%d" % scanNum)  # get the current scan
                 # access the child if a childName is given
                 if len(childName) == 0:
                     g5 = scan
-                else:               
+                else:
                     g5 = scan[childName]
-                    
-                data =  g5[dataName][:] # get the actual dataset
+
+                data = g5[dataName][:]  # get the actual dataset
             except:
                 # if no data is available return False
                 data = False
-            
+
         return data
-        
-        
-    def plotScans(self,scanList, ylims=[], xlims=[], figSize=[], xGrid=[], 
-                  yErr='std', xErr = 'std', norm2one=False, binning=True, 
-                  labelText='', titleText='', skipPlot=False, gridOn=True, 
+
+    def plotScans(self, scanList, ylims=[], xlims=[], figSize=[], xGrid=[],
+                  yErr='std', xErr='std', norm2one=False, binning=True,
+                  labelText='', titleText='', skipPlot=False, gridOn=True,
                   yText='', xText='', fmt='-o'):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
-        
+
         Args:
             scanList (List[int])        : List of scan numbers.
             ylims (Optional[ndarray])   : ylim for the plot. 
@@ -628,25 +634,25 @@ class spec(object):
             yText (Optional[str])       : y-Label of the plot - defaults is none. 
             xText (Optional[str])       : x-Label of the plot - defaults is none. 
             fmt (Optional[str])         : format string of the plot - defaults is -o. 
-            
+
         Returns:
             y2plot (OrderedDict)    : y-data which was plotted.
             x2plot (ndarray)        : x-data which was plotted.
             yerr2plot (OrderedDict) : y-error which was plotted.
             xerr2plot (ndarray)     : x-error which was plotted.
             name (str)              : Name of the data set.
-        
+
         """
-        
-        # initialize the y-data as ordered dict in order to allow for multiple 
+
+        # initialize the y-data as ordered dict in order to allow for multiple
         # counters at the same time
-        y2plot    = collections.OrderedDict()
+        y2plot = collections.OrderedDict()
         yerr2plot = collections.OrderedDict()
-        
+
         # get the averaged data, stds and errors for the scan list and the xGrid
         avgData, stdData, errData, name = self.avgNbinScans(
-                                        scanList, xGrid=xGrid, binning=binning)
-        
+            scanList, xGrid=xGrid, binning=binning)
+
         # set the error data
         if xErr == 'std':
             xErrData = stdData
@@ -654,34 +660,34 @@ class spec(object):
             xErrData = errData
         else:
             xErrData = np.zeros_like(stdData)
-            
+
         if yErr == 'std':
             yErrData = stdData
         elif yErr == 'err':
             yErrData = errData
         else:
             yErrData = np.zeros_like(stdData)
-        
+
         # set x-data and errors
-        x2plot    = avgData[self.xCol]
-        xerr2plot = xErrData[self.xCol]       
-        
+        x2plot = avgData[self.xCol]
+        xerr2plot = xErrData[self.xCol]
+
         # plot all keys in the clist
-        cList = self.getClist()        
+        cList = self.getClist()
         for col in cList:
             # traverse the counter list
-            
+
             # save the counter data and errors in the ordered dictionary
-            y2plot[col]    = avgData[col]
+            y2plot[col] = avgData[col]
             yerr2plot[col] = yErrData[col]
-                        
+
             if norm2one:
                 # normalize the y-data to 1 for t < t0
                 # just makes sense for delay scans
-                beforeZero      = y2plot[col][x2plot <= self.t0]
-                y2plot[col]     = y2plot[col]/np.mean(beforeZero)
-                yerr2plot[col]  = yerr2plot[col]/np.mean(beforeZero)
-            
+                beforeZero = y2plot[col][x2plot <= self.t0]
+                y2plot[col] = y2plot[col]/np.mean(beforeZero)
+                yerr2plot[col] = yerr2plot[col]/np.mean(beforeZero)
+
             if len(labelText) == 0:
                 # if no labelText is given use the counter name
                 lt = col
@@ -692,17 +698,18 @@ class spec(object):
                 else:
                     # for a single counter just use the labelText
                     lt = labelText
-            
+
             if not skipPlot:
                 # plot the errorbar for each counter
                 if (xErr == 'none') & (yErr == 'none'):
-                    plt.plot(x2plot,y2plot[col],fmt,label=lt)
+                    plt.plot(x2plot, y2plot[col], fmt, label=lt)
                 else:
-                    plt.errorbar(x2plot,y2plot[col],fmt=fmt,label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
-        
+                    plt.errorbar(
+                        x2plot, y2plot[col], fmt=fmt, label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
+
         if not skipPlot:
             # add a legend, labels, title and set the limits and grid
-            plt.legend(frameon=True,loc=0,numpoints=1)
+            plt.legend(frameon=True, loc=0, numpoints=1)
             plt.xlabel(self.xCol)
             if xlims:
                 plt.xlim(xlims)
@@ -714,21 +721,20 @@ class spec(object):
                 plt.title(name)
             if len(xText) > 0:
                 plt.xlabel(xText)
-                
+
             if len(yText) > 0:
                 plt.ylabel(yText)
-                
+
             if gridOn:
-                plt.grid(True)   
-        
+                plt.grid(True)
+
         return y2plot, x2plot, yerr2plot, xerr2plot, name
-        
-        
-    def plotMeshScan(self, scanNum, skipPlot=False, gridOn=False, yText='', xText='', levels = 20, cBar = True):
+
+    def plotMeshScan(self, scanNum, skipPlot=False, gridOn=False, yText='', xText='', levels=20, cBar=True):
         """Plot a single mesh scan from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
-        
+
         Args:
             scanNum (int)               : Scan number of the spec scan.
             skipPlot (Optional[bool])   : Skip plotting, just return data
@@ -738,115 +744,113 @@ class spec(object):
             xText (Optional[str])       : x-Label of the plot - defaults is none. 
             levels (Optional[int])      : levels of contour plot - defaults is 20. 
             cBar (Optional[bool])       : Add colorbar to plot - default is True.
-            
+
         Returns:
             xx, yy, zz              : x,y,z data which was plotted
-        
+
         """
-        
+
         from matplotlib.mlab import griddata
         from matplotlib import gridspec
-        
+
         # read data from spec file
         try:
             # try to read the motors and data of this scan
             motors, specData = self.getScanData(scanNum)
         except:
-            print('Scan #' + scanNum + ' not found, skipping')  
-        
+            print('Scan #' + scanNum + ' not found, skipping')
+
         dt = specData.dtype
-        dt = dt.descr        
-        
+        dt = dt.descr
+
         xMotor = dt[0][0]
         yMotor = dt[1][0]
-        
-        
+
         X = specData[xMotor]
         Y = specData[yMotor]
-        
+
         xx = np.sort(np.unique(X))
         yy = np.sort(np.unique(Y))
-        
+
         cList = self.getClist()
-        
+
         if len(cList) > 1:
             print('WARNING: Only the first counter of the cList is plotted.')
-        
+
         Z = specData[cList[0]]
-                
-        zz = griddata(X,Y,Z,xx,yy, interp='linear')
-        
+
+        zz = griddata(X, Y, Z, xx, yy, interp='linear')
+
         if not skipPlot:
-            
+
             if cBar:
                 gs = gridspec.GridSpec(4, 2,
-                width_ratios=[3,1],
-                height_ratios=[0.2,0.1,1,3]                
-                )
+                                       width_ratios=[3, 1],
+                                       height_ratios=[0.2, 0.1, 1, 3]
+                                       )
                 k = 4
             else:
                 gs = gridspec.GridSpec(2, 2,
-                width_ratios=[3,1],
-                height_ratios=[1,3]                
-                )
-                k= 0
+                                       width_ratios=[3, 1],
+                                       height_ratios=[1, 3]
+                                       )
+                k = 0
 
             ax1 = plt.subplot(gs[0+k])
-            
-            plt.plot(xx, np.mean(zz,0), label='mean')
-            
-            plt.plot(xx, zz[np.argmax(np.mean(zz,1)),:], label='peak')
-            
+
+            plt.plot(xx, np.mean(zz, 0), label='mean')
+
+            plt.plot(xx, zz[np.argmax(np.mean(zz, 1)), :], label='peak')
+
             plt.xlim([min(xx), max(xx)])
             plt.legend(loc=0)
             ax1.xaxis.tick_top()
             if gridOn:
                 plt.grid(True)
-            
+
             ax3 = plt.subplot(gs[2+k])
-            
-            plt.contourf(xx,yy,zz, levels, cmap='viridis')
-            
+
+            plt.contourf(xx, yy, zz, levels, cmap='viridis')
+
             plt.xlabel(xMotor)
             plt.ylabel(yMotor)
-            
+
             if len(xText) > 0:
                 plt.xlabel(xText)
-                
+
             if len(yText) > 0:
                 plt.ylabel(yText)
-                
+
             if gridOn:
-                plt.grid(True) 
-                
+                plt.grid(True)
+
             if cBar:
-                cb = plt.colorbar(cax=plt.subplot(gs[0]), orientation='horizontal')
+                cb = plt.colorbar(cax=plt.subplot(
+                    gs[0]), orientation='horizontal')
                 cb.ax.xaxis.set_ticks_position('top')
                 cb.ax.xaxis.set_label_position('top')
-            
-            
+
             ax4 = plt.subplot(gs[3+k])
-            
-            plt.plot(np.mean(zz,1),yy)
-            plt.plot(zz[:,np.argmax(np.mean(zz,0))], yy)
+
+            plt.plot(np.mean(zz, 1), yy)
+            plt.plot(zz[:, np.argmax(np.mean(zz, 0))], yy)
             plt.ylim([np.min(yy), np.max(yy)])
-            
+
             ax4.yaxis.tick_right()
             if gridOn:
                 plt.grid(True)
 
         return xx, yy, zz
-            
-    
-    def plotScanSequence(self,scanSequence, ylims=[], xlims=[], figSize=[], 
-                         xGrid=[], yErr='std', xErr = 'std',norm2one=False, 
-                         binning=True, sequenceType='', labelText='', 
+
+    def plotScanSequence(self, scanSequence, ylims=[], xlims=[], figSize=[],
+                         xGrid=[], yErr='std', xErr='std', norm2one=False,
+                         binning=True, sequenceType='', labelText='',
                          titleText='', skipPlot=False, gridOn=True, yText='',
                          xText='', fmt='-o'):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
-        
+
         Args:
             scanSequence (ndarray[List[int]
                           , int/str])   : Sequence of scan lists and parameters.
@@ -873,30 +877,30 @@ class spec(object):
             yText (Optional[str])       : y-Label of the plot - defaults is none.
             xText (Optional[str])       : x-Label of the plot - defaults is none.
             fmt (Optional[str])         : format string of the plot - defaults is -o. 
-            
+
         Returns:
             sequenceData (OrderedDict) : Dictionary of the averaged scan data.
             parameters (ndarray)       : Parameters of the sequence.
             names (List[str])          : List of names of each data set.
             labelTexts (List[str])     : List of labels for each data set.
-        
+
         """
-        
+
         # initialize the return data
-        sequenceData= collections.OrderedDict()  
-        names       = []
-        labelTexts  = []
-        parameters  = []
-        
-#        pb = ProgressBar(len(scanSequence), title='Read Data', key='scanSequence')        
+        sequenceData = collections.OrderedDict()
+        names = []
+        labelTexts = []
+        parameters = []
+
+#        pb = ProgressBar(len(scanSequence), title='Read Data', key='scanSequence')
 #        for i in pb:
 #            scanList = scanSequence[i,0]
 #            parameter = scanSequence[i,1]
         for i, (scanList, parameter) in enumerate(scanSequence):
             # traverse the scan sequence
-            
+
             parameters.append(parameter)
-            # format the parameter as label text of this plot if no label text 
+            # format the parameter as label text of this plot if no label text
             # is given
             if len(labelText) == 0:
                 if sequenceType == 'fluence':
@@ -918,66 +922,65 @@ class spec(object):
                 elif sequenceType == 'scans':
                     lt = str(scanList)
                 elif sequenceType == 'none':
-                    #no parameter for single scans 
+                    # no parameter for single scans
                     lt = ''
                 elif sequenceType == 'text':
-                    #parameter is a string
+                    # parameter is a string
                     lt = parameter
                 else:
-                    #no sequence type is given --> enumerate
+                    # no sequence type is given --> enumerate
                     lt = str.format('#{}', i+1)
-            
+
             # get the plot data for the scan list
             y2plot, x2plot, yerr2plot, xerr2plot, name = self.plotScans(
-                                                            scanList,
-                                                            ylims=ylims, 
-                                                            xlims=xlims, 
-                                                            figSize=figSize, 
-                                                            xGrid=xGrid, 
-                                                            yErr=yErr, 
-                                                            xErr=xErr, 
-                                                            norm2one=norm2one,
-                                                            binning=binning,
-                                                            labelText=lt,
-                                                            titleText=titleText, 
-                                                            skipPlot=skipPlot,
-                                                            gridOn=gridOn,
-                                                            yText=yText,
-                                                            xText=xText,
-                                                            fmt=fmt
-                                                            )
-                                                            
+                scanList,
+                ylims=ylims,
+                xlims=xlims,
+                figSize=figSize,
+                xGrid=xGrid,
+                yErr=yErr,
+                xErr=xErr,
+                norm2one=norm2one,
+                binning=binning,
+                labelText=lt,
+                titleText=titleText,
+                skipPlot=skipPlot,
+                gridOn=gridOn,
+                yText=yText,
+                xText=xText,
+                fmt=fmt
+            )
+
             if self.xCol not in sequenceData.keys():
                 # if the xCol is not in the return data dict - add the key
-                sequenceData[self.xCol]         = []
+                sequenceData[self.xCol] = []
                 sequenceData[self.xCol + 'Err'] = []
-            
+
             # add the x-axis data to the return data dict
             sequenceData[self.xCol].append(x2plot)
             sequenceData[self.xCol + 'Err'].append(xerr2plot)
-            
+
             for counter in y2plot:
                 # traverse all counters in the data set
                 if counter not in sequenceData.keys():
                     # if the counter is not in the return data dict - add the key
                     sequenceData[counter] = []
                     sequenceData[counter + 'Err'] = []
-                
+
                 # add the counter data to the return data dict
                 sequenceData[counter].append(y2plot[counter])
                 sequenceData[counter + 'Err'].append(yerr2plot[counter])
-            
-            # append names and labels to their lists            
+
+            # append names and labels to their lists
             names.append(name)
             labelTexts.append(lt)
-            
+
         return sequenceData, parameters, names, labelTexts
-            
-            
-    def exportScanSequence(self,scanSequence,path,fileName, yErr='std', 
-                           xErr = 'std', xGrid=[], norm2one=False, binning=True):
+
+    def exportScanSequence(self, scanSequence, path, fileName, yErr='std',
+                           xErr='std', xGrid=[], norm2one=False, binning=True):
         """Exports spec data for each scan list in the sequence as individual file.
-        
+
         Args:
             scanSequence (ndarray[List[int]
                           , int/str])   : Sequence of scan lists and parameters.
@@ -992,63 +995,63 @@ class spec(object):
                                           x-axis of the first scan.
             norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
                                           default is False.
-        
+
         """
         # get scanSequence data without plotting
         sequenceData, parameters, names, labelTexts = self.plotScanSequence(
-                                                    scanSequence, 
-                                                    xGrid = xGrid,
-                                                    yErr = yErr,
-                                                    xErr = xErr,
-                                                    norm2one = norm2one,
-                                                    binning=binning,
-                                                    skipPlot = True)
-        
-        for i, labelText in enumerate(labelTexts): 
+            scanSequence,
+            xGrid=xGrid,
+            yErr=yErr,
+            xErr=xErr,
+            norm2one=norm2one,
+            binning=binning,
+            skipPlot=True)
+
+        for i, labelText in enumerate(labelTexts):
             # travserse the sequence
-        
+
             header = ''
             saveData = []
             for counter in sequenceData:
                 # travserse all counters in the data
-                
+
                 # build the file header
                 header = header + counter + '\t '
                 # build the data matrix
-                saveData.append(sequenceData[counter][i])            
-            
+                saveData.append(sequenceData[counter][i])
+
             # save data with header to text file
-            np.savetxt('%s/%s_%s.dat' % (path,fileName,"".join(x for x in labelText if x.isalnum())), np.r_[saveData].T, delimiter = '\t', header=header)
-            
-    def fitScans(self,scans,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], 
-                 yErr='std', xErr = 'std', norm2one=False, binning=True, 
-                 sequenceType='text', labelText='', titleText='', yText='', 
-                 xText='', select='', fitReport=0, showSingle=False, 
-                 weights=False, fitMethod='leastsq', offsetT0 = False, 
-                 plotSeparate = False, gridOn = True, fmt='o'):
+            np.savetxt('%s/%s_%s.dat' % (path, fileName, "".join(x for x in labelText if x.isalnum())),
+                       np.r_[saveData].T, delimiter='\t', header=header)
+
+    def fitScans(self, scans, mod, pars, ylims=[], xlims=[], figSize=[], xGrid=[],
+                 yErr='std', xErr='std', norm2one=False, binning=True,
+                 sequenceType='text', labelText='', titleText='', yText='',
+                 xText='', select='', fitReport=0, showSingle=False,
+                 weights=False, fitMethod='leastsq', offsetT0=False,
+                 plotSeparate=False, gridOn=True, fmt='o'):
         """Fit, plot, and return the data of scans.
-            
+
             This is just a wrapper for the fitScanSequence method
         """
         scanSequence = [[scans, '']]
-        return self.fitScanSequence(scanSequence,mod,pars,ylims,xlims,figSize, 
-                                    xGrid, yErr, xErr, norm2one, binning, 
-                                    'none', labelText, titleText, yText, 
-                                    xText, select, fitReport, showSingle, 
-                                    weights, fitMethod, offsetT0, plotSeparate, 
+        return self.fitScanSequence(scanSequence, mod, pars, ylims, xlims, figSize,
+                                    xGrid, yErr, xErr, norm2one, binning,
+                                    'none', labelText, titleText, yText,
+                                    xText, select, fitReport, showSingle,
+                                    weights, fitMethod, offsetT0, plotSeparate,
                                     gridOn, fmt=fmt)
-        
-    
-    def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], 
-                        xGrid=[], yErr='std', xErr = 'std', norm2one=False, 
-                        binning=True, sequenceType='', labelText='', 
-                        titleText='', yText='', xText='', select='', 
-                        fitReport=0, showSingle=False, weights=False, 
-                        fitMethod='leastsq', offsetT0 = False, 
-                        plotSeparate = False, gridOn = True, 
+
+    def fitScanSequence(self, scanSequence, mod, pars, ylims=[], xlims=[], figSize=[],
+                        xGrid=[], yErr='std', xErr='std', norm2one=False,
+                        binning=True, sequenceType='', labelText='',
+                        titleText='', yText='', xText='', select='',
+                        fitReport=0, showSingle=False, weights=False,
+                        fitMethod='leastsq', offsetT0=False,
+                        plotSeparate=False, gridOn=True,
                         lastResAsPar=False, sequenceData=[], fmt='o'):
         """Fit, plot, and return the data of a scan sequence.
-        
+
         Args:
             scanSequence (ndarray[List[int]
                           , int/str])   : Sequence of scan lists and parameters.
@@ -1091,111 +1094,109 @@ class spec(object):
             sequenceData (Optional[ndarray]): actual exp. data are externally given.
                                               default is empty
             fmt (Optional[str])         : format string of the plot - defaults is -o. 
-            
-            
+
+
         Returns:
             res (Dict[ndarray])        : Fit results.
             parameters (ndarray)       : Parameters of the sequence.
             sequenceData (OrderedDict) : Dictionary of the averaged scan data.equenceData
-        
+
         """
-        
+
         # get the last open figure number
         mainFigNum = self.getLastFigNumber()
-        
+
         if not figSize:
             # use default figure size if none is given
             figSize = mpl.rcParams['figure.figsize']
-        
-        
-        # initialization of returns
-        res = {} # initialize the results dict
 
-        for i, counter in enumerate(self.getClist()):        
+        # initialization of returns
+        res = {}  # initialize the results dict
+
+        for i, counter in enumerate(self.getClist()):
             # traverse all counters in the counter list to initialize the returns
-            
-            # results for this counter is again a Dict            
+
+            # results for this counter is again a Dict
             res[counter] = {}
-            
+
             if isinstance(pars, (list, tuple)):
                 # the fit paramters might individual for each counter
                 _pars = pars[i]
             else:
                 _pars = pars
-                        
+
             for pname, par in _pars.items():
                 # add a dict key for each fit parameter in the result dict
                 res[counter][pname] = []
-                res[counter][pname + 'Err'] = []   
-            
+                res[counter][pname + 'Err'] = []
+
             # add some more results
             res[counter]['chisqr'] = []
             res[counter]['redchi'] = []
-            res[counter]['CoM']    = []
-            res[counter]['int']    = []
-            res[counter]['fit']    = []
-        
-        
+            res[counter]['CoM'] = []
+            res[counter]['int'] = []
+            res[counter]['fit'] = []
+
         if len(sequenceData) > 0:
             # get only the parameters
             _, parameters, names, labelTexts = self.plotScanSequence(
-                                                scanSequence, 
-                                                ylims = ylims, 
-                                                xlims = xlims, 
-                                                figSize = figSize, 
-                                                xGrid = xGrid, 
-                                                yErr = yErr, 
-                                                xErr = xErr,
-                                                norm2one = norm2one, 
-                                                binning = True, 
-                                                sequenceType = sequenceType, 
-                                                labelText = labelText, 
-                                                titleText = titleText, 
-                                                skipPlot=True)  
+                scanSequence,
+                ylims=ylims,
+                xlims=xlims,
+                figSize=figSize,
+                xGrid=xGrid,
+                yErr=yErr,
+                xErr=xErr,
+                norm2one=norm2one,
+                binning=True,
+                sequenceType=sequenceType,
+                labelText=labelText,
+                titleText=titleText,
+                skipPlot=True)
         else:
             # get the sequence data and parameters
             sequenceData, parameters, names, labelTexts = self.plotScanSequence(
-                                                scanSequence, 
-                                                ylims = ylims, 
-                                                xlims = xlims, 
-                                                figSize = figSize, 
-                                                xGrid = xGrid, 
-                                                yErr = yErr, 
-                                                xErr = xErr,
-                                                norm2one = norm2one, 
-                                                binning = True,
-                                                sequenceType = sequenceType, 
-                                                labelText = labelText, 
-                                                titleText = titleText, 
-                                                skipPlot=True)        
-        
-        # this is the number of different counters        
-        numSubplots = len(self.getClist()) 
-        
+                scanSequence,
+                ylims=ylims,
+                xlims=xlims,
+                figSize=figSize,
+                xGrid=xGrid,
+                yErr=yErr,
+                xErr=xErr,
+                norm2one=norm2one,
+                binning=True,
+                sequenceType=sequenceType,
+                labelText=labelText,
+                titleText=titleText,
+                skipPlot=True)
+
+        # this is the number of different counters
+        numSubplots = len(self.getClist())
+
         # fitting and plotting the data
-        l = 1 # counter for singlePlots
-        
+        l = 1  # counter for singlePlots
+
         for i, parameter in enumerate(parameters):
-            # traverse all parameters of the sequence           
-            lt          = labelTexts[i]         
-            name        = names[i]
-            
+            # traverse all parameters of the sequence
+            lt = labelTexts[i]
+            name = names[i]
+
             x2plot = sequenceData[self.xCol][i]
             xerr2plot = sequenceData[self.xCol + 'Err'][i]
-            
+
             if fitReport > 0:
                 # plot for basics and full fit reporting
                 print('')
-                print('='*10 + ' Parameter: ' + lt + ' ' + '='*15)   
-            
-            j = 0 # counter for counters ;)
-            k = 1 # counter for subplots
+                print('='*10 + ' Parameter: ' + lt + ' ' + '='*15)
+
+            j = 0  # counter for counters ;)
+            k = 1  # counter for subplots
             for counter in sequenceData:
                 # traverse all counters in the sequence
-                
-                # plot only y counters - next is the coresp. error                
-                if j >= 2 and j%2 == 0:
-                    
+
+                # plot only y counters - next is the coresp. error
+                if j >= 2 and j % 2 == 0:
+
                     # add the counter name to the label for not seperate plots
                     if sequenceType == 'none':
                         _lt = counter
@@ -1203,124 +1204,132 @@ class spec(object):
                         if plotSeparate or numSubplots == 1:
                             _lt = lt
                         else:
-                             _lt = lt + ' | ' + counter
-                    
+                            _lt = lt + ' | ' + counter
+
                     # get the fit models and fit parameters if they are lists/tupels
-                    if isinstance(mod, (list, tuple)):  
+                    if isinstance(mod, (list, tuple)):
                         _mod = mod[k-1]
                     else:
                         _mod = mod
-                    
-                    
+
                     if lastResAsPar and i > 0:
                         # use last results as start values for pars
                         _pars = pars
                         for pname, par in pars.items():
-                            _pars[pname].value  = res[counter][pname][i-1]
+                            _pars[pname].value = res[counter][pname][i-1]
                     else:
-                        if isinstance(pars, (list, tuple)):  
+                        if isinstance(pars, (list, tuple)):
                             _pars = pars[k-1]
                         else:
                             _pars = pars
-                        
+
                     # get the actual y-data and -errors for plotting and fitting
                     y2plot = sequenceData[counter][i]
                     yerr2plot = sequenceData[counter + 'Err'][i]
-                    
+
                     # evaluate the select statement
                     if select == '':
                         # select all
                         sel = np.ones_like(y2plot, dtype=bool)
                     else:
-                        sel = eval(select)            
-                    
+                        sel = eval(select)
+
                     # execute the select statement
                     y2plot = y2plot[sel]
                     x2plot = x2plot[sel]
                     yerr2plot = yerr2plot[sel]
                     xerr2plot = xerr2plot[sel]
-                    
+
                     # remove nans
                     y2plot = y2plot[~np.isnan(y2plot)]
                     x2plot = x2plot[~np.isnan(y2plot)]
                     yerr2plot = yerr2plot[~np.isnan(y2plot)]
-                    xerr2plot = xerr2plot[~np.isnan(y2plot)]        
-                                
+                    xerr2plot = xerr2plot[~np.isnan(y2plot)]
+
                     # do the fitting with or without weighting the data
                     if weights:
-                        out  = _mod.fit(y2plot, _pars, x=x2plot, weights=1/yerr2plot, method=fitMethod)
+                        out = _mod.fit(y2plot, _pars, x=x2plot,
+                                       weights=1/yerr2plot, method=fitMethod)
                     else:
-                        out  = _mod.fit(y2plot, _pars, x=x2plot, method=fitMethod)                         
-                    
+                        out = _mod.fit(y2plot, _pars, x=x2plot,
+                                       method=fitMethod)
+
                     if fitReport > 0:
                         # for basic and full fit reporting
                         print('')
-                        print('-'*10 + ' ' + counter + ': ' + '-'*15)  
+                        print('-'*10 + ' ' + counter + ': ' + '-'*15)
                         for key in out.best_values:
-                            print('{:>12}:  {:>10.4f} '.format(key,out.best_values[key]))
-                    
-                    # set the x-offset for delay scans - offset parameter in 
+                            print('{:>12}:  {:>10.4f} '.format(
+                                key, out.best_values[key]))
+
+                    # set the x-offset for delay scans - offset parameter in
                     # the fit must be called 't0'
                     if offsetT0:
                         offsetX = out.best_values['t0']
                     else:
                         offsetX = 0
-                        
-                    plt.figure(mainFigNum) # select the main figure                            
-                    
+
+                    plt.figure(mainFigNum)  # select the main figure
+
                     if plotSeparate:
                         # use subplot for separate plotting
-                        plt.subplot( (numSubplots+numSubplots%2)/2,2,k)
-                    
+                        plt.subplot((numSubplots+numSubplots % 2)/2, 2, k)
+
                     # plot the fit and the data as errorbars
-                    x2plotFit = np.linspace(np.min(x2plot), np.max(x2plot), 10000)
-                    plot = plt.plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1)
-                    plt.errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plot[0].get_color())
-                    
+                    x2plotFit = np.linspace(
+                        np.min(x2plot), np.max(x2plot), 10000)
+                    plot = plt.plot(x2plotFit-offsetX,
+                                    out.eval(x=x2plotFit), '-', lw=2, alpha=1)
+                    plt.errorbar(x2plot-offsetX, y2plot, fmt=fmt, xerr=xerr2plot,
+                                 yerr=yerr2plot, label=_lt, alpha=0.25, color=plot[0].get_color())
+
                     if len(parameters) > 5:
-                        # move the legend outside the plot for more than 
+                        # move the legend outside the plot for more than
                         # 5 sequence parameters
                         plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
-                                       loc=3,numpoints=1,ncol=3, mode="expand", 
-                                       borderaxespad=0.)
+                                   loc=3, numpoints=1, ncol=3, mode="expand",
+                                   borderaxespad=0.)
                     else:
-                        plt.legend(frameon=True,loc=0,numpoints=1)
-                    
+                        plt.legend(frameon=True, loc=0, numpoints=1)
+
                     # set the axis limits, title, labels and gird
                     if xlims:
                         plt.xlim(xlims)
                     if ylims:
                         plt.ylim(ylims)
                     if len(titleText) > 0:
-                        if isinstance(titleText, (list, tuple)):             
+                        if isinstance(titleText, (list, tuple)):
                             plt.title(titleText[k-1])
                         else:
                             plt.title(titleText)
                     else:
                         plt.title(name)
-                        
+
                     if len(xText) > 0:
                         plt.xlabel(xText)
-                        
+
                     if len(yText) > 0:
-                        if isinstance(yText, (list, tuple)):             
+                        if isinstance(yText, (list, tuple)):
                             plt.ylabel(yText[k-1])
                         else:
                             plt.ylabel(yText)
-                    
+
                     if gridOn:
-                        plt.grid(True)  
-                    
+                        plt.grid(True)
+
                     # show the single fits and residuals
                     if showSingle:
                         plt.figure(mainFigNum+l, figsize=figSize)
 #                        gs = mpl.gridspec.GridSpec(2*numSubplots*len(parameters),1, height_ratios=[1,3], hspace=0.1)
-                        gs = mpl.gridspec.GridSpec(2,1, height_ratios=[1,3], hspace=0.1)
+                        gs = mpl.gridspec.GridSpec(
+                            2, 1, height_ratios=[1, 3], hspace=0.1)
                         ax1 = plt.subplot(gs[0])
-                        markerline, stemlines, baseline = plt.stem(x2plot-offsetX, out.residual, markerfmt=' ')
-                        plt.setp(stemlines, 'color', plot[0].get_color(), 'linewidth', 2, alpha=0.5)
-                        plt.setp(baseline, 'color','k', 'linewidth', 0)
-                        
+                        markerline, stemlines, baseline = plt.stem(
+                            x2plot-offsetX, out.residual, markerfmt=' ')
+                        plt.setp(stemlines, 'color',
+                                 plot[0].get_color(), 'linewidth', 2, alpha=0.5)
+                        plt.setp(baseline, 'color', 'k', 'linewidth', 0)
+
                         ax1.xaxis.tick_top()
                         ax1.yaxis.set_major_locator(plt.MaxNLocator(3))
                         plt.ylabel('Residuals')
@@ -1328,146 +1337,155 @@ class spec(object):
                             plt.xlim(xlims)
                         if ylims:
                             plt.ylim(ylims)
-                        
+
                         if len(xText) > 0:
                             plt.xlabel(xText)
-                            
+
                         if gridOn:
-                            plt.grid(True)                     
-                        
+                            plt.grid(True)
+
                         if len(titleText) > 0:
-                            if isinstance(titleText, (list, tuple)):             
+                            if isinstance(titleText, (list, tuple)):
                                 plt.title(titleText[k-1])
                             else:
                                 plt.title(titleText)
                         else:
                             plt.title(name)
-                        #print(i*k+k+numSubplots*len(parameters))
+                        # print(i*k+k+numSubplots*len(parameters))
                         #ax2 = subplot(gs[i*numSubplots+k-1+numSubplots*len(parameters)])
                         ax2 = plt.subplot(gs[1])
-                        x2plotFit = np.linspace(np.min(x2plot), np.max(x2plot), 1000)
-                        ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1, color=plot[0].get_color())
-                        ax2.errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plot[0].get_color())
-                        plt.legend(frameon=True,loc=0,numpoints=1)
-                        
+                        x2plotFit = np.linspace(
+                            np.min(x2plot), np.max(x2plot), 1000)
+                        ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit),
+                                 '-', lw=2, alpha=1, color=plot[0].get_color())
+                        ax2.errorbar(x2plot-offsetX, y2plot, fmt=fmt, xerr=xerr2plot,
+                                     yerr=yerr2plot, label=_lt, alpha=0.25, color=plot[0].get_color())
+                        plt.legend(frameon=True, loc=0, numpoints=1)
+
                         if xlims:
                             plt.xlim(xlims)
                         if ylims:
                             plt.ylim(ylims)
-                        
+
                         if len(xText) > 0:
                             plt.xlabel(xText)
-                        
+
                         if len(yText) > 0:
-                            if isinstance(yText, (list, tuple)):             
+                            if isinstance(yText, (list, tuple)):
                                 plt.ylabel(yText[k-1])
                             else:
                                 plt.ylabel(yText)
-                    
+
                         if gridOn:
-                            plt.grid(True)                           
+                            plt.grid(True)
 #                        show()
-                        
+
                         l += 1
                     if fitReport > 1:
                         # for full fit reporting
                         print('_'*40)
                         print(out.fit_report())
-                    
+
                     # add the fit results to the returns
                     for pname, par in _pars.items():
-                        res[counter][pname] = np.append(res[counter][pname], out.best_values[pname])
-                        res[counter][pname + 'Err'] = np.append(res[counter][pname + 'Err'], out.params[pname].stderr)
-                        
-                    res[counter]['chisqr'] = np.append(res[counter]['chisqr'], out.chisqr)
-                    res[counter]['redchi'] = np.append(res[counter]['redchi'], out.redchi)
-                    res[counter]['CoM']    = np.append(res[counter]['CoM'], sum(y2plot*x2plot)/sum(y2plot))
-                    res[counter]['int']    = np.append(res[counter]['int'], sum(y2plot))
-                    res[counter]['fit']    = np.append(res[counter]['fit'], out)
-                    
+                        res[counter][pname] = np.append(
+                            res[counter][pname], out.best_values[pname])
+                        res[counter][pname + 'Err'] = np.append(
+                            res[counter][pname + 'Err'], out.params[pname].stderr)
+
+                    res[counter]['chisqr'] = np.append(
+                        res[counter]['chisqr'], out.chisqr)
+                    res[counter]['redchi'] = np.append(
+                        res[counter]['redchi'], out.redchi)
+                    res[counter]['CoM'] = np.append(
+                        res[counter]['CoM'], sum(y2plot*x2plot)/sum(y2plot))
+                    res[counter]['int'] = np.append(
+                        res[counter]['int'], sum(y2plot))
+                    res[counter]['fit'] = np.append(res[counter]['fit'], out)
+
                     k += 1
-                    
+
                 j += 1
                 # end if
-            # end for             
-            
-        plt.figure(mainFigNum) # set as active figure
-                 
+            # end for
+
+        plt.figure(mainFigNum)  # set as active figure
+
         return res, parameters, sequenceData
 
 
 # sub classes of evalData.spec
 
 
-
 # helper functions
-      
-      
+
+
 def edges4grid(grid):
     """Creates a vector of the corresponding edges for a grid vector. """
-    binwidth = np.diff(grid);
-    edges    = np.hstack([grid[0]-binwidth[0]/2, grid[0:-1]+binwidth/2, grid[-1]+binwidth[-1]/2]);
-    
+    binwidth = np.diff(grid)
+    edges = np.hstack([grid[0]-binwidth[0]/2, grid[0:-1] +
+                       binwidth/2, grid[-1]+binwidth[-1]/2])
+
     return edges, binwidth
 
 
-def binData(y,x,X,statistic='mean'):
+def binData(y, x, X, statistic='mean'):
     """Bin data y(x) on new grid X using a statistic type. """
-        
+
     y = y.flatten(1)
     x = x.flatten(1)
     X = np.sort(X.flatten(1))
-    
+
     # create bins for the grid
-    edges, _ = edges4grid(X);    
-    
-    if np.array_equal(x,X): 
+    edges, _ = edges4grid(X)
+
+    if np.array_equal(x, X):
         # no binning since the new grid is the same as the old one
         Y = y
-        bins = np.ones_like(Y)        
-        n    = np.ones_like(Y)
-    else:    
-        # do the binning and get the Y results 
-        Y, _ , bins = binned_statistic(x,y,statistic,edges)
+        bins = np.ones_like(Y)
+        n = np.ones_like(Y)
+    else:
+        # do the binning and get the Y results
+        Y, _, bins = binned_statistic(x, y, statistic, edges)
         bins = bins.astype(np.int_)
-        
-        n = np.bincount(bins[bins > 0], minlength=len(X)+1)  
+
+        n = np.bincount(bins[bins > 0], minlength=len(X)+1)
         n = n[1:len(X)+1]
-    
-    
-    if np.array_equal(x,X) and statistic is not 'sum': 
-        
+
+    if np.array_equal(x, X) and statistic is not 'sum':
+
         Ystd = np.zeros_like(Y)
         Xstd = np.zeros_like(X)
         Yerr = np.zeros_like(Y)
         Xerr = np.zeros_like(X)
-    else:    
+    else:
         # calculate the std of X and Y
         if statistic == 'sum':
-            Ystd = np.sqrt(Y)                   
+            Ystd = np.sqrt(Y)
             Yerr = Ystd
         else:
-            Ystd, _ , _ = binned_statistic(x,y,'std',edges)        
-            Yerr        = Ystd/np.sqrt(n)
-        
-        Xstd, _ , _ = binned_statistic(x,x,'std',edges)        
-        Xerr        = Xstd/np.sqrt(n)
-    
-    
-    #remove NaNs
-    Y    = Y[n > 0]
-    X    = X[n > 0]
+            Ystd, _, _ = binned_statistic(x, y, 'std', edges)
+            Yerr = Ystd/np.sqrt(n)
+
+        Xstd, _, _ = binned_statistic(x, x, 'std', edges)
+        Xerr = Xstd/np.sqrt(n)
+
+    # remove NaNs
+    Y = Y[n > 0]
+    X = X[n > 0]
     Yerr = Yerr[n > 0]
     Xerr = Xerr[n > 0]
     Ystd = Ystd[n > 0]
-    Xstd = Xstd[n > 0]       
-    
+    Xstd = Xstd[n > 0]
+
     return Y, X, Yerr, Xerr, Ystd, Xstd, edges, bins, n
 
 
 # xrayutilities child classes
 
 from xrayutilities.io.imagereader import ImageReader
+
+
 class Pilatus100k(ImageReader):
 
     """
@@ -1493,15 +1511,14 @@ class Pilatus100k(ImageReader):
 
         ImageReader.__init__(self, 195, 487, hdrlen=4096, dtype=np.int32,
                              byte_swap=False, **keyargs)
-        
-        
+
 
 ###########################
 
 class areaDetector(spec):
     """Inherit from spec and add capabilities to read and evaluate area 
     detector frames from its specific goniometer setup to reciprocal space.
-    
+
     Attributes:                                    
         hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
                                      xrayutilities.
@@ -1522,80 +1539,82 @@ class areaDetector(spec):
         customCounters (List[str]) : List of custom counters - default is 
                                      ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
         plotLog (bool)             : Boolean if subplots of RSM are log or lin
-    
+
     """
-    
-    # properties    
-    rawDataPath   = ''
-    hxrd          = ''
-    gridder       = ''
-    normalizer    = ''
-    UB            = ''
-    delta         = [0, 0]
-    motorNames    = ['Theta', 'TwoTheta']
-    customCounters= ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap', 'Hs', 'Ks', 'Ls', 'HMap', 'KMap', 'LMap']
-    plotLog       = True
-    
+
+    # properties
+    rawDataPath = ''
+    hxrd = ''
+    gridder = ''
+    normalizer = ''
+    UB = ''
+    delta = [0, 0]
+    motorNames = ['Theta', 'TwoTheta']
+    customCounters = ['qx', 'qy', 'qz', 'QxMap', 'QyMap',
+                      'QzMap', 'Hs', 'Ks', 'Ls', 'HMap', 'KMap', 'LMap']
+    plotLog = True
+
     def __init__(self, name, filePath, specFileExt=''):
         super().__init__(name, filePath, specFileExt)
-    
+
     def addCustomCounters(self, specData, scanNum, baseCounters):
         """Add custom counters to the spec data array.
         Here we add the Qx, Qy, Qz maps and axises which by default have a 
         different length than the spec data array. In this case all default 
         spec counters are removed and only custom counters are given.
-        
+
         Args:
             specData (ndarray)     : Data array from the spec scan.
             scanNum (int)          : Scan number of the spec scan.
             baseCounters list(str) : List of the base spec and custom counters
                                      from the cList and xCol.
-            
+
         Returns:
             specData (ndarray): Updated data array from the spec scan.
-        
+
         """
-        
-        #check if any custom counter is in the baseCounters list
+
+        # check if any custom counter is in the baseCounters list
         usedCustomCounters = set(baseCounters) & set(self.customCounters)
         if usedCustomCounters:
-            
+
             if usedCustomCounters & set(['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']):
-                # calculate the Q data for the current scan number            
+                # calculate the Q data for the current scan number
                 Qmap, qx, qy, qz = self.convAreaScan2Q(scanNum)
-                
+
                 # do the integration along the different axises
                 QxMap = np.trapz(np.trapz(Qmap, qy, axis=1), qz, axis=1)
                 QyMap = np.trapz(np.trapz(Qmap, qx, axis=0), qz, axis=1)
                 QzMap = np.trapz(np.trapz(Qmap, qx, axis=0), qy, axis=0)
-            
+
             if usedCustomCounters & set(['Hs', 'Ks', 'Ls', 'HMap', 'KMap', 'LMap']):
-                # calculate the HKL data for the current scan number 
+                # calculate the HKL data for the current scan number
                 HKLmap, Hs, Ks, Ls = self.convAreaScan2HKL(scanNum)
-                
+
                 # do the integration along the different axises
                 HMap = np.trapz(np.trapz(HKLmap, Ks, axis=1), Ls, axis=1)
                 KMap = np.trapz(np.trapz(HKLmap, Hs, axis=0), Ls, axis=1)
                 LMap = np.trapz(np.trapz(HKLmap, Hs, axis=0), Ks, axis=0)
-            
+
             sizeValid = True
-            
+
             for customCounter in usedCustomCounters:
-                
+
                 if len(eval(customCounter)) != len(specData):
                     # the length of the custom counters is different from the
                     # spec data array, so we cannot append and need to init an
                     # empty spec data array
                     sizeValid = False
-            
+
             if not sizeValid:
                 specData = np.array([])
                 print('Custom counter has a different length than the spec scan!')
                 print('Cannot use default spec counters anymore!')
-            
+
             for customCounter in usedCustomCounters:
                 if len(specData) == 0:
-                    specData = np.array(eval(customCounter), dtype=[(customCounter, float)])
+                    specData = np.array(eval(customCounter), dtype=[
+                                        (customCounter, float)])
                 else:
                     try:
                         # in case the custom counter has the same name as a
@@ -1604,521 +1623,524 @@ class areaDetector(spec):
                     except:
                         if len(eval(customCounter)) == len(specData):
                             # append the custom counters to data array
-                            specData = recfuncs.append_fields(specData, customCounter , data=eval(customCounter) , dtypes=float, asrecarray=True, usemask=False)
+                            specData = recfuncs.append_fields(specData, customCounter, data=eval(
+                                customCounter), dtypes=float, asrecarray=True, usemask=False)
                         else:
-                            print('Adding a custom counter with a different length does not work!')
+                            print(
+                                'Adding a custom counter with a different length does not work!')
 
-        return specData    
-    
-    def readRawScan(self,scanNum):
+        return specData
+
+    def readRawScan(self, scanNum):
         """Read the raw data of an area detector scan including.
-        
+
         """
-        #stub
-        return    
-        
+        # stub
+        return
+
     def writeAllAreaScans2HDF5(self):
         """Use this function with caution. It might take some time.
         Reads all scans from the spec file and save the area detector frames, 
         if present, to the HDF5 file.
         Currently it allways overwrite the whole hdf5 file
-        
+
         """
-        
+
         # update the spec file in order to have the specFile object at hand
         self.updateSpec()
-        
-        for i , scan in enumerate(self.specFile.scan_list):
+
+        for i, scan in enumerate(self.specFile.scan_list):
             # iterate over all scan in the specFile
-            self.readAreaScan(i+1) # read (and write) the pilatus data
-        
+            self.readAreaScan(i+1)  # read (and write) the pilatus data
+
     def readAreaScan(self, scanNum):
         """Read the complete data of an area detector scan including the frames, 
         motors, and spec data.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
-            
+
         Returns:
             frames (ndarray): Data array from the area detector data.
             motors (ndarray): Data array from the spec motors.
             data (ndarray)  : Data array from the spec scan.
-        
+
         """
-        
+
         # update the spec file
         if self.updateBeforeRead:
             self.updateSpec()
-        
-        # check if frames are already stored in hdf5 file               
+
+        # check if frames are already stored in hdf5 file
         frames = self.readDataFromHDF5(scanNum, 'AreaRaw', 'frames')
-        
+
         if any(frames) and not self.overwriteHDF5:
-            # if the data is present in the HDF5 file and we don't want to 
+            # if the data is present in the HDF5 file and we don't want to
             # overwrite, read also the other datasets
-            motors   = self.readDataFromHDF5(scanNum, 'AreaRaw', 'motors')
-            data   = self.readDataFromHDF5(scanNum, '', 'data')
-            #print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
-        elif os.path.isfile(self.rawDataPath.format(scanNum,1)):
+            motors = self.readDataFromHDF5(scanNum, 'AreaRaw', 'motors')
+            data = self.readDataFromHDF5(scanNum, '', 'data')
+            # print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
+        elif os.path.isfile(self.rawDataPath.format(scanNum, 1)):
             # data is not present in the HDF5 file but there are frames
             # on the disk, so read them and save them
-        
-            #print('Scan #{0:.0f} read from files and saved to HDF5.'.format(scanNum))      
-            
+
+            # print('Scan #{0:.0f} read from files and saved to HDF5.'.format(scanNum))
+
             # get the motors and data from the spec scan
             motors, data = self.getScanData(scanNum)
-                                
+
             frames = self.readRawScan(scanNum)
-                
+
             # write the frames and motors to the HDF5 file
-            self.writeData2HDF5(scanNum, 'AreaRaw', motors  , 'motors')
+            self.writeData2HDF5(scanNum, 'AreaRaw', motors, 'motors')
             self.writeData2HDF5(scanNum, 'AreaRaw', frames, 'frames')
-            
+
         else:
             # no pilatus imagers for this scna
-            print('Scan #{0:.0f} includes no area detector frames!'.format(scanNum))
+            print(
+                'Scan #{0:.0f} includes no area detector frames!'.format(scanNum))
             frames = []
             motors, data = self.getScanData(scanNum)
-        
-        # if a normalizer is set to the normalization here after reading the data        
+
+        # if a normalizer is set to the normalization here after reading the data
         if self.normalizer and any(frames):
             frames = self.normalizer(data, ccd=frames)
-        
+
         return frames, motors, data
-    
-    
+
     def convAreaScan(self, scanNum, hkl=False):
         """Convert the area detector data for a given scan number to q/hkl-space.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
-            
+
         Returns:
             data (ndarray)   : area detector frames in q/hkl space.
             xaxis (ndarray)  : qx qxis.
             yaxis (ndarray)  : qy qxis.
             zaxis (ndarray)  : qz qxis.
-        
+
         """
-        
-        # read the frames, motors and data        
-        frames, motors, data = self.readAreaScan(scanNum)   
-        
-        # convert the data to q-space using the HXRD instance  
+
+        # read the frames, motors and data
+        frames, motors, data = self.readAreaScan(scanNum)
+
+        # convert the data to q-space using the HXRD instance
         evalString = 'self.hxrd.Ang2Q.area('
-                                           
+
         for motorName in self.motorNames:
-            evalString += 'motors[\'' +  motorName +  '\'], '
-        
+            evalString += 'motors[\'' + motorName + '\'], '
+
         if hkl == True:
             evalString += 'UB=self.UB, '
-            
+
         evalString += 'delta=self.delta)'
-          
-        x, y, z = eval(evalString)   
-    
+
+        x, y, z = eval(evalString)
+
         # convert data to rectangular grid in reciprocal space using the gridder
-        self.gridder(x, y, z, frames[:,:,:])
-        
+        self.gridder(x, y, z, frames[:, :, :])
+
         data = (self.gridder.data)
-        
+
         return data, self.gridder.xaxis, self.gridder.yaxis, self.gridder.zaxis
-    
+
     def convAreaScan2Q(self, scanNum):
         """Convert the area detector data for a given scan number to q-space.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
-            
+
         Returns:
             data (ndarray)   : area detector frames in q-space.
             xaxis (ndarray)  : qx qxis.
             yaxis (ndarray)  : qy qxis.
             zaxis (ndarray)  : qz qxis.
-        
+
         """
-        
+
         return self.convAreaScan(scanNum, hkl=False)
-        
+
     def convAreaScan2HKL(self, scanNum):
         """Convert the area detector data for a given scan number to q-space.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
-            
+
         Returns:
             data (ndarray)   : area detector frames in hkl-space.
             xaxis (ndarray)  : h qxis.
             yaxis (ndarray)  : k qxis.
             zaxis (ndarray)  : l qxis.
-        
+
         """
         return self.convAreaScan(scanNum, hkl=True)
-        
-        
+
     def plotAreaScan(self, scanNum, hkl=False, levels=100, setGrid=True):
         """Plot the area detector data for a given scan number in q-space.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
-        
+
         """
-        
+
         if hkl == True:
             xlabelText = 'H'
             ylabelText = 'K'
-            zlabelText = 'L'            
-            
+            zlabelText = 'L'
+
             data, xaxis, yaxis, zaxis = self.convAreaScan2HKL(scanNum)
-        else:            
+        else:
             xlabelText = r'$q_x$'
             ylabelText = r'$q_y$'
             zlabelText = r'$q_z$'
-            
+
             # get the data to plot
             data, xaxis, yaxis, zaxis = self.convAreaScan2Q(scanNum)
-            
-        
+
         if self.plotLog:
             scaleType = 'log'
-            scaleFunc = lambda x: np.log10(x)
+
+            def scaleFunc(x): return np.log10(x)
         else:
             scaleType = 'linear'
-            scaleFunc = lambda x: x
-        
+
+            def scaleFunc(x): return x
+
         from matplotlib import gridspec
-        
+
         # do the plotting
         fig = plt.figure()
         # qy qx Map
         gs = gridspec.GridSpec(2, 2,
-                               width_ratios=[3,1],
-                               height_ratios=[1,3]
+                               width_ratios=[3, 1],
+                               height_ratios=[1, 3]
                                )
-        
-        
+
         plt.subplot(gs[2])
-        
+
         #z = sum(data,axis=2)
         z = np.trapz(data, zaxis, axis=2)
-        
+
         x = yaxis
         y = xaxis
-        plt.contourf(x,y,scaleFunc(z), levels)
-        plt.xlabel(ylabelText,size=18)
-        plt.ylabel(xlabelText,size=18)
-        plt.xlim([min(x),max(x)])
-        plt.ylim([min(y),max(y)])
+        plt.contourf(x, y, scaleFunc(z), levels)
+        plt.xlabel(ylabelText, size=18)
+        plt.ylabel(xlabelText, size=18)
+        plt.xlim([min(x), max(x)])
+        plt.ylim([min(y), max(y)])
         plt.grid(setGrid)
-        
-        ax = plt.subplot(gs[3])        
+
+        ax = plt.subplot(gs[3])
 #        temp = sum(z,axis=1)
-        temp = np.trapz(z,yaxis,axis=1)
-        plt.plot(temp,y, '-')
+        temp = np.trapz(z, yaxis, axis=1)
+        plt.plot(temp, y, '-')
         ax.set_xscale(scaleType)
-            
-        plt.ylim([min(y),max(y)])
+
+        plt.ylim([min(y), max(y)])
         plt.grid(setGrid)
         ax.yaxis.tick_right()
         ax.yaxis.set_label_position("right")
-        plt.ylabel(xlabelText,size=18, )
-        
+        plt.ylabel(xlabelText, size=18, )
+
         ax = plt.subplot(gs[0])
 #        temp = sum(z,axis=0)
-        temp = np.trapz(z,xaxis, axis=0)
-        plt.plot(x,temp, '-')
+        temp = np.trapz(z, xaxis, axis=0)
+        plt.plot(x, temp, '-')
         ax.set_yscale(scaleType)
-        
-        plt.xlim([min(x),max(x)])
-        plt.xlabel(ylabelText,size=18)
+
+        plt.xlim([min(x), max(x)])
+        plt.xlabel(ylabelText, size=18)
         plt.grid(setGrid)
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
-        
+
         gs.tight_layout(fig)
         plt.show()
-        
+
         #####################################################################
-        fig=plt.figure()
+        fig = plt.figure()
         # qz qx Map
         gs = gridspec.GridSpec(2, 2,
-                               width_ratios=[3,1],
-                               height_ratios=[1,3]
+                               width_ratios=[3, 1],
+                               height_ratios=[1, 3]
                                )
-        
+
         plt.subplot(gs[2])
 #        z = sum(data,axis=1)
-        z = np.trapz(data,yaxis, axis=1)
-        
+        z = np.trapz(data, yaxis, axis=1)
+
         x = zaxis
         y = xaxis
-        plt.contourf(x,y,scaleFunc(z), levels)
-        plt.xlabel(zlabelText,size=18)
-        plt.ylabel(xlabelText,size=18)
-        plt.xlim([min(x),max(x)])
-        plt.ylim([min(y),max(y)])
+        plt.contourf(x, y, scaleFunc(z), levels)
+        plt.xlabel(zlabelText, size=18)
+        plt.ylabel(xlabelText, size=18)
+        plt.xlim([min(x), max(x)])
+        plt.ylim([min(y), max(y)])
         plt.grid(setGrid)
-        
+
         ax = plt.subplot(gs[3])
 #        temp = sum(z,axis=1)
-        temp = np.trapz(z,zaxis, axis=1)          
-        plt.plot(temp,y)
+        temp = np.trapz(z, zaxis, axis=1)
+        plt.plot(temp, y)
         ax.set_xscale(scaleType)
-            
-            
-        plt.ylim([min(y),max(y)])
+
+        plt.ylim([min(y), max(y)])
         plt.grid(setGrid)
         ax.yaxis.tick_right()
         ax.yaxis.set_label_position("right")
-        plt.ylabel(xlabelText,size=18, )
-        
-        ax = plt.subplot(gs[0])  
-#        temp = sum(z,axis=0)
-        temp = np.trapz(z,xaxis, axis=0)
-        plt.plot(x,temp)
-        ax.set_yscale(scaleType)
-        
-        plt.xlim([min(x),max(x)])
-        plt.xlabel(zlabelText,size=18)
-        plt.grid(setGrid)
-        ax.xaxis.tick_top()
-        ax.xaxis.set_label_position("top")
-        
-        gs.tight_layout(fig)
-        plt.show()
-        
-        
-        #####################################################################
-        fig=plt.figure()
-        # qz qy Map
-        gs = gridspec.GridSpec(2, 2,
-                               width_ratios=[3,1],
-                               height_ratios=[1,3]
-                               )
-        
-        plt.subplot(gs[2])
-#        z = sum(data,axis=0)
-        z = np.trapz(data,xaxis, axis=0)
-        x = zaxis
-        y = yaxis
-        plt.contourf(x,y,scaleFunc(z), levels)
-        plt.xlabel(zlabelText,size=18)
-        plt.ylabel(ylabelText,size=18)
-        plt.xlim([min(x),max(x)])
-        plt.ylim([min(y),max(y)])
-        plt.grid(setGrid)
-        
-        ax = plt.subplot(gs[3])
-#        temp = sum(z,axis=1)
-        temp = np.trapz(z,zaxis, axis=1)         
-        plt.plot(temp,y)
-        ax.set_xscale(scaleType)
-            
-        
-        plt.ylim([min(y),max(y)])
-        plt.grid(setGrid)
-        ax.yaxis.tick_right()
-        ax.yaxis.set_label_position("right")
-        plt.ylabel(ylabelText,size=18, )
-        
+        plt.ylabel(xlabelText, size=18, )
+
         ax = plt.subplot(gs[0])
 #        temp = sum(z,axis=0)
-        temp = np.trapz(z,yaxis, axis=0)           
-        plt.plot(x,temp)
+        temp = np.trapz(z, xaxis, axis=0)
+        plt.plot(x, temp)
         ax.set_yscale(scaleType)
-            
-        
-        plt.xlim([min(x),max(x)])
-        plt.xlabel(zlabelText,size=18)
+
+        plt.xlim([min(x), max(x)])
+        plt.xlabel(zlabelText, size=18)
         plt.grid(setGrid)
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
-        
+
         gs.tight_layout(fig)
         plt.show()
-     
+
+        #####################################################################
+        fig = plt.figure()
+        # qz qy Map
+        gs = gridspec.GridSpec(2, 2,
+                               width_ratios=[3, 1],
+                               height_ratios=[1, 3]
+                               )
+
+        plt.subplot(gs[2])
+#        z = sum(data,axis=0)
+        z = np.trapz(data, xaxis, axis=0)
+        x = zaxis
+        y = yaxis
+        plt.contourf(x, y, scaleFunc(z), levels)
+        plt.xlabel(zlabelText, size=18)
+        plt.ylabel(ylabelText, size=18)
+        plt.xlim([min(x), max(x)])
+        plt.ylim([min(y), max(y)])
+        plt.grid(setGrid)
+
+        ax = plt.subplot(gs[3])
+#        temp = sum(z,axis=1)
+        temp = np.trapz(z, zaxis, axis=1)
+        plt.plot(temp, y)
+        ax.set_xscale(scaleType)
+
+        plt.ylim([min(y), max(y)])
+        plt.grid(setGrid)
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
+        plt.ylabel(ylabelText, size=18, )
+
+        ax = plt.subplot(gs[0])
+#        temp = sum(z,axis=0)
+        temp = np.trapz(z, yaxis, axis=0)
+        plt.plot(x, temp)
+        ax.set_yscale(scaleType)
+
+        plt.xlim([min(x), max(x)])
+        plt.xlabel(zlabelText, size=18)
+        plt.grid(setGrid)
+        ax.xaxis.tick_top()
+        ax.xaxis.set_label_position("top")
+
+        gs.tight_layout(fig)
+        plt.show()
+
     def plotAreaScanQ(self, scanNum, levels=100, setGrid=True):
         """Plot the area detector data for a given scan number in q-space.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
-        
+
         """
-        
+
         self.plotAreaScan(scanNum, hkl=False, levels=levels, setGrid=setGrid)
-        
+
     def plotAreaScanHKL(self, scanNum, levels=100, setGrid=True):
         """Plot the area detector data for a given scan number in hkl-space.
-        
+
         Args:
             scanNum (int)   : Scan number of the spec scan.
-        
+
         """
-        
+
         self.plotAreaScan(scanNum, hkl=True, levels=levels, setGrid=setGrid)
-        
+
 
 ###########################
-        
+
 class princtonPM3(areaDetector):
     """Inherit from areaDetector and add specfic routins for reading data files
     of princton instruments SPE files and goniometer setup at BESSY II PM3
-    
+
     Attributes:                                    
         inherited from area detector    
-        
+
     """
-    
+
     # properties
-    delta         = [0, 0]
-    motorNames    = ['Theta', 'TwoTheta']
+    delta = [0, 0]
+    motorNames = ['Theta', 'TwoTheta']
 
     def __init__(self, name, filePath, specFileExt=''):
         super().__init__(name, filePath, specFileExt)
         # set the path to the raw data frame files
-        self.rawDataPath = self.filePath + '/ccd/' + self.specFileName + '_{0:0>4d}.SPE'      
+        self.rawDataPath = self.filePath + '/ccd/' + \
+            self.specFileName + '_{0:0>4d}.SPE'
 
-    def readRawScan(self,scanNum):
+    def readRawScan(self, scanNum):
         """Read the raw data of a Princton Instrument CCD scan.
-        
+
         """
-        
+
         from winspec import SpeFile
         frames = SpeFile(self.rawDataPath.format(scanNum)).data
 
         return frames
-        
-    
-        
-        
+
+
 ########################################
-        
+
 class pilatusXPP(areaDetector):
     """Inherit from spec and add capabilities to read Pilatus images from the 
     BESSY II XPP beamline with its specific goniometer setup.
-    
+
     Attributes:                                   
         inherited from areaDetector
         pilatus (ImageReader(xrayutilities)): Pilatus100k-object for reading frames
-    
+
     """
-    
+
     # properties
-    delta         = [0,0,0,0]
-    motorNames    = ['Theta', 'Chi', 'Phi', 'Two Theta']
-    pilatus       = ''
+    delta = [0, 0, 0, 0]
+    motorNames = ['Theta', 'Chi', 'Phi', 'Two Theta']
+    pilatus = ''
 
     def __init__(self, name, filePath, specFileExt=''):
         super().__init__(name, filePath, specFileExt)
         # set the path to the raw data frame files
-        self.rawDataPath = self.filePath + '/pilatus/S{0:0>5d}/' + self.specFileName + '_{0:.0f}_{2:.0f}.tif'     
+        self.rawDataPath = self.filePath + \
+            '/pilatus/S{0:0>5d}/' + self.specFileName + '_{0:.0f}_{2:.0f}.tif'
 
-    def readRawScan(self,scanNum):
+    def readRawScan(self, scanNum):
         """Read the raw data of a Pilatsu 100k scan.
-        
+
         """
-        
+
         motors, data = self.getScanData(scanNum)
-            
-        numPoints = len(data) #  number of points in the scan
-       
+
+        numPoints = len(data)  # number of points in the scan
+
         # initilize the frames array
-        frames = np.zeros([numPoints,self.pilatus.nop1,self.pilatus.nop2], dtype=np.int32)
-        
+        frames = np.zeros([numPoints, self.pilatus.nop1,
+                           self.pilatus.nop2], dtype=np.int32)
+
         for i in range(1, numPoints, 1):
             # traverse all points in the scan
-            pfile = self.filePath.format(scanNum,i) # format the pilatus image path
-            img = self.pilatus.readImage(pfile) # read the image
-            frames[i,:,:] = img # save the image in the return array
+            # format the pilatus image path
+            pfile = self.filePath.format(scanNum, i)
+            img = self.pilatus.readImage(pfile)  # read the image
+            frames[i, :, :] = img  # save the image in the return array
 
         return frames
 
-        
+
 ########################################
-        
+
 class scopeTraces(spec):
     """Inherit from spec and add capabilities to read and plot scope traces.
-    
+
     Attributes:
         inherited from spec
-        
+
     """
-    
-    # properties    
+
+    # properties
     scopeDataPath = ''
-    
+
     def __init__(self, name, filePath, specFileExt=''):
         super().__init__(name, filePath, specFileExt)
         # set the path to the scope raw traces
-        self.scopeDataPath = self.filePath + '/scope/' + self.specFileName + '_{:04d}/F1_' + self.specFileName + '_{:04d}_{:05d}.txt'
-        
+        self.scopeDataPath = self.filePath + '/scope/' + self.specFileName + \
+            '_{:04d}/F1_' + self.specFileName + '_{:04d}_{:05d}.txt'
+
     def readScopeTrace(self, scanNum, scanPoint):
         # add automatic file copying in the future
         # import os#,shutil
         # basePath = 'D:/HZB/Beamtimes/ZPM/2017-02-Schick/scope/'
         # filepath = 'Dy_{:04d}/F1_Dy_{:04d}_{:05d}.txt'.format(ScanNr,ScanNr,ScanPoint)
-        
+
         #     if not os.path.exists(basePath + filepath):
         #         # copy data if path not exists
         #         shutil.copytree('/mnt/lecroy/2017/2017-02-Schick/Dy_{:04d}'.format(ScanNr), 'D:/HZB/Beamtimes/ZPM/2017-02-Schick/scope/Dy_{:04d}'.format(ScanNr))
-                
-        trace = np.genfromtxt(self.scopeDataPath.format(scanNum,scanNum,scanPoint),skip_header=5,delimiter=',')
-        delays = trace[:,0]*1e9 
-        ampl = trace[:,1]
-        
-        return delays, ampl 
-        
-    def readScopeScan(self, scanNum, delayGrid= []):  
-        
+
+        trace = np.genfromtxt(self.scopeDataPath.format(
+            scanNum, scanNum, scanPoint), skip_header=5, delimiter=',')
+        delays = trace[:, 0]*1e9
+        ampl = trace[:, 1]
+
+        return delays, ampl
+
+    def readScopeScan(self, scanNum, delayGrid=[]):
+
         import evalData
-    
+
         # check if there is data in the hdf5 file available
         intensities = self.readDataFromHDF5(scanNum, 'ScopeRaw', 'intensities')
-        
+
         delays, _ = self.readScopeTrace(scanNum, 0)
-        
+
         if any(intensities):
-            # if the data is present in the HDF5 file and we don't want to 
+            # if the data is present in the HDF5 file and we don't want to
             # overwrite, read also the other datasets
-            delays   = self.readDataFromHDF5(scanNum, 'ScopeRaw', 'delays')
+            delays = self.readDataFromHDF5(scanNum, 'ScopeRaw', 'delays')
             # print('Scan #{0:.0f} read from HDF5.'.format(scanNum))
-           
+
         elif any(delays):
             # data is not present in the HDF5 file but there are frames
             # on the disk, so read them and save them
-    
-            # print('Scan #{0:.0f} read from files and saved to HDF5.'.format(scanNum))  
-            
-            folderName = os.path.dirname(self.scopeDataPath.format(scanNum,scanNum,0))
-            
+
+            # print('Scan #{0:.0f} read from files and saved to HDF5.'.format(scanNum))
+
+            folderName = os.path.dirname(
+                self.scopeDataPath.format(scanNum, scanNum, 0))
+
             numFiles = len(os.listdir(folderName))
-            
+
             if len(delayGrid) > 0:
-                delayGrid, _, _, _, _, _, _, _, _ = evalData.binData(delays,delays,delayGrid)        
+                delayGrid, _, _, _, _, _, _, _, _ = evalData.binData(
+                    delays, delays, delayGrid)
                 intensities = np.zeros([numFiles, len(delayGrid)])
             else:
                 intensities = np.zeros([numFiles, len(delays)])
-    
-    
+
             for i in range(numFiles):
                 _, ampl = self.readScopeTrace(scanNum, i)
-    
+
                 if len(delayGrid) > 0:
-                    ampl, X, Yerr, Xerr, Ystd, Xstd, edges, bins, n = evalData.binData(ampl,delays,delayGrid,statistic='mean')
-    
-                intensities[i,:] = ampl
-    
-            self.writeData2HDF5(scanNum, 'ScopeRaw', intensities  , 'intensities')
+                    ampl, X, Yerr, Xerr, Ystd, Xstd, edges, bins, n = evalData.binData(
+                        ampl, delays, delayGrid, statistic='mean')
+
+                intensities[i, :] = ampl
+
+            self.writeData2HDF5(scanNum, 'ScopeRaw',
+                                intensities, 'intensities')
             self.writeData2HDF5(scanNum, 'ScopeRaw', delays, 'delays')
-    
+
         else:
             # no scope data for this scan
             print('Scan #{0:.0f} includes no scope data!'.format(scanNum))
             intensities = []
-        
-        
+
         scanData = self.plotScans([scanNum], skipPlot=True)
-        
+
         if len(delayGrid) > 0:
             return scanData, delayGrid, intensities
         else:
