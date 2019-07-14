@@ -15,11 +15,11 @@
 #
 # Copyright (C) 2015 Daniel Schick <schick.daniel@gmail.com>
 
-from numpy import *
-from numpy.lib.recfunctions import *
-from numpy.core import records
+import numpy as np
+import numpy.lib.recfunctions as recfuncs
+#from numpy.core import records
 import collections
-from matplotlib.pyplot import *
+import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os
 import xrayutilities as xu
@@ -162,7 +162,8 @@ class spec(object):
                 motors = []
             else:
                 # read the data providing the motorNames
-                motors, data = xu.io.geth5_scan(os.path.join(self.hdf5Path, self.h5FileName), scanNum, *self.motorNames)
+                motors, data = xu.io.geth5_scan(os.path.join(self.hdf5Path, self.h5FileName),
+                                                scanNum, *self.motorNames)
                         
             # convert the data array to float64 since lmfit works better
             # is there a smarter way to do so?
@@ -170,11 +171,11 @@ class spec(object):
             dt = dt.descr
             for i, thisType in enumerate(dt):
                 dt[i] = (dt[i][0], 'float64')                
-            dt = dtype(dt)
+            dt = np.dtype(dt)
             data = data.astype(dt)            
             
             # convert list of motors to recarray
-            motors = rec.array(motors, names=self.motorNames)
+            motors = np.rec.array(motors, names=self.motorNames)
         except Exception as e: 
             print(e)
             print('Scan #{0:.0f} not present in hdf5 file!'.format(scanNum))
@@ -359,7 +360,7 @@ class spec(object):
         return specData
     
     
-    def avgNbinScans(self,scanList,xGrid=array([]), binning=True):
+    def avgNbinScans(self,scanList,xGrid=np.array([]), binning=True):
         """Averages data defined by the counter list, cList, onto an optional 
         xGrid. If no xGrid is given the x-axis data of the first scan in the 
         list is used instead.
@@ -394,7 +395,7 @@ class spec(object):
             cList.append(self.xCol)
         
         specCols = []
-        concatData = array([])
+        concatData = np.array([])
             
         for i, scanNum in enumerate(scanList):
             # traverse the scan list and read data
@@ -436,7 +437,7 @@ class spec(object):
                 for colName in cList:
                     dtypes.append((colName, '<f8'))
             
-            data = array([])  
+            data = np.array([])  
             # read data into data array
             for colString, colName in zip(colStrings, colNames):                 
                 # traverse the counters in the cList and append to data if not
@@ -444,14 +445,14 @@ class spec(object):
                 evalString = self.colString2evalString(colString, arrayName='specData')
 
                 if len(data) == 0:
-                    data = array(eval(evalString), dtype=[(colName, float)])
+                    data = np.array(eval(evalString), dtype=[(colName, float)])
                 elif not colName in data.dtype.names:
-                    data = eval('append_fields(data,\'' + colName + '\',data=(' + evalString + '), dtypes=float, asrecarray=True, usemask=False)')     
+                    data = eval('recfuncs.append_fields(data,\'' + colName + '\',data=(' + evalString + '), dtypes=float, asrecarray=True, usemask=False)')     
             
             if i > 0:
                 # this is not the first scan in the list so append the data to
                 # the concatenated data array
-                concatData = concatenate((concatData,data), axis=0)           
+                concatData = np.concatenate((concatData,data), axis=0)           
             else:
                 concatData = data
                 
@@ -473,9 +474,9 @@ class spec(object):
             else:
                 xGridReduced = xGrid
             # create empty arrays for averages, std and errors
-            avgData=recarray(shape(xGridReduced)[0],dtype=dtypes)
-            stdData=recarray(shape(xGridReduced)[0],dtype=dtypes)
-            errData=recarray(shape(xGridReduced)[0],dtype=dtypes)
+            avgData=np.recarray(np.shape(xGridReduced)[0],dtype=dtypes)
+            stdData=np.recarray(np.shape(xGridReduced)[0],dtype=dtypes)
+            errData=np.recarray(np.shape(xGridReduced)[0],dtype=dtypes)
                        
             if self.statisticType == 'poisson':
                 binStat = 'sum'
@@ -551,7 +552,7 @@ class spec(object):
                 # try to create the new subgroup for the area detector data
                 scan.create_group(childName)
             except:
-                void
+                np.void
             
             g5 = scan[childName] # this is the new group
             
@@ -559,7 +560,7 @@ class spec(object):
                 # add the data to the group
                 g5.create_dataset(dataName, data=data, compression="gzip", compression_opts=9)
             except:
-                void
+                np.void
                 
             h5.flush() # write the data to the file
                     
@@ -652,14 +653,14 @@ class spec(object):
         elif xErr == 'err':
             xErrData = errData
         else:
-            xErrData = zeros_like(stdData)
+            xErrData = np.zeros_like(stdData)
             
         if yErr == 'std':
             yErrData = stdData
         elif yErr == 'err':
             yErrData = errData
         else:
-            yErrData = zeros_like(stdData)
+            yErrData = np.zeros_like(stdData)
         
         # set x-data and errors
         x2plot    = avgData[self.xCol]
@@ -678,8 +679,8 @@ class spec(object):
                 # normalize the y-data to 1 for t < t0
                 # just makes sense for delay scans
                 beforeZero      = y2plot[col][x2plot <= self.t0]
-                y2plot[col]     = y2plot[col]/mean(beforeZero)
-                yerr2plot[col]  = yerr2plot[col]/mean(beforeZero)
+                y2plot[col]     = y2plot[col]/np.mean(beforeZero)
+                yerr2plot[col]  = yerr2plot[col]/np.mean(beforeZero)
             
             if len(labelText) == 0:
                 # if no labelText is given use the counter name
@@ -695,30 +696,30 @@ class spec(object):
             if not skipPlot:
                 # plot the errorbar for each counter
                 if (xErr == 'none') & (yErr == 'none'):
-                    plot(x2plot,y2plot[col],fmt,label=lt)
+                    plt.plot(x2plot,y2plot[col],fmt,label=lt)
                 else:
-                    errorbar(x2plot,y2plot[col],fmt=fmt,label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
+                    plt.errorbar(x2plot,y2plot[col],fmt=fmt,label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
         
         if not skipPlot:
             # add a legend, labels, title and set the limits and grid
-            legend(frameon=True,loc=0,numpoints=1)
-            xlabel(self.xCol)
+            plt.legend(frameon=True,loc=0,numpoints=1)
+            plt.xlabel(self.xCol)
             if xlims:
-                xlim(xlims)
+                plt.xlim(xlims)
             if ylims:
-                ylim(ylims)
+                plt.ylim(ylims)
             if len(titleText) > 0:
-                title(titleText)
+                plt.title(titleText)
             else:
-                title(name)
+                plt.title(name)
             if len(xText) > 0:
-                xlabel(xText)
+                plt.xlabel(xText)
                 
             if len(yText) > 0:
-                ylabel(yText)
+                plt.ylabel(yText)
                 
             if gridOn:
-                grid(True)   
+                plt.grid(True)   
         
         return y2plot, x2plot, yerr2plot, xerr2plot, name
         
@@ -763,8 +764,8 @@ class spec(object):
         X = specData[xMotor]
         Y = specData[yMotor]
         
-        xx = sort(unique(X))
-        yy = sort(unique(Y))
+        xx = np.sort(np.unique(X))
+        yy = np.sort(np.unique(Y))
         
         cList = self.getClist()
         
@@ -790,51 +791,50 @@ class spec(object):
                 )
                 k= 0
 
-            ax1 = subplot(gs[0+k])
+            ax1 = plt.subplot(gs[0+k])
             
-            plot(xx, mean(zz,0), label='mean')
+            plt.plot(xx, np.mean(zz,0), label='mean')
             
-            plot(xx, zz[argmax(mean(zz,1)),:], label='peak')
+            plt.plot(xx, zz[np.argmax(np.mean(zz,1)),:], label='peak')
             
-            xlim([min(xx), max(xx)])
-            legend(loc=0)
+            plt.xlim([min(xx), max(xx)])
+            plt.legend(loc=0)
             ax1.xaxis.tick_top()
             if gridOn:
-                grid(True)
+                plt.grid(True)
             
-            ax3 = subplot(gs[2+k])
+            ax3 = plt.subplot(gs[2+k])
             
-            contourf(xx,yy,zz, levels, cmap='viridis')
+            plt.contourf(xx,yy,zz, levels, cmap='viridis')
             
-            xlabel(xMotor)
-            ylabel(yMotor)
+            plt.xlabel(xMotor)
+            plt.ylabel(yMotor)
             
             if len(xText) > 0:
-                xlabel(xText)
+                plt.xlabel(xText)
                 
             if len(yText) > 0:
-                ylabel(yText)
+                plt.ylabel(yText)
                 
             if gridOn:
-                grid(True) 
+                plt.grid(True) 
                 
             if cBar:
-                cb = colorbar(cax=subplot(gs[0]), orientation='horizontal')
+                cb = plt.colorbar(cax=plt.subplot(gs[0]), orientation='horizontal')
                 cb.ax.xaxis.set_ticks_position('top')
                 cb.ax.xaxis.set_label_position('top')
             
             
-            ax4 = subplot(gs[3+k])
+            ax4 = plt.subplot(gs[3+k])
             
-            plot(mean(zz,1),yy)
-            plot(zz[:,argmax(mean(zz,0))], yy)
-            ylim([min(yy), max(yy)])
+            plt.plot(np.mean(zz,1),yy)
+            plt.plot(zz[:,np.argmax(np.mean(zz,0))], yy)
+            plt.ylim([np.min(yy), np.max(yy)])
             
             ax4.yaxis.tick_right()
             if gridOn:
-                grid(True)
-            
-            
+                plt.grid(True)
+
         return xx, yy, zz
             
     
@@ -1018,7 +1018,7 @@ class spec(object):
                 saveData.append(sequenceData[counter][i])            
             
             # save data with header to text file
-            savetxt('%s/%s_%s.dat' % (path,fileName,"".join(x for x in labelText if x.isalnum())), r_[saveData].T, delimiter = '\t', header=header)
+            np.savetxt('%s/%s_%s.dat' % (path,fileName,"".join(x for x in labelText if x.isalnum())), np.r_[saveData].T, delimiter = '\t', header=header)
             
     def fitScans(self,scans,mod,pars,ylims=[],xlims=[],figSize=[], xGrid=[], 
                  yErr='std', xErr = 'std', norm2one=False, binning=True, 
@@ -1230,7 +1230,7 @@ class spec(object):
                     # evaluate the select statement
                     if select == '':
                         # select all
-                        sel = ones_like(y2plot, dtype=bool)
+                        sel = np.ones_like(y2plot, dtype=bool)
                     else:
                         sel = eval(select)            
                     
@@ -1241,10 +1241,10 @@ class spec(object):
                     xerr2plot = xerr2plot[sel]
                     
                     # remove nans
-                    y2plot = y2plot[~isnan(y2plot)]
-                    x2plot = x2plot[~isnan(y2plot)]
-                    yerr2plot = yerr2plot[~isnan(y2plot)]
-                    xerr2plot = xerr2plot[~isnan(y2plot)]        
+                    y2plot = y2plot[~np.isnan(y2plot)]
+                    x2plot = x2plot[~np.isnan(y2plot)]
+                    yerr2plot = yerr2plot[~np.isnan(y2plot)]
+                    xerr2plot = xerr2plot[~np.isnan(y2plot)]        
                                 
                     # do the fitting with or without weighting the data
                     if weights:
@@ -1266,106 +1266,106 @@ class spec(object):
                     else:
                         offsetX = 0
                         
-                    figure(mainFigNum) # select the main figure                            
+                    plt.figure(mainFigNum) # select the main figure                            
                     
                     if plotSeparate:
                         # use subplot for separate plotting
-                        subplot( (numSubplots+numSubplots%2)/2,2,k)
+                        plt.subplot( (numSubplots+numSubplots%2)/2,2,k)
                     
                     # plot the fit and the data as errorbars
-                    x2plotFit = linspace(min(x2plot), max(x2plot), 10000)
-                    plt = plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1)
-                    errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
+                    x2plotFit = np.linspace(np.min(x2plot), np.max(x2plot), 10000)
+                    plot = plt.plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1)
+                    plt.errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plot[0].get_color())
                     
                     if len(parameters) > 5:
                         # move the legend outside the plot for more than 
                         # 5 sequence parameters
-                        legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
+                        plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
                                        loc=3,numpoints=1,ncol=3, mode="expand", 
                                        borderaxespad=0.)
                     else:
-                        legend(frameon=True,loc=0,numpoints=1)
+                        plt.legend(frameon=True,loc=0,numpoints=1)
                     
                     # set the axis limits, title, labels and gird
                     if xlims:
-                        xlim(xlims)
+                        plt.xlim(xlims)
                     if ylims:
-                        ylim(ylims)
+                        plt.ylim(ylims)
                     if len(titleText) > 0:
                         if isinstance(titleText, (list, tuple)):             
-                            title(titleText[k-1])
+                            plt.title(titleText[k-1])
                         else:
-                            title(titleText)
+                            plt.title(titleText)
                     else:
-                        title(name)
+                        plt.title(name)
                         
                     if len(xText) > 0:
-                        xlabel(xText)
+                        plt.xlabel(xText)
                         
                     if len(yText) > 0:
                         if isinstance(yText, (list, tuple)):             
-                            ylabel(yText[k-1])
+                            plt.ylabel(yText[k-1])
                         else:
-                            ylabel(yText)
+                            plt.ylabel(yText)
                     
                     if gridOn:
-                        grid(True)  
+                        plt.grid(True)  
                     
                     # show the single fits and residuals
                     if showSingle:
-                        figure(mainFigNum+l, figsize=figSize)
+                        plt.figure(mainFigNum+l, figsize=figSize)
 #                        gs = mpl.gridspec.GridSpec(2*numSubplots*len(parameters),1, height_ratios=[1,3], hspace=0.1)
                         gs = mpl.gridspec.GridSpec(2,1, height_ratios=[1,3], hspace=0.1)
-                        ax1 = subplot(gs[0])
-                        markerline, stemlines, baseline = stem(x2plot-offsetX, out.residual, markerfmt=' ')
-                        setp(stemlines, 'color', plt[0].get_color(), 'linewidth', 2, alpha=0.5)
-                        setp(baseline, 'color','k', 'linewidth', 0)
+                        ax1 = plt.subplot(gs[0])
+                        markerline, stemlines, baseline = plt.stem(x2plot-offsetX, out.residual, markerfmt=' ')
+                        plt.setp(stemlines, 'color', plot[0].get_color(), 'linewidth', 2, alpha=0.5)
+                        plt.setp(baseline, 'color','k', 'linewidth', 0)
                         
                         ax1.xaxis.tick_top()
-                        ax1.yaxis.set_major_locator(MaxNLocator(3))
-                        ylabel('Residuals')
+                        ax1.yaxis.set_major_locator(plt.MaxNLocator(3))
+                        plt.ylabel('Residuals')
                         if xlims:
-                            xlim(xlims)
+                            plt.xlim(xlims)
                         if ylims:
-                            ylim(ylims)
+                            plt.ylim(ylims)
                         
                         if len(xText) > 0:
-                            xlabel(xText)
+                            plt.xlabel(xText)
                             
                         if gridOn:
-                            grid(True)                     
+                            plt.grid(True)                     
                         
                         if len(titleText) > 0:
                             if isinstance(titleText, (list, tuple)):             
-                                title(titleText[k-1])
+                                plt.title(titleText[k-1])
                             else:
-                                title(titleText)
+                                plt.title(titleText)
                         else:
-                            title(name)
+                            plt.title(name)
                         #print(i*k+k+numSubplots*len(parameters))
                         #ax2 = subplot(gs[i*numSubplots+k-1+numSubplots*len(parameters)])
-                        ax2 = subplot(gs[1])
-                        x2plotFit = linspace(min(x2plot), max(x2plot), 1000)
-                        ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1, color=plt[0].get_color())
-                        ax2.errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
-                        legend(frameon=True,loc=0,numpoints=1)
+                        ax2 = plt.subplot(gs[1])
+                        x2plotFit = np.linspace(np.min(x2plot), np.max(x2plot), 1000)
+                        ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1, color=plot[0].get_color())
+                        ax2.errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plot[0].get_color())
+                        plt.legend(frameon=True,loc=0,numpoints=1)
                         
                         if xlims:
-                            xlim(xlims)
+                            plt.xlim(xlims)
                         if ylims:
-                            ylim(ylims)
+                            plt.ylim(ylims)
                         
                         if len(xText) > 0:
-                            xlabel(xText)
+                            plt.xlabel(xText)
                         
                         if len(yText) > 0:
                             if isinstance(yText, (list, tuple)):             
-                                ylabel(yText[k-1])
+                                plt.ylabel(yText[k-1])
                             else:
-                                ylabel(yText)
+                                plt.ylabel(yText)
                     
                         if gridOn:
-                            grid(True)                           
+                            plt.grid(True)                           
 #                        show()
                         
                         l += 1
@@ -1376,14 +1376,14 @@ class spec(object):
                     
                     # add the fit results to the returns
                     for pname, par in _pars.items():
-                        res[counter][pname] = append(res[counter][pname], out.best_values[pname])
-                        res[counter][pname + 'Err'] = append(res[counter][pname + 'Err'], out.params[pname].stderr)
+                        res[counter][pname] = np.append(res[counter][pname], out.best_values[pname])
+                        res[counter][pname + 'Err'] = np.append(res[counter][pname + 'Err'], out.params[pname].stderr)
                         
-                    res[counter]['chisqr'] = append(res[counter]['chisqr'], out.chisqr)
-                    res[counter]['redchi'] = append(res[counter]['redchi'], out.redchi)
-                    res[counter]['CoM']    = append(res[counter]['CoM'], sum(y2plot*x2plot)/sum(y2plot))
-                    res[counter]['int']    = append(res[counter]['int'], sum(y2plot))
-                    res[counter]['fit']    = append(res[counter]['fit'], out)
+                    res[counter]['chisqr'] = np.append(res[counter]['chisqr'], out.chisqr)
+                    res[counter]['redchi'] = np.append(res[counter]['redchi'], out.redchi)
+                    res[counter]['CoM']    = np.append(res[counter]['CoM'], sum(y2plot*x2plot)/sum(y2plot))
+                    res[counter]['int']    = np.append(res[counter]['int'], sum(y2plot))
+                    res[counter]['fit']    = np.append(res[counter]['fit'], out)
                     
                     k += 1
                     
@@ -1391,7 +1391,7 @@ class spec(object):
                 # end if
             # end for             
             
-        figure(mainFigNum) # set as active figure
+        plt.figure(mainFigNum) # set as active figure
                  
         return res, parameters, sequenceData
 
@@ -1405,8 +1405,8 @@ class spec(object):
       
 def edges4grid(grid):
     """Creates a vector of the corresponding edges for a grid vector. """
-    binwidth = diff(grid);
-    edges    = hstack([grid[0]-binwidth[0]/2, grid[0:-1]+binwidth/2, grid[-1]+binwidth[-1]/2]);
+    binwidth = np.diff(grid);
+    edges    = np.hstack([grid[0]-binwidth[0]/2, grid[0:-1]+binwidth/2, grid[-1]+binwidth[-1]/2]);
     
     return edges, binwidth
 
@@ -1416,42 +1416,42 @@ def binData(y,x,X,statistic='mean'):
         
     y = y.flatten(1)
     x = x.flatten(1)
-    X = sort(X.flatten(1))
+    X = np.sort(X.flatten(1))
     
     # create bins for the grid
     edges, _ = edges4grid(X);    
     
-    if array_equal(x,X): 
+    if np.array_equal(x,X): 
         # no binning since the new grid is the same as the old one
         Y = y
-        bins = ones_like(Y)        
-        n    = ones_like(Y)
+        bins = np.ones_like(Y)        
+        n    = np.ones_like(Y)
     else:    
         # do the binning and get the Y results 
         Y, _ , bins = binned_statistic(x,y,statistic,edges)
-        bins = bins.astype(int_)
+        bins = bins.astype(np.int_)
         
-        n = bincount(bins[bins > 0],minlength=len(X)+1)  
+        n = np.bincount(bins[bins > 0], minlength=len(X)+1)  
         n = n[1:len(X)+1]
     
     
-    if array_equal(x,X) and statistic is not 'sum': 
+    if np.array_equal(x,X) and statistic is not 'sum': 
         
-        Ystd = zeros_like(Y)
-        Xstd = zeros_like(X)
-        Yerr = zeros_like(Y)
-        Xerr = zeros_like(X)
+        Ystd = np.zeros_like(Y)
+        Xstd = np.zeros_like(X)
+        Yerr = np.zeros_like(Y)
+        Xerr = np.zeros_like(X)
     else:    
         # calculate the std of X and Y
         if statistic == 'sum':
-            Ystd = sqrt(Y)                   
+            Ystd = np.sqrt(Y)                   
             Yerr = Ystd
         else:
-            Ystd, _ , _ = binned_statistic(x,y,std,edges)        
-            Yerr        = Ystd/sqrt(n)
+            Ystd, _ , _ = binned_statistic(x,y,'std',edges)        
+            Yerr        = Ystd/np.sqrt(n)
         
-        Xstd, _ , _ = binned_statistic(x,x,std,edges)        
-        Xerr        = Xstd/sqrt(n)
+        Xstd, _ , _ = binned_statistic(x,x,'std',edges)        
+        Xerr        = Xstd/np.sqrt(n)
     
     
     #remove NaNs
@@ -1491,7 +1491,7 @@ class Pilatus100k(ImageReader):
                      for flat field are supported.
         """
 
-        ImageReader.__init__(self, 195, 487, hdrlen=4096, dtype=int32,
+        ImageReader.__init__(self, 195, 487, hdrlen=4096, dtype=np.int32,
                              byte_swap=False, **keyargs)
         
         
@@ -1565,18 +1565,18 @@ class areaDetector(spec):
                 Qmap, qx, qy, qz = self.convAreaScan2Q(scanNum)
                 
                 # do the integration along the different axises
-                QxMap = trapz(trapz(Qmap, qy, axis=1), qz, axis=1)
-                QyMap = trapz(trapz(Qmap, qx, axis=0), qz, axis=1)
-                QzMap = trapz(trapz(Qmap, qx, axis=0), qy, axis=0)
+                QxMap = np.trapz(np.trapz(Qmap, qy, axis=1), qz, axis=1)
+                QyMap = np.trapz(np.trapz(Qmap, qx, axis=0), qz, axis=1)
+                QzMap = np.trapz(np.trapz(Qmap, qx, axis=0), qy, axis=0)
             
             if usedCustomCounters & set(['Hs', 'Ks', 'Ls', 'HMap', 'KMap', 'LMap']):
                 # calculate the HKL data for the current scan number 
                 HKLmap, Hs, Ks, Ls = self.convAreaScan2HKL(scanNum)
                 
                 # do the integration along the different axises
-                HMap = trapz(trapz(HKLmap, Ks, axis=1), Ls, axis=1)
-                KMap = trapz(trapz(HKLmap, Hs, axis=0), Ls, axis=1)
-                LMap = trapz(trapz(HKLmap, Hs, axis=0), Ks, axis=0)
+                HMap = np.trapz(np.trapz(HKLmap, Ks, axis=1), Ls, axis=1)
+                KMap = np.trapz(np.trapz(HKLmap, Hs, axis=0), Ls, axis=1)
+                LMap = np.trapz(np.trapz(HKLmap, Hs, axis=0), Ks, axis=0)
             
             sizeValid = True
             
@@ -1589,13 +1589,13 @@ class areaDetector(spec):
                     sizeValid = False
             
             if not sizeValid:
-                specData = array([])
+                specData = np.array([])
                 print('Custom counter has a different length than the spec scan!')
                 print('Cannot use default spec counters anymore!')
             
             for customCounter in usedCustomCounters:
                 if len(specData) == 0:
-                    specData = array(eval(customCounter), dtype=[(customCounter, float)])
+                    specData = np.array(eval(customCounter), dtype=[(customCounter, float)])
                 else:
                     try:
                         # in case the custom counter has the same name as a
@@ -1604,7 +1604,7 @@ class areaDetector(spec):
                     except:
                         if len(eval(customCounter)) == len(specData):
                             # append the custom counters to data array
-                            specData = append_fields(specData, customCounter , data=eval(customCounter) , dtypes=float, asrecarray=True, usemask=False)
+                            specData = recfuncs.append_fields(specData, customCounter , data=eval(customCounter) , dtypes=float, asrecarray=True, usemask=False)
                         else:
                             print('Adding a custom counter with a different length does not work!')
 
@@ -1781,18 +1781,15 @@ class areaDetector(spec):
         
         if self.plotLog:
             scaleType = 'log'
-            scaleFunc = lambda x: log10(x)
+            scaleFunc = lambda x: np.log10(x)
         else:
             scaleType = 'linear'
             scaleFunc = lambda x: x
         
-        
-        from matplotlib import gridspec        
-        
-        
+        from matplotlib import gridspec
         
         # do the plotting
-        fig = figure()
+        fig = plt.figure()
         # qy qx Map
         gs = gridspec.GridSpec(2, 2,
                                width_ratios=[3,1],
@@ -1800,146 +1797,145 @@ class areaDetector(spec):
                                )
         
         
-        subplot(gs[2])
+        plt.subplot(gs[2])
         
         #z = sum(data,axis=2)
-        z = trapz(data,zaxis, axis=2)
+        z = np.trapz(data, zaxis, axis=2)
         
         x = yaxis
         y = xaxis
-        contourf(x,y,scaleFunc(z), levels)
-        xlabel(ylabelText,size=18)
-        ylabel(xlabelText,size=18)
-        xlim([min(x),max(x)])
-        ylim([min(y),max(y)])
-        grid(setGrid)
+        plt.contourf(x,y,scaleFunc(z), levels)
+        plt.xlabel(ylabelText,size=18)
+        plt.ylabel(xlabelText,size=18)
+        plt.xlim([min(x),max(x)])
+        plt.ylim([min(y),max(y)])
+        plt.grid(setGrid)
         
-        ax = subplot(gs[3])        
+        ax = plt.subplot(gs[3])        
 #        temp = sum(z,axis=1)
-        temp = trapz(z,yaxis,axis=1)
-        plot(temp,y, '-')
+        temp = np.trapz(z,yaxis,axis=1)
+        plt.plot(temp,y, '-')
         ax.set_xscale(scaleType)
             
-        ylim([min(y),max(y)])
-        grid(setGrid)
+        plt.ylim([min(y),max(y)])
+        plt.grid(setGrid)
         ax.yaxis.tick_right()
         ax.yaxis.set_label_position("right")
-        ylabel(xlabelText,size=18, )
+        plt.ylabel(xlabelText,size=18, )
         
-        ax = subplot(gs[0])
+        ax = plt.subplot(gs[0])
 #        temp = sum(z,axis=0)
-        temp = trapz(z,xaxis, axis=0)
-        plot(x,temp, '-')
+        temp = np.trapz(z,xaxis, axis=0)
+        plt.plot(x,temp, '-')
         ax.set_yscale(scaleType)
         
-        xlim([min(x),max(x)])
-        xlabel(ylabelText,size=18)
-        grid(setGrid)
+        plt.xlim([min(x),max(x)])
+        plt.xlabel(ylabelText,size=18)
+        plt.grid(setGrid)
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
         
-        
         gs.tight_layout(fig)
-        show()
+        plt.show()
         
         #####################################################################
-        fig=figure()
+        fig=plt.figure()
         # qz qx Map
         gs = gridspec.GridSpec(2, 2,
                                width_ratios=[3,1],
                                height_ratios=[1,3]
                                )
         
-        subplot(gs[2])
+        plt.subplot(gs[2])
 #        z = sum(data,axis=1)
-        z = trapz(data,yaxis, axis=1)
+        z = np.trapz(data,yaxis, axis=1)
         
         x = zaxis
         y = xaxis
-        contourf(x,y,scaleFunc(z), levels)
-        xlabel(zlabelText,size=18)
-        ylabel(xlabelText,size=18)
-        xlim([min(x),max(x)])
-        ylim([min(y),max(y)])
-        grid(setGrid)
+        plt.contourf(x,y,scaleFunc(z), levels)
+        plt.xlabel(zlabelText,size=18)
+        plt.ylabel(xlabelText,size=18)
+        plt.xlim([min(x),max(x)])
+        plt.ylim([min(y),max(y)])
+        plt.grid(setGrid)
         
-        ax = subplot(gs[3])
+        ax = plt.subplot(gs[3])
 #        temp = sum(z,axis=1)
-        temp = trapz(z,zaxis, axis=1)          
-        plot(temp,y)
+        temp = np.trapz(z,zaxis, axis=1)          
+        plt.plot(temp,y)
         ax.set_xscale(scaleType)
             
             
-        ylim([min(y),max(y)])
-        grid(setGrid)
+        plt.ylim([min(y),max(y)])
+        plt.grid(setGrid)
         ax.yaxis.tick_right()
         ax.yaxis.set_label_position("right")
-        ylabel(xlabelText,size=18, )
+        plt.ylabel(xlabelText,size=18, )
         
-        ax = subplot(gs[0])  
+        ax = plt.subplot(gs[0])  
 #        temp = sum(z,axis=0)
-        temp = trapz(z,xaxis, axis=0)
-        plot(x,temp)
+        temp = np.trapz(z,xaxis, axis=0)
+        plt.plot(x,temp)
         ax.set_yscale(scaleType)
         
-        xlim([min(x),max(x)])
-        xlabel(zlabelText,size=18)
-        grid(setGrid)
+        plt.xlim([min(x),max(x)])
+        plt.xlabel(zlabelText,size=18)
+        plt.grid(setGrid)
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
         
         gs.tight_layout(fig)
-        show()
+        plt.show()
         
         
         #####################################################################
-        fig=figure()
+        fig=plt.figure()
         # qz qy Map
         gs = gridspec.GridSpec(2, 2,
                                width_ratios=[3,1],
                                height_ratios=[1,3]
                                )
         
-        subplot(gs[2])
+        plt.subplot(gs[2])
 #        z = sum(data,axis=0)
-        z = trapz(data,xaxis, axis=0)
+        z = np.trapz(data,xaxis, axis=0)
         x = zaxis
         y = yaxis
-        contourf(x,y,scaleFunc(z), levels)
-        xlabel(zlabelText,size=18)
-        ylabel(ylabelText,size=18)
-        xlim([min(x),max(x)])
-        ylim([min(y),max(y)])
-        grid(setGrid)
+        plt.contourf(x,y,scaleFunc(z), levels)
+        plt.xlabel(zlabelText,size=18)
+        plt.ylabel(ylabelText,size=18)
+        plt.xlim([min(x),max(x)])
+        plt.ylim([min(y),max(y)])
+        plt.grid(setGrid)
         
-        ax = subplot(gs[3])
+        ax = plt.subplot(gs[3])
 #        temp = sum(z,axis=1)
-        temp = trapz(z,zaxis, axis=1)         
-        plot(temp,y)
+        temp = np.trapz(z,zaxis, axis=1)         
+        plt.plot(temp,y)
         ax.set_xscale(scaleType)
             
         
-        ylim([min(y),max(y)])
-        grid(setGrid)
+        plt.ylim([min(y),max(y)])
+        plt.grid(setGrid)
         ax.yaxis.tick_right()
         ax.yaxis.set_label_position("right")
-        ylabel(ylabelText,size=18, )
+        plt.ylabel(ylabelText,size=18, )
         
-        ax = subplot(gs[0])
+        ax = plt.subplot(gs[0])
 #        temp = sum(z,axis=0)
-        temp = trapz(z,yaxis, axis=0)           
-        plot(x,temp)
+        temp = np.trapz(z,yaxis, axis=0)           
+        plt.plot(x,temp)
         ax.set_yscale(scaleType)
             
         
-        xlim([min(x),max(x)])
-        xlabel(zlabelText,size=18)
-        grid(setGrid)
+        plt.xlim([min(x),max(x)])
+        plt.xlabel(zlabelText,size=18)
+        plt.grid(setGrid)
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
         
         gs.tight_layout(fig)
-        show()
+        plt.show()
      
     def plotAreaScanQ(self, scanNum, levels=100, setGrid=True):
         """Plot the area detector data for a given scan number in q-space.
@@ -2027,7 +2023,7 @@ class pilatusXPP(areaDetector):
         numPoints = len(data) #  number of points in the scan
        
         # initilize the frames array
-        frames = zeros([numPoints,self.pilatus.nop1,self.pilatus.nop2], dtype=int32)
+        frames = np.zeros([numPoints,self.pilatus.nop1,self.pilatus.nop2], dtype=np.int32)
         
         for i in range(1, numPoints, 1):
             # traverse all points in the scan
@@ -2066,13 +2062,15 @@ class scopeTraces(spec):
         #         # copy data if path not exists
         #         shutil.copytree('/mnt/lecroy/2017/2017-02-Schick/Dy_{:04d}'.format(ScanNr), 'D:/HZB/Beamtimes/ZPM/2017-02-Schick/scope/Dy_{:04d}'.format(ScanNr))
                 
-        trace = genfromtxt(self.scopeDataPath.format(scanNum,scanNum,scanPoint),skip_header=5,delimiter=',')
+        trace = np.genfromtxt(self.scopeDataPath.format(scanNum,scanNum,scanPoint),skip_header=5,delimiter=',')
         delays = trace[:,0]*1e9 
         ampl = trace[:,1]
         
         return delays, ampl 
         
-    def readScopeScan(self, scanNum, delayGrid= []):    
+    def readScopeScan(self, scanNum, delayGrid= []):  
+        
+        import evalData
     
         # check if there is data in the hdf5 file available
         intensities = self.readDataFromHDF5(scanNum, 'ScopeRaw', 'intensities')
@@ -2097,9 +2095,9 @@ class scopeTraces(spec):
             
             if len(delayGrid) > 0:
                 delayGrid, _, _, _, _, _, _, _, _ = evalData.binData(delays,delays,delayGrid)        
-                intensities = zeros([numFiles, len(delayGrid)])
+                intensities = np.zeros([numFiles, len(delayGrid)])
             else:
-                intensities = zeros([numFiles, len(delays)])
+                intensities = np.zeros([numFiles, len(delays)])
     
     
             for i in range(numFiles):
