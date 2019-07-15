@@ -325,7 +325,9 @@ class spec(object):
         iterator = re.finditer(
             '([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', colString)
         # these are keys which should not be replaced but evaluated
-        keys = list(self.mathKeys)
+        math_keys = list(self.mathKeys)
+        keys = math_keys.copy()
+        
         for key in iterator:
             # traverse all found counter names
             if len(key.group()) > 0:
@@ -336,10 +338,14 @@ class spec(object):
                     # remember this counter name in the key list in order
                     # not to replace it again
                     keys.append(key.group())
+                    print(key.group())
                     # the actual replacement
                     (colString, _) = re.subn(r'\b'+key.group()+r'\b',
                                              arrayName + '[\'' + key.group() + '\']', colString)
-
+        
+        #add 'np.' prefix to numpy functions/math keys
+        for mk in math_keys:
+            (colString, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk , colString)
         return colString
 
     def addCustomCounters(self, specData, scanNum, baseCounters):
