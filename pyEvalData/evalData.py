@@ -1267,7 +1267,7 @@ class spec(object):
                         subplot( (numSubplots+numSubplots%2)/2,2,k)
                     
                     # plot the fit and the data as errorbars
-                    x2plotFit = arange(min(x2plot), max(x2plot), 0.010)
+                    x2plotFit = linspace(min(x2plot), max(x2plot), 1000)
                     plt = plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1)
                     errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
                     
@@ -1339,7 +1339,7 @@ class spec(object):
                         #print(i*k+k+numSubplots*len(parameters))
                         #ax2 = subplot(gs[i*numSubplots+k-1+numSubplots*len(parameters)])
                         ax2 = subplot(gs[1])
-                        x2plotFit = arange(min(x2plot), max(x2plot), 0.010)
+                        x2plotFit = linspace(min(x2plot), max(x2plot), 1000)
                         ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit), '-', lw=2, alpha=1, color=plt[0].get_color())
                         ax2.errorbar(x2plot-offsetX,y2plot,fmt=fmt, xerr=xerr2plot, yerr=yerr2plot, label=_lt, alpha=0.25, color=plt[0].get_color())
                         legend(frameon=True,loc=0,numpoints=1)
@@ -1489,6 +1489,7 @@ class Pilatus100k(ImageReader):
                              byte_swap=False, **keyargs)
         
         
+
 ###########################
 
 class areaDetector(spec):
@@ -1986,6 +1987,8 @@ class princtonPM3(areaDetector):
         return frames
         
     
+        
+        
 ########################################
         
 class pilatusXPP(areaDetector):
