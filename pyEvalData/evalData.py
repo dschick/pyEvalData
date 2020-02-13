@@ -1019,7 +1019,7 @@ class spec(object):
                  sequenceType='text', labelText='', titleText='', yText='', 
                  xText='', select='', fitReport=0, showSingle=False, 
                  weights=False, fitMethod='leastsq', offsetT0 = False, 
-                 plotSeparate = False, gridOn = True, fmt='o'):
+                 plotSeparate = False, gridOn = True, fmt='o', nan_policy = 'raise'):
         """Fit, plot, and return the data of scans.
             
             This is just a wrapper for the fitScanSequence method
@@ -1030,7 +1030,7 @@ class spec(object):
                                     'none', labelText, titleText, yText, 
                                     xText, select, fitReport, showSingle, 
                                     weights, fitMethod, offsetT0, plotSeparate, 
-                                    gridOn, fmt=fmt)
+                                    gridOn, fmt=fmt, nan_policy = nan_policy)
         
     
     def fitScanSequence(self,scanSequence,mod,pars,ylims=[],xlims=[],figSize=[], 
@@ -1040,7 +1040,7 @@ class spec(object):
                         fitReport=0, showSingle=False, weights=False, 
                         fitMethod='leastsq', offsetT0 = False, 
                         plotSeparate = False, gridOn = True, 
-                        lastResAsPar=False, sequenceData=[], fmt='o'):
+                        lastResAsPar=False, sequenceData=[], fmt='o', nan_policy = 'raise'):
         """Fit, plot, and return the data of a scan sequence.
         
         Args:
@@ -1084,7 +1084,11 @@ class spec(object):
                                            values for next fit - default is False.
             sequenceData (Optional[ndarray]): actual exp. data are externally given.
                                               default is empty
-            fmt (Optional[str])         : format string of the plot - defaults is -o. 
+            fmt (Optional[str])         : format string of the plot - defaults is -o.
+            nan_policy                  : How to handle NaN and missing values in data.
+                                          Must be one of 'raise' (default),
+                                          'propagate' (do nothing), or
+                                          'omit' (was 'drop') (drop missing data)
             
             
         Returns:
@@ -1242,9 +1246,9 @@ class spec(object):
                                 
                     # do the fitting with or without weighting the data
                     if weights:
-                        out  = _mod.fit(y2plot, _pars, x=x2plot, weights=1/yerr2plot, method=fitMethod)
+                        out  = _mod.fit(y2plot, _pars, x=x2plot, weights=1/yerr2plot, method=fitMethod, nan_policy = nan_policy)
                     else:
-                        out  = _mod.fit(y2plot, _pars, x=x2plot, method=fitMethod)                         
+                        out  = _mod.fit(y2plot, _pars, x=x2plot, method=fitMethod, nan_policy = nan_policy)                         
                     
                     if fitReport > 0:
                         # for basic and full fit reporting
