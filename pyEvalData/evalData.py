@@ -17,7 +17,6 @@
 
 import numpy as np
 import numpy.lib.recfunctions as recfuncs
-#from numpy.core import records
 import collections
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -28,7 +27,7 @@ import re
 from uncertainties import unumpy
 
 """
-evalData module provide class definitions to read, average, plot, and fit data 
+evalData module provide class definitions to read, average, plot, and fit data
 from spec files. The base class "spec" supports only spec files. The spec class
 allows for user-defined counters as predefinitions or even at run-time.
 The spec file is converted into a hdf5 file.
@@ -40,7 +39,7 @@ using the xrayutility package.
 
 
 class spec(object):
-    """Read, average, plot, and fit spec data.    
+    """Read, average, plot, and fit spec data.
 
     Attributes:
         name (str)              : Name of the spec file.
@@ -49,22 +48,22 @@ class spec(object):
         filePath (str)          : Base path of the spec file.
         hdf5Path (str)          : Base path of the HDF5 file.
         specFile (object)       : specFile object of xrayutility package.
-        updateBeforeRead (bool) : Boolean to force an update of the spec file 
+        updateBeforeRead (bool) : Boolean to force an update of the spec file
                                   prior reading each scan.
         overwriteHDF5 (bool)    : Boolean to force overwriting the HDF5 file.
         cList (List[str])       : List of counter names to evaluate.
-        cDef (Dict{str:str})    : Dict of predefined counter names and 
+        cDef (Dict{str:str})    : Dict of predefined counter names and
                                   definitions.
         xCol (str)              : spec counter or motor to plot as x-axis.
-        t0 (float)              : approx. time zero for delay scans to 
-                                  determine the unpumped region of the data 
+        t0 (float)              : approx. time zero for delay scans to
+                                  determine the unpumped region of the data
                                   for normalization.
-        motorNames (List[str])  : default axis of the goniometer for reading 
+        motorNames (List[str])  : default axis of the goniometer for reading
                                   spec files by xrayutilities.
         customCounters (List[str]): List of custom counters - default is []
-        mathKeys (List[str])    : List of keywords which are not replaced in 
+        mathKeys (List[str])    : List of keywords which are not replaced in
                                   counter names
-        statisticType  (str)    : 'gauss' for normal averaging, 
+        statisticType  (str)    : 'gauss' for normal averaging,
                                   'poisson' for counting statistics
         propagateErrors  (bool) : whether to propagate errors or not
 
@@ -83,7 +82,8 @@ class spec(object):
     cDef = {}
     xCol = ''
     t0 = 0
-    # must be the same order as for xu experiment configuration (first sample axis, last detector axis)
+    # must be the same order as for xu experiment configuration
+    # (first sample axis, last detector axis)
     motorNames = ['Theta', 'TwoTheta']
     customCounters = []
     mathKeys = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs',
@@ -95,13 +95,13 @@ class spec(object):
     sigmaOutliners = 0.1
 
     def __init__(self, name, filePath, specFileExt=''):
-        """Initialize the class, set all file names and load the spec file. 
+        """Initialize the class, set all file names and load the spec file.
 
         Args:
             name (str)                  : Name of the spec file.
             filePath (str)              : Base path of the spec and HDF5 files.
-            specFileExt (Optional[str]) : File extension of the spec file, 
-                                          default is none.        
+            specFileExt (Optional[str]) : File extension of the spec file,
+                                          default is none.
 
         """
         self.name = name
@@ -126,7 +126,7 @@ class spec(object):
         try:
             # try if spec file object already exist
             self.specFile.Update()
-        except:
+        except Exception as e:
             # load the spec file from disc
             self.specFile = xu.io.SPECFile(
                 self.specFileName, path=self.filePath)
@@ -139,7 +139,7 @@ class spec(object):
                 self.hdf5Path, self.h5FileName))
 
     def getScanData(self, scanNum):
-        """Read the spec data for a given scan number from the hdf5 file. 
+        """Read the spec data for a given scan number from the hdf5 file.
 
         Args:
             scanNum (int) : Number of the spec scan.
@@ -187,7 +187,7 @@ class spec(object):
         return motors, data
 
     def getClist(self):
-        """Return the list of counters to evaluate as list even if they are 
+        """Return the list of counters to evaluate as list even if they are
         provided as Dict by the user.
         This method is only for backward compatibility to older versions.
 
@@ -199,10 +199,11 @@ class spec(object):
         if isinstance(self.cList, dict):
             # the cList property is a dict, so retrun its keys as list
             cList = list(self.cList.keys())
+            print('dict')
         else:
             cList = list(self.cList)
 
-        return list(set(cList))
+        return cList
 
     def getLastFigNumber(self):
         """Return the last figure number of all opened figures for plotting
@@ -216,14 +217,14 @@ class spec(object):
         try:
             # get the number of all opened figures
             figNumber = mpl._pylab_helpers.Gcf.get_active().num
-        except:
+        except Exception as e:
             # there are no figures open
             figNumber = 1
 
         return figNumber
 
     def getNextFigNumber(self):
-        """Return the number of the next figure for plotting data in the 
+        """Return the number of the next figure for plotting data in the
         same figure during for-loops.
 
         Returns:
@@ -281,7 +282,7 @@ class spec(object):
         for findcDef in self.cDef.keys():
             # check for all predefined counters
             searchPattern = r'\b' + findcDef + r'\b'
-            if re.search(searchPattern, colString) != None:
+            if re.search(searchPattern, colString) is not None:
                 if self.cDef[findcDef] in specCols:
                     # this counter definition is a base spec counter
                     baseCounters.append(self.cDef[findcDef])
@@ -301,14 +302,14 @@ class spec(object):
         for findcDef in specCols:
             # check for all base spec counters
             searchPattern = r'\b' + findcDef + r'\b'
-            if re.search(searchPattern, colString) != None:
+            if re.search(searchPattern, colString) is not None:
                 baseCounters.append(findcDef)
 
         return colString, baseCounters
 
     def colString2evalString(self, colString, arrayName='specData'):
         """Use regular expressions in order to generate an evaluateable string
-        from the counter string in order to append the new counter to the 
+        from the counter string in order to append the new counter to the
         spec data.
 
         Args:
@@ -316,7 +317,7 @@ class spec(object):
             mode (int)      : Flag for different modes
 
         Returns:
-            evalString (str): Evaluateable string to add the new counter 
+            evalString (str): Evaluateable string to add the new counter
                               to the spec data.
 
         """
@@ -327,7 +328,7 @@ class spec(object):
         # these are keys which should not be replaced but evaluated
         math_keys = list(self.mathKeys)
         keys = math_keys.copy()
-        
+
         for key in iterator:
             # traverse all found counter names
             if len(key.group()) > 0:
@@ -338,14 +339,13 @@ class spec(object):
                     # remember this counter name in the key list in order
                     # not to replace it again
                     keys.append(key.group())
-                    print(key.group())
                     # the actual replacement
                     (colString, _) = re.subn(r'\b'+key.group()+r'\b',
                                              arrayName + '[\'' + key.group() + '\']', colString)
-        
-        #add 'np.' prefix to numpy functions/math keys
+
+        # add 'np.' prefix to numpy functions/math keys
         for mk in math_keys:
-            (colString, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk , colString)
+            (colString, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, colString)
         return colString
 
     def addCustomCounters(self, specData, scanNum, baseCounters):
@@ -366,14 +366,14 @@ class spec(object):
         return specData
 
     def avgNbinScans(self, scanList, xGrid=np.array([]), binning=True):
-        """Averages data defined by the counter list, cList, onto an optional 
-        xGrid. If no xGrid is given the x-axis data of the first scan in the 
+        """Averages data defined by the counter list, cList, onto an optional
+        xGrid. If no xGrid is given the x-axis data of the first scan in the
         list is used instead.
 
         Args:
             scanList (List[int])      : List of scan numbers.
-            xGrid (Optional[ndarray]) : Grid to bin the data to - 
-                                        default in empty so use the 
+            xGrid (Optional[ndarray]) : Grid to bin the data to -
+                                        default in empty so use the
                                         x-axis of the first scan.
 
         Returns:
@@ -396,7 +396,7 @@ class spec(object):
         if not self.xCol:
             raise Exception('No xCol is defined. Do not know what to plot!')
             return
-        if not self.xCol in cList:
+        if self.xCol not in cList:
             cList.append(self.xCol)
 
         specCols = []
@@ -407,7 +407,7 @@ class spec(object):
             try:
                 # try to read the motors and data of this scan
                 motors, specData = self.getScanData(scanNum)
-            except:
+            except Exception as e:
                 raise
                 print('Scan #' + scanNum + ' not found, skipping')
 
@@ -455,7 +455,7 @@ class spec(object):
 
                 if len(data) == 0:
                     data = np.array(eval(evalString), dtype=[(colName, float)])
-                elif not colName in data.dtype.names:
+                elif colName not in data.dtype.names:
                     data = eval('recfuncs.append_fields(data,\'' + colName + '\',data=(' +
                                 evalString + '), dtypes=float, asrecarray=True, usemask=False)')
 
@@ -503,9 +503,12 @@ class spec(object):
                     uncDataStd = {}
 
                     for col in baseCounters:
-                        # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
-                        y, avgData[self.xCol], yErr, errData[self.xCol], yStd, stdData[self.xCol], _, _, _ = binData(
-                            concatData[col], concatData[self.xCol], xGridReduced, statistic=binStat)
+                        # for all cols in the cList bin the data to the xGrid an calculate
+                        # the averages, stds and errors
+                        y, avgData[self.xCol], yErr, errData[self.xCol], yStd,\
+                            stdData[self.xCol], _, _, _ =\
+                                binData(concatData[col], concatData[self.xCol],
+                                    xGridReduced, statistic=binStat)
                         # add spec base counters to uncData arrays
                         uncDataStd[col] = unumpy.uarray(y, yStd)
                         uncDataErr[col] = unumpy.uarray(y, yErr)
@@ -527,9 +530,12 @@ class spec(object):
                 else:
                     # no error propagation but averaging of individual scans
                     for col in cList:
-                        # for all cols in the cList bin the data to the xGrid an calculate the averages, stds and errors
-                        avgData[col], avgData[self.xCol], errData[col], errData[self.xCol], stdData[col], stdData[self.xCol], _, _, _ = binData(
-                            concatData[col], concatData[self.xCol], xGridReduced, statistic=binStat)
+                        # for all cols in the cList bin the data to the xGrid an calculate
+                        # the averages, stds and errors
+                        avgData[col], avgData[self.xCol], errData[col], errData[self.xCol],\
+                            stdData[col], stdData[self.xCol], _, _, _ =\
+                                binData(concatData[col], concatData[self.xCol],
+                                        xGridReduced, statistic=binStat)
             else:
                 for col in cList:
                     avgData[col] = concatData[col]
@@ -539,9 +545,10 @@ class spec(object):
                     stdData[col] = 0
                     stdData[self.xCol] = 0
 
-        except:
+        except Exception as e:
             raise
-            print('xCol and yCol must have the same length --> probably you try plotting a custom counter together with a spec counter')
+            print('xCol and yCol must have the same length --> probably you try plotting a custom'
+                  ' counter together with a spec counter')
 
         return avgData, stdData, errData, name
 
@@ -564,7 +571,7 @@ class spec(object):
             try:
                 # try to create the new subgroup for the area detector data
                 scan.create_group(childName)
-            except:
+            except Exception as e:
                 np.void
 
             g5 = scan[childName]  # this is the new group
@@ -573,7 +580,7 @@ class spec(object):
                 # add the data to the group
                 g5.create_dataset(dataName, data=data,
                                   compression="gzip", compression_opts=9)
-            except:
+            except Exception as e:
                 np.void
 
             h5.flush()  # write the data to the file
@@ -604,7 +611,7 @@ class spec(object):
                     g5 = scan[childName]
 
                 data = g5[dataName][:]  # get the actual dataset
-            except:
+            except Exception as e:
                 # if no data is available return False
                 data = False
 
@@ -620,11 +627,11 @@ class spec(object):
 
         Args:
             scanList (List[int])        : List of scan numbers.
-            ylims (Optional[ndarray])   : ylim for the plot. 
+            ylims (Optional[ndarray])   : ylim for the plot.
             xlims (Optional[ndarray])   : xlim for the plot.
-            figSize (Optional[ndarray]) : Figure size of the figure. 
-            xGrid (Optional[ndarray])   : Grid to bin the data to - 
-                                          default in empty so use the 
+            figSize (Optional[ndarray]) : Figure size of the figure.
+            xGrid (Optional[ndarray])   : Grid to bin the data to -
+                                          default in empty so use the
                                           x-axis of the first scan.
             yErr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
                                           default is 'std'.
@@ -632,14 +639,14 @@ class spec(object):
                                           default is 'std'.
             norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
                                           default is False.
-            labelText (Optional[str])   : Label of the plot - default is none. 
-            titleText (Optional[str])   : Title of the figure - default is none. 
+            labelText (Optional[str])   : Label of the plot - default is none.
+            titleText (Optional[str])   : Title of the figure - default is none.
             skipPlot (Optional[bool])   : Skip plotting, just return data
                                           default is False.
             gridOn (Optional[bool])     : Add grid to plot - default is True.
-            yText (Optional[str])       : y-Label of the plot - defaults is none. 
-            xText (Optional[str])       : x-Label of the plot - defaults is none. 
-            fmt (Optional[str])         : format string of the plot - defaults is -o. 
+            yText (Optional[str])       : y-Label of the plot - defaults is none.
+            xText (Optional[str])       : x-Label of the plot - defaults is none.
+            fmt (Optional[str])         : format string of the plot - defaults is -o.
 
         Returns:
             y2plot (OrderedDict)    : y-data which was plotted.
@@ -711,7 +718,8 @@ class spec(object):
                     plt.plot(x2plot, y2plot[col], fmt, label=lt)
                 else:
                     plt.errorbar(
-                        x2plot, y2plot[col], fmt=fmt, label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
+                        x2plot, y2plot[col], fmt=fmt, label=lt,
+                        xerr=xerr2plot, yerr=yerr2plot[col])
 
         if not skipPlot:
             # add a legend, labels, title and set the limits and grid
@@ -736,7 +744,8 @@ class spec(object):
 
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
-    def plotMeshScan(self, scanNum, skipPlot=False, gridOn=False, yText='', xText='', levels=20, cBar=True):
+    def plotMeshScan(self, scanNum, skipPlot=False, gridOn=False, yText='', xText='',
+                     levels=20, cBar=True):
         """Plot a single mesh scan from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -746,9 +755,9 @@ class spec(object):
             skipPlot (Optional[bool])   : Skip plotting, just return data
                                           default is False.
             gridOn (Optional[bool])     : Add grid to plot - default is False.
-            yText (Optional[str])       : y-Label of the plot - defaults is none. 
-            xText (Optional[str])       : x-Label of the plot - defaults is none. 
-            levels (Optional[int])      : levels of contour plot - defaults is 20. 
+            yText (Optional[str])       : y-Label of the plot - defaults is none.
+            xText (Optional[str])       : x-Label of the plot - defaults is none.
+            levels (Optional[int])      : levels of contour plot - defaults is 20.
             cBar (Optional[bool])       : Add colorbar to plot - default is True.
 
         Returns:
@@ -763,7 +772,7 @@ class spec(object):
         try:
             # try to read the motors and data of this scan
             motors, specData = self.getScanData(scanNum)
-        except:
+        except Exception as e:
             print('Scan #' + scanNum + ' not found, skipping')
 
         dt = specData.dtype
@@ -814,7 +823,7 @@ class spec(object):
             if gridOn:
                 plt.grid(True)
 
-            ax3 = plt.subplot(gs[2+k])
+            plt.subplot(gs[2+k])
 
             plt.contourf(xx, yy, zz, levels, cmap='viridis')
 
@@ -860,11 +869,11 @@ class spec(object):
         Args:
             scanSequence (ndarray[List[int]
                           , int/str])   : Sequence of scan lists and parameters.
-            ylims (Optional[ndarray])   : ylim for the plot. 
+            ylims (Optional[ndarray])   : ylim for the plot.
             xlims (Optional[ndarray])   : xlim for the plot.
-            figSize (Optional[ndarray]) : Figure size of the figure. 
-            xGrid (Optional[ndarray])   : Grid to bin the data to - 
-                                          default in empty so use the 
+            figSize (Optional[ndarray]) : Figure size of the figure.
+            xGrid (Optional[ndarray])   : Grid to bin the data to -
+                                          default in empty so use the
                                           x-axis of the first scan.
             yErr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
                                           default is 'std'.
@@ -872,17 +881,17 @@ class spec(object):
                                           default is 'std'.
             norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
                                           default is False.
-            sequenceType (Optional[str]): Type of the sequence: [fluence, delay, 
-                                          energy, theta, position, voltage, none, 
+            sequenceType (Optional[str]): Type of the sequence: [fluence, delay,
+                                          energy, theta, position, voltage, none,
                                           text] - default is enumeration.
-            labelText (Optional[str])   : Label of the plot - default is none. 
-            titleText (Optional[str])   : Title of the figure - default is none. 
+            labelText (Optional[str])   : Label of the plot - default is none.
+            titleText (Optional[str])   : Title of the figure - default is none.
             skipPlot (Optional[bool])   : Skip plotting, just return data
                                           default is False.
             gridOn (Optional[bool])     : Add grid to plot - default is True.
             yText (Optional[str])       : y-Label of the plot - defaults is none.
             xText (Optional[str])       : x-Label of the plot - defaults is none.
-            fmt (Optional[str])         : format string of the plot - defaults is -o. 
+            fmt (Optional[str])         : format string of the plot - defaults is -o.
 
         Returns:
             sequenceData (OrderedDict) : Dictionary of the averaged scan data.
@@ -996,8 +1005,8 @@ class spec(object):
                                           default is 'std'.
             xErr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
                                           default is 'std'.
-            xGrid (Optional[ndarray])   : Grid to bin the data to - 
-                                          default in empty so use the 
+            xGrid (Optional[ndarray])   : Grid to bin the data to -
+                                          default in empty so use the
                                           x-axis of the first scan.
             norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
                                           default is False.
@@ -1027,8 +1036,9 @@ class spec(object):
                 saveData.append(sequenceData[counter][i])
 
             # save data with header to text file
-            np.savetxt('%s/%s_%s.dat' % (path, fileName, "".join(x for x in labelText if x.isalnum())),
-                       np.r_[saveData].T, delimiter='\t', header=header)
+            np.savetxt('%s/%s_%s.dat' % (path,
+                                         fileName, "".join(x for x in labelText if x.isalnum())),
+                                           np.r_[saveData].T, delimiter='\t', header=header)
 
     def fitScans(self, scans, mod, pars, ylims=[], xlims=[], figSize=[], xGrid=[],
                  yErr='std', xErr='std', norm2one=False, binning=True,
@@ -1062,12 +1072,12 @@ class spec(object):
             scanSequence (ndarray[List[int]
                           , int/str])   : Sequence of scan lists and parameters.
             mod (Model[lmfit])          : lmfit model for fitting the data.
-            pars (Parameters[lmfit])    : lmfit parameters for fitting the data.                             
-            ylims (Optional[ndarray])   : ylim for the plot. 
+            pars (Parameters[lmfit])    : lmfit parameters for fitting the data.
+            ylims (Optional[ndarray])   : ylim for the plot.
             xlims (Optional[ndarray])   : xlim for the plot.
-            figSize (Optional[ndarray]) : Figure size of the figure. 
-            xGrid (Optional[ndarray])   : Grid to bin the data to - 
-                                          default in empty so use the 
+            figSize (Optional[ndarray]) : Figure size of the figure.
+            xGrid (Optional[ndarray])   : Grid to bin the data to -
+                                          default in empty so use the
                                           x-axis of the first scan.
             yErr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
                                           default is 'std'.
@@ -1075,31 +1085,31 @@ class spec(object):
                                           default is 'std'.
             norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
                                           default is False.
-            sequenceType (Optional[str]): Type of the sequence: [fluence, delay, 
+            sequenceType (Optional[str]): Type of the sequence: [fluence, delay,
                                           energy, theta] - default is fluence.
-            labelText (Optional[str])   : Label of the plot - default is none. 
-            titleText (Optional[str])   : Title of the figure - default is none. 
+            labelText (Optional[str])   : Label of the plot - default is none.
+            titleText (Optional[str])   : Title of the figure - default is none.
             yText (Optional[str])       : y-Label of the plot - defaults is none.
             xText (Optional[str])       : x-Label of the plot - defaults is none.
-            select (Optional[str])      : String to evaluate as select statement 
+            select (Optional[str])      : String to evaluate as select statement
                                           for the fit region - default is none
-            fitReport (Optional[int])   : Set the fit reporting level: 
+            fitReport (Optional[int])   : Set the fit reporting level:
                                           [0: none, 1: basic, 2: full]
                                           default 0.
             showSingle (Optional[bool]) : Plot each fit seperately - default False.
             weights (Optional[bool])    : Use weights for fitting - default False.
-            fitMethod (Optional[str])   : Method to use for fitting; refer to 
+            fitMethod (Optional[str])   : Method to use for fitting; refer to
                                           lmfit - default is 'leastsq'.
             offsetT0 (Optional[bool])   : Offset time scans by the fitted
                                           t0 parameter - default False.
             plotSeparate (Optional[bool]):A single plot for each counter
                                           default False.
             gridOn (Optional[bool])     : Add grid to plot - default is True.
-            lastResAsPar (Optional[bool]): Use the last fit result as start 
+            lastResAsPar (Optional[bool]): Use the last fit result as start
                                            values for next fit - default is False.
             sequenceData (Optional[ndarray]): actual exp. data are externally given.
                                               default is empty
-            fmt (Optional[str])         : format string of the plot - defaults is -o. 
+            fmt (Optional[str])         : format string of the plot - defaults is -o.
 
 
         Returns:
@@ -1326,7 +1336,6 @@ class spec(object):
                     # show the single fits and residuals
                     if showSingle:
                         plt.figure(mainFigNum+l, figsize=figSize)
-#                        gs = mpl.gridspec.GridSpec(2*numSubplots*len(parameters),1, height_ratios=[1,3], hspace=0.1)
                         gs = mpl.gridspec.GridSpec(
                             2, 1, height_ratios=[1, 3], hspace=0.1)
                         ax1 = plt.subplot(gs[0])
@@ -1357,15 +1366,14 @@ class spec(object):
                                 plt.title(titleText)
                         else:
                             plt.title(name)
-                        # print(i*k+k+numSubplots*len(parameters))
-                        #ax2 = subplot(gs[i*numSubplots+k-1+numSubplots*len(parameters)])
                         ax2 = plt.subplot(gs[1])
                         x2plotFit = np.linspace(
                             np.min(x2plot), np.max(x2plot), 1000)
                         ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit),
                                  '-', lw=2, alpha=1, color=plot[0].get_color())
                         ax2.errorbar(x2plot-offsetX, y2plot, fmt=fmt, xerr=xerr2plot,
-                                     yerr=yerr2plot, label=_lt, alpha=0.25, color=plot[0].get_color())
+                                     yerr=yerr2plot, label=_lt, alpha=0.25,
+                                     color=plot[0].get_color())
                         plt.legend(frameon=True, loc=0, numpoints=1)
 
                         if xlims:
@@ -1522,27 +1530,27 @@ class Pilatus100k(ImageReader):
 ###########################
 
 class areaDetector(spec):
-    """Inherit from spec and add capabilities to read and evaluate area 
+    """Inherit from spec and add capabilities to read and evaluate area
     detector frames from its specific goniometer setup to reciprocal space.
 
-    Attributes:                                    
-        hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the 
+    Attributes:
+        hxrd (HXRD[xrayutilities]) : Instance of the HXRD class of the
                                      xrayutilities.
         gridder 
-        (gidder[xrayutilities])    : Instance of the gridder class of the 
+        (gidder[xrayutilities])    : Instance of the gridder class of the
                                      xrayutilities.
         normalizer 
         (IntensityNormalizer[xrayutilities])
-                                   : Instance of the IntensityNormalizerr class 
+                                   : Instance of the IntensityNormalizerr class
                                      of the xrayutilities.
-        UB (ndarray[float])        : Transformation matrix UB for 
+        UB (ndarray[float])        : Transformation matrix UB for
                                      q-hkl tranformation in xrayutilities
-        delta (List[float])        : Offset angles of the goniometer axis: 
+        delta (List[float])        : Offset angles of the goniometer axis:
                                      Theta, Two_Theta
                                      default is [0,0].
-        motorNames (List[str])     : List of goniometer motor names - default 
+        motorNames (List[str])     : List of goniometer motor names - default
                                      is ['Theta', 'Two_Theta']
-        customCounters (List[str]) : List of custom counters - default is 
+        customCounters (List[str]) : List of custom counters - default is
                                      ['qx', 'qy', 'qz', 'QxMap', 'QyMap', 'QzMap']
         plotLog (bool)             : Boolean if subplots of RSM are log or lin
 
@@ -1565,8 +1573,8 @@ class areaDetector(spec):
 
     def addCustomCounters(self, specData, scanNum, baseCounters):
         """Add custom counters to the spec data array.
-        Here we add the Qx, Qy, Qz maps and axises which by default have a 
-        different length than the spec data array. In this case all default 
+        Here we add the Qx, Qy, Qz maps and axises which by default have a
+        different length than the spec data array. In this case all default
         spec counters are removed and only custom counters are given.
 
         Args:
@@ -1626,7 +1634,7 @@ class areaDetector(spec):
                         # in case the custom counter has the same name as a
                         # default spec base counter
                         specData[customCounter] = eval(customCounter)
-                    except:
+                    except Exception as e:
                         if len(eval(customCounter)) == len(specData):
                             # append the custom counters to data array
                             specData = recfuncs.append_fields(specData, customCounter, data=eval(
@@ -1646,7 +1654,7 @@ class areaDetector(spec):
 
     def writeAllAreaScans2HDF5(self):
         """Use this function with caution. It might take some time.
-        Reads all scans from the spec file and save the area detector frames, 
+        Reads all scans from the spec file and save the area detector frames,
         if present, to the HDF5 file.
         Currently it allways overwrite the whole hdf5 file
 
@@ -1660,7 +1668,7 @@ class areaDetector(spec):
             self.readAreaScan(i+1)  # read (and write) the pilatus data
 
     def readAreaScan(self, scanNum):
-        """Read the complete data of an area detector scan including the frames, 
+        """Read the complete data of an area detector scan including the frames,
         motors, and spec data.
 
         Args:
@@ -1737,7 +1745,7 @@ class areaDetector(spec):
         for motorName in self.motorNames:
             evalString += 'motors[\'' + motorName + '\'], '
 
-        if hkl == True:
+        if hkl is True:
             evalString += 'UB=self.UB, '
 
         evalString += 'delta=self.delta)'
@@ -1790,7 +1798,7 @@ class areaDetector(spec):
 
         """
 
-        if hkl == True:
+        if hkl is True:
             xlabelText = 'H'
             ylabelText = 'K'
             zlabelText = 'L'
@@ -1825,7 +1833,6 @@ class areaDetector(spec):
 
         plt.subplot(gs[2])
 
-        #z = sum(data,axis=2)
         z = np.trapz(data, zaxis, axis=2)
 
         x = yaxis
@@ -1986,8 +1993,8 @@ class princtonPM3(areaDetector):
     """Inherit from areaDetector and add specfic routins for reading data files
     of princton instruments SPE files and goniometer setup at BESSY II PM3
 
-    Attributes:                                    
-        inherited from area detector    
+    Attributes:
+        inherited from area detector
 
     """
 
@@ -2015,10 +2022,10 @@ class princtonPM3(areaDetector):
 ########################################
 
 class pilatusXPP(areaDetector):
-    """Inherit from spec and add capabilities to read Pilatus images from the 
+    """Inherit from spec and add capabilities to read Pilatus images from the
     BESSY II XPP beamline with its specific goniometer setup.
 
-    Attributes:                                   
+    Attributes:
         inherited from areaDetector
         pilatus (ImageReader(xrayutilities)): Pilatus100k-object for reading frames
 
@@ -2085,7 +2092,8 @@ class scopeTraces(spec):
 
         #     if not os.path.exists(basePath + filepath):
         #         # copy data if path not exists
-        #         shutil.copytree('/mnt/lecroy/2017/2017-02-Schick/Dy_{:04d}'.format(ScanNr), 'D:/HZB/Beamtimes/ZPM/2017-02-Schick/scope/Dy_{:04d}'.format(ScanNr))
+        #         shutil.copytree('/mnt/lecroy/2017/2017-02-Schick/Dy_{:04d}'.format(ScanNr),
+        #         'D:/HZB/Beamtimes/ZPM/2017-02-Schick/scope/Dy_{:04d}'.format(ScanNr))
 
         trace = np.genfromtxt(self.scopeDataPath.format(
             scanNum, scanNum, scanPoint), skip_header=5, delimiter=',')
