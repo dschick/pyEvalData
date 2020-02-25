@@ -199,7 +199,6 @@ class spec(object):
         if isinstance(self.cList, dict):
             # the cList property is a dict, so retrun its keys as list
             cList = list(self.cList.keys())
-            print('dict')
         else:
             cList = list(self.cList)
 
@@ -401,7 +400,6 @@ class spec(object):
 
         specCols = []
         concatData = np.array([])
-
         for i, scanNum in enumerate(scanList):
             # traverse the scan list and read data
             try:
