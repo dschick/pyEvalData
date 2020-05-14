@@ -31,9 +31,10 @@ class PalSpec(spec):
     
     def __init__(self, name, filePath, specFileExt='', file_format='{0:07d}_meta.log',
                  start_scan=1):
-        super(PalSpec, self).__init__(name, filePath, specFileExt)
+        
         self.file_format = file_format
         self.start_scan = start_scan
+        super(PalSpec, self).__init__(name, filePath, specFileExt)
     
     def updateSpec(self):
         """Update the current spec file if already in memory.
