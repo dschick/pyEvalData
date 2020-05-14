@@ -16,6 +16,7 @@
 # Copyright (C) 2015 Daniel Schick <schick.daniel@gmail.com>
 
 import numpy as np
+import numpy.lib.recfunctions as recfuncs
 import collections
 import os
 from xrayutilities.io import SPECFile, SPECScan
@@ -27,7 +28,7 @@ from .evalData import spec
 
 class PalSpec(spec):
     
-    motorNames = ['th', 'tth']
+    motorNames = ['th', 'tth', 'phen']
     
     def __init__(self, name, filePath, specFileExt='', file_format='{0:07d}_meta.log',
                  start_scan=1):
@@ -57,6 +58,28 @@ class PalSpec(spec):
             self.specFile.Save2HDF5(os.path.join(
                 self.hdf5Path, self.h5FileName))
     
+    def addCustomCounters(self, specData, scanNum, baseCounters, motors=[]):
+        """Add custom counters to the spec data array.
+        
+
+        Args:
+            specData (ndarray)     : Data array from the spec scan.
+            scanNum (int)          : Scan number of the spec scan.
+            baseCounters list(str) : List of the base spec and custom counters
+                                     from the cList and xCol.
+
+        Returns:
+            specData (ndarray): Updated data array from the spec scan.
+
+        """
+        unusedMotors = set(baseCounters) and not set(self.motorNames)
+        # for i, motor in enumerate(unusedMotors):
+            # print('{:s}: {}'.format(motor, motors[i]))
+        if 'phen' not in baseCounters:
+            data = (np.ones((specData.size))*motors['phen'])
+            specData = recfuncs.append_fields(specData, 'phen', data, dtypes=float, asrecarray=True, usemask=False)
+
+        return specData
     
 
 # define some uesfull regular expressions

@@ -346,7 +346,7 @@ class spec(object):
             (colString, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, colString)
         return colString
 
-    def addCustomCounters(self, specData, scanNum, baseCounters):
+    def addCustomCounters(self, specData, scanNum, baseCounters, motors=[]):
         """Add custom counters to the spec data array.
         This is a stub for child classes.
 
@@ -419,10 +419,8 @@ class spec(object):
                 resolvedCounters, baseCounters = self.traverseCounters(
                     cList, specCols)
 
-                # add custom counters if defined
-                specData = self.addCustomCounters(
-                    specData, scanNum, baseCounters)
-
+                
+                
                 # counter names and resolved strings for further calculations
                 if self.statisticType == 'poisson' or self.propagateErrors:
                     # for error propagation we just need the base spec counters
@@ -441,7 +439,10 @@ class spec(object):
                 dtypes = []
                 for colName in cList:
                     dtypes.append((colName, '<f8'))
-
+            
+            # add custom counters if defined
+            specData = self.addCustomCounters(
+                specData, scanNum, baseCounters, motors)
             data = np.array([])
             # read data into data array
             for colString, colName in zip(colStrings, colNames):
@@ -453,8 +454,7 @@ class spec(object):
                 if len(data) == 0:
                     data = np.array(eval(evalString), dtype=[(colName, float)])
                 elif colName not in data.dtype.names:
-                    data = eval('recfuncs.append_fields(data,\'' + colName + '\',data=(' +
-                                evalString + '), dtypes=float, asrecarray=True, usemask=False)')
+                    data = eval('recfuncs.append_fields(data,\'' + colName + '\',data=(' + evalString + '), dtypes=float, asrecarray=True, usemask=False)')
 
             if i > 0:
                 # this is not the first scan in the list so append the data to
@@ -514,6 +514,7 @@ class spec(object):
 
                         evalString = self.colString2evalString(
                             colString, arrayName='uncDataErr')
+                        print(evalString)
                         temp = eval(evalString)
 
                         avgData[colName] = unumpy.nominal_values(temp)
