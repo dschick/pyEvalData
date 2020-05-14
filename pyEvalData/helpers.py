@@ -34,6 +34,11 @@ def binData(y, x, X, statistic='mean'):
     y = y.flatten('F')
     x = x.flatten('F')
     X = np.sort(X.flatten('F'))
+    
+    # set non-finite values to 0
+    idx = ~np.isfinite(y)
+    y[idx] = 0
+   
 
     # create bins for the grid
     edges, _ = edges4grid(X)
