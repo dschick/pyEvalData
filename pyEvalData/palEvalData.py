@@ -29,6 +29,12 @@ class PalSpec(spec):
     
     motorNames = ['th', 'tth']
     
+    def __init__(self, name, filePath, specFileExt='', file_format='{0:07d}_meta.log',
+                 start_scan=1):
+        super(PalSpec, self).__init__(name, filePath, specFileExt)
+        self.file_format = file_format
+        self.start_scan = start_scan
+    
     def updateSpec(self):
         """Update the current spec file if already in memory.
         Otherwise read it and write its content to the hdf5 file.
@@ -40,7 +46,8 @@ class PalSpec(spec):
         except Exception as e:
             # load the spec file from disc
             self.specFile = PalSpecFile(
-                self.specFileName, path=self.filePath)
+                self.specFileName, path=self.filePath,
+                file_format=self.file_format, start_scan=self.start_scan)
             self.specFile.Update()
 
         if not os.path.exists(os.path.join(self.hdf5Path, self.h5FileName)) or self.overwriteHDF5:
@@ -81,7 +88,7 @@ scan_status_flags = ["OK", "NODATA", "ABORTED", "CORRUPTED"]
 class PalSpecFile(SPECFile):    
     
     
-    def __init__(self, filename, path=''):
+    def __init__(self, filename, path='', file_format='{0:07d}_meta.log', start_scan=1):
         """
         SPECFile init routine
 
@@ -92,6 +99,8 @@ class PalSpecFile(SPECFile):
         path :      str, optional
             path to the specfile
         """
+        
+        self.debug = False
         
         self.path = path
         
@@ -105,10 +114,9 @@ class PalSpecFile(SPECFile):
         self.scan_list = []
         self.fid = None
         self.last_offset = 0
-        self.last_scan_nb = 0
+        self.last_scan_nb = start_scan-1
         
-        self.folder_format = '{:07d}'
-        self.file_format = '{:07d}_meta.log'
+        self.file_format = file_format
 
         # initially parse the file
         self.init_motor_names_fh = []  # this list will hold the names of the
@@ -122,19 +130,23 @@ class PalSpecFile(SPECFile):
         self.parse_folders()
         
     def parse_folders(self):
+        
+        data_path = os.path.abspath(self.path)
+        
         while True:
             scan_nb = self.last_scan_nb + 1
-            print('Look for scan number {:d}'.format(scan_nb))
+            if self.debug:
+                print('Look for scan number {:d}'.format(scan_nb))
             
-            data_file = os.path.abspath(os.path.join(
-                self.path,
-                self.folder_format.format(scan_nb), 
-                self.file_format.format(scan_nb)))
+            data_file = os.path.join(
+                data_path, 
+                self.file_format.format(scan_nb))
             
             
             if os.path.exists(data_file):
                 self.full_filename = data_file
-                print('Parsing Scan #{:d}'.format(scan_nb))
+                if self.debug:
+                    print('Parsing Scan #{:d}'.format(scan_nb))
                 self.Parse()
                 
                 # when parsing is done, we reset everything
@@ -149,7 +161,8 @@ class PalSpecFile(SPECFile):
                 # we remeber the last scan number
                 self.last_scan_nb = scan_nb
             else:
-                print('data file does not exists')
+                if self.debug:
+                    print('data file does not exists')
                 break
             
     def Parse(self):
