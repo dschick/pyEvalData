@@ -1444,9 +1444,9 @@ def edges4grid(grid):
 def binData(y, x, X, statistic='mean'):
     """Bin data y(x) on new grid X using a statistic type. """
 
-    y = y.flatten(1)
-    x = x.flatten(1)
-    X = np.sort(X.flatten(1))
+    y = y.flatten('F')
+    x = x.flatten('F')
+    X = np.sort(X.flatten('F'))
 
     # create bins for the grid
     edges, _ = edges4grid(X)
