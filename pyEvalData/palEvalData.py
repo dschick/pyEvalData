@@ -27,6 +27,8 @@ from .evalData import spec
 
 class PalSpec(spec):
     
+    motorNames = ['th', 'tth']
+    
     def updateSpec(self):
         """Update the current spec file if already in memory.
         Otherwise read it and write its content to the hdf5 file.

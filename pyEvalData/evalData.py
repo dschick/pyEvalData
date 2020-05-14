@@ -16,6 +16,7 @@
 # Copyright (C) 2015 Daniel Schick <schick.daniel@gmail.com>
 
 import numpy as np
+import numpy.lib.recfunctions as recfuncs
 import collections
 import matplotlib.pyplot as plt
 import matplotlib as mpl
