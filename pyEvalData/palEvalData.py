@@ -42,6 +42,7 @@ class PalSpec(spec):
         Otherwise read it and write its content to the hdf5 file.
 
         """
+        
         try:
             # try if spec file object already exist
             self.specFile.Update()
@@ -151,6 +152,22 @@ class PalSpecFile(SPECFile):
         # motors saved in initial motor positions from either the file or
         # scan header
         
+        self.parse_folders()
+
+    def Update(self):
+        """
+        reread the file and add newly added files. The parsing starts at the
+        data offset of the last scan gathered during the last parsing run.
+        """
+
+        # reparse the SPEC file
+        if config.VERBOSITY >= config.INFO_LOW:
+            print("XU.io.SPECFile.Update: reparsing file for new scans ...")
+        # mark last found scan as not saved to force reread
+        idx = len(self.scan_list)
+        if idx > 0:
+            lastscan = self.scan_list[idx - 1]
+            lastscan.ischanged = True
         self.parse_folders()
         
     def parse_folders(self):

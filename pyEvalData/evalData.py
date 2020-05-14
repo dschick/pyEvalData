@@ -418,9 +418,7 @@ class spec(object):
                 # necessary base spec counters for error propagation
                 resolvedCounters, baseCounters = self.traverseCounters(
                     cList, specCols)
-
-                
-                
+                            
                 # counter names and resolved strings for further calculations
                 if self.statisticType == 'poisson' or self.propagateErrors:
                     # for error propagation we just need the base spec counters
@@ -443,6 +441,7 @@ class spec(object):
             # add custom counters if defined
             specData = self.addCustomCounters(
                 specData, scanNum, baseCounters, motors)
+
             data = np.array([])
             # read data into data array
             for colString, colName in zip(colStrings, colNames):
