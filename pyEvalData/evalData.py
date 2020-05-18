@@ -594,7 +594,7 @@ class spec(object):
     def plotScans(self,scanList, ylims=[], xlims=[], figSize=[], xGrid=[], 
                   yErr='std', xErr = 'std', norm2one=False, binning=True, 
                   labelText='', titleText='', skipPlot=False, gridOn=True, 
-                  yText='', xText='', fmt='-o'):
+                  yText='', xText='', fmt='-o', offsetX = 0):
         """Plot a list of scans from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -689,9 +689,9 @@ class spec(object):
             if not skipPlot:
                 # plot the errorbar for each counter
                 if (xErr == 'none') & (yErr == 'none'):
-                    plot(x2plot,y2plot[col],fmt,label=lt)
+                    plot(x2plot-offsetX,y2plot[col],fmt,label=lt)
                 else:
-                    errorbar(x2plot,y2plot[col],fmt=fmt,label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
+                    errorbar(x2plot-offsetX,y2plot[col],fmt=fmt,label=lt, xerr=xerr2plot, yerr=yerr2plot[col])
         
         if not skipPlot:
             # add a legend, labels, title and set the limits and grid
@@ -714,7 +714,7 @@ class spec(object):
             if gridOn:
                 grid(True)   
         
-        return y2plot, x2plot, yerr2plot, xerr2plot, name
+        return y2plot, x2plot-offsetX, yerr2plot, xerr2plot, name
         
         
     def plotMeshScan(self, scanNum, skipPlot=False, gridOn=False, yText='', xText='', levels = 20, cBar = True):
