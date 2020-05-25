@@ -1272,7 +1272,7 @@ class spec(object):
                         print('')
                         print('-'*10 + ' ' + counter + ': ' + '-'*15)
                         for key in out.best_values:
-                            print('{:>12}:  {:>10.4f} '.format(
+                            print('{:>12}:  {:>10.4e} '.format(
                                 key, out.best_values[key]))
 
                     # set the x-offset for delay scans - offset parameter in
@@ -1337,7 +1337,8 @@ class spec(object):
                             2, 1, height_ratios=[1, 3], hspace=0.1)
                         ax1 = plt.subplot(gs[0])
                         markerline, stemlines, baseline = plt.stem(
-                            x2plot-offsetX, out.residual, markerfmt=' ')
+                            x2plot-offsetX, out.residual, markerfmt=' ',
+                            use_line_collection=True)
                         plt.setp(stemlines, 'color',
                                  plot[0].get_color(), 'linewidth', 2, alpha=0.5)
                         plt.setp(baseline, 'color', 'k', 'linewidth', 0)

@@ -72,7 +72,7 @@ def binData(y, x, X, statistic='mean'):
 
         Xstd, _, _ = binned_statistic(x, x, 'std', edges)
         Xerr = Xstd/np.sqrt(n)
-
+    
     # remove NaNs
     Y = Y[n > 0]
     X = X[n > 0]
