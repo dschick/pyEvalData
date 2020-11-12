@@ -535,12 +535,15 @@ class spec(object):
                                 binData(concatData[col], concatData[self.xCol],
                                         xGridReduced, statistic=binStat)
             else:
-                for col in cList:
-                    avgData[col] = concatData[col]
+                for colName, colString in zip(cList, resolvedCounters):
+                    evalString = self.colString2evalString(
+                        colString, arrayName='specData')
+                    temp = eval(evalString)
+                    avgData[colName] = temp
                     avgData[self.xCol] = concatData[self.xCol]
-                    errData[col] = 0
+                    errData[colName] = 0
                     errData[self.xCol] = 0
-                    stdData[col] = 0
+                    stdData[colName] = 0
                     stdData[self.xCol] = 0
 
         except Exception as e:
