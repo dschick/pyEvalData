@@ -71,20 +71,21 @@ class Evaluation(object):
 
     """
 
-    # properties
-    source = []
-    clist = []
-    cdef = {}
-    xcol = ''
-    t0 = 0
-    custom_counters = []
-    math_keys = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs',
-                 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
-                 'pi', 'exp', 'log', 'log10', 'sqrt']
-    statistic_type = 'gauss'
-    propagate_errors = True
-    remove_outliners = False
-    sigma_outliners = 0.1
+    def __init__(self, source):
+        # properties
+        self.source = source
+        self.clist = []
+        self.cdef = {}
+        self.xcol = ''
+        self.t0 = 0
+        self.custom_counters = []
+        self.math_keys = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs',
+                          'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
+                          'pi', 'exp', 'log', 'log10', 'sqrt']
+        self.statistic_type = 'gauss'
+        self.propagate_errors = True
+        self.remove_outliners = False
+        self.sigma_outliners = 0.1
 
     def get_clist(self):
         """Return the list of counters to evaluate as list even if they are
