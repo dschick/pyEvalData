@@ -946,6 +946,8 @@ class spec(object):
                 else:
                     # no sequence type is given --> enumerate
                     lt = str.format('#{}', i+1)
+            else:
+                lt = labelText[i]
 
             # get the plot data for the scan list
             y2plot, x2plot, yerr2plot, xerr2plot, name = self.plotScans(
