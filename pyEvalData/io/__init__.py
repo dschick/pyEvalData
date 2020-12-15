@@ -1,3 +1,3 @@
-from .spec import Spec
+from .spec import Spec, PalSpec
 
-__all__ = ['Spec']
+__all__ = ['Spec', 'PalSpec']
