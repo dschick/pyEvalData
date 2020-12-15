@@ -35,7 +35,7 @@ def edges4grid(grid):
     return edges, binwidth
 
 
-def binData(y, x, X, statistic='mean'):
+def bin_data(y, x, X, statistic='mean'):
     """Bin data y(x) on new grid X using a statistic type. """
 
     y = y.flatten('F')
