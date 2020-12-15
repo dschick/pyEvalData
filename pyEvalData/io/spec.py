@@ -25,7 +25,7 @@
 import os
 import xrayutilities as xu
 import numpy as np
-
+from numpy.lib.recfunctions import append_fields
 
 class Spec(object):
     """Spec"""
@@ -169,14 +169,9 @@ class Spec(object):
         try:
             self.motor_names = self.spec_file.init_motor_names
             # if no motor_names are given motors are set as empty array
-            if len(self.motor_names) == 0:
-                # read the data
-                data = xu.io.geth5_scan(os.path.join(self.hdf5_path, self.h5_file_name), scan_num)
-                motors = []
-            else:
-                # read the data providing the motor_names
-                motors, data = xu.io.geth5_scan(os.path.join(self.hdf5_path, self.h5_file_name),
-                                                scan_num, *self.motor_names)
+            # read the data providing the motor_names
+            motors, data = xu.io.geth5_scan(os.path.join(self.hdf5_path, self.h5_file_name),
+                                            scan_num, *self.motor_names, rettype='numpy')
 
             # convert the data array to float64 since lmfit works better
             # is there a smarter way to do so?
@@ -186,13 +181,15 @@ class Spec(object):
                 dt[i] = (dt[i][0], 'float64')
             dt = np.dtype(dt)
             data = data.astype(dt)
+            data = np.rec.array(data, names=data.dtype.names)
 
-            # convert list of motors to recarray
-            motors = np.rec.array(motors, names=self.motor_names)
+            
+            for name in list(set(list(motors.dtype.names)) - set(list(data.dtype.names))):
+                data = append_fields(data, name, data=motors[name],
+                                     dtypes=float, asrecarray=True, usemask=False)
         except Exception as e:
             print(e)
             print('Scan #{0:.0f} not present in hdf5 file!'.format(scan_num))
-            motors = []
             data = []
 
-        return motors, data
+        return data

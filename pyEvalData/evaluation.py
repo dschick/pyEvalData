@@ -245,7 +245,7 @@ class Evaluation(object):
             (col_string, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, col_string)
         return col_string
 
-    def add_custom_counters(self, spec_data, scan_num, base_counters, motors=[]):
+    def add_custom_counters(self, spec_data, scan_num, base_counters):
         """Add custom counters to the spec data array.
         This is a stub for child classes.
 
@@ -259,7 +259,6 @@ class Evaluation(object):
             spec_data (ndarray): Updated data array from the spec scan.
 
         """
-
         return spec_data
 
     def avg_N_bin_scans(self, scan_list, xgrid=np.array([]), binning=True):
@@ -302,7 +301,7 @@ class Evaluation(object):
             # traverse the scan list and read data
             try:
                 # try to read the motors and data of this scan
-                motors, spec_data = self.source.get_scan_data(scan_num)
+                spec_data = self.source.get_scan_data(scan_num)
             except:
                 raise
                 print('Scan #' + scan_num + ' not found, skipping')
@@ -338,8 +337,7 @@ class Evaluation(object):
                     dtypes.append((col_name, '<f8'))
 
             # add custom counters if defined
-            spec_data = self.add_custom_counters(
-                spec_data, scan_num, base_counters, motors)
+            spec_data = self.add_custom_counters(spec_data, scan_num, base_counters)
 
             data = np.array([])
             # read data into data array
@@ -607,8 +605,8 @@ class Evaluation(object):
 
         # read data from spec file
         try:
-            # try to read the motors and data of this scan
-            motors, spec_data = self.source.get_scan_data(scan_num)
+            # try to read data of this scan
+            spec_data = self.source.get_scan_data(scan_num)
         except:
             print('Scan #' + int(scan_num) + ' not found, skipping')
 
