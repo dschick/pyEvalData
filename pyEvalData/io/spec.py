@@ -29,17 +29,6 @@ import numpy as np
 
 class Spec(object):
     """Spec"""
-    name = ''
-    spec_file_name = ''
-    h5_file_name = ''
-    file_path = './'
-    hdf5_path = './'
-    spec_file = ''
-    update_before_read = False
-    overwrite_hdf5 = False
-    # must be the same order as for xu experiment configuration
-    # (first sample axis, last detector axis)
-    motor_names = ['Theta', 'TwoTheta']
 
     def __init__(self, name, file_path, spec_file_ext=''):
         """Initialize the class, set all file names and load the spec file.
@@ -53,8 +42,13 @@ class Spec(object):
         """
         self.name = name
         self.spec_file_name = self.name + spec_file_ext
-        self.h5_file_name = self.name + '.h5'
+        self.h5_file_name = self.name + '_pyEvalData.h5'
         self.file_path = file_path
+        self.hdf5_path = ''
+        self.spec_file = ''
+        self.update_before_read = False
+        self.overwrite_hdf5 = False
+        self.motor_names = []
         # load the spec data
         self.load_spec()
 
@@ -73,10 +67,9 @@ class Spec(object):
         try:
             # try if spec file object already exist
             self.spec_file.Update()
-        except Exception as e:
-            print(e)
+        except:
             # load the spec file from disc
-            self.spec_file = xu.io.spec_file(self.spec_file_name, path=self.file_path)
+            self.spec_file = xu.io.SPECFile(self.spec_file_name, path=self.file_path)
             self.spec_file.Update()
 
         if (not os.path.exists(os.path.join(self.hdf5_path, self.h5_file_name))
@@ -174,6 +167,7 @@ class Spec(object):
 
         # read the scan from the hdf5 file
         try:
+            self.motor_names = self.spec_file.init_motor_names
             # if no motor_names are given motors are set as empty array
             if len(self.motor_names) == 0:
                 # read the data
