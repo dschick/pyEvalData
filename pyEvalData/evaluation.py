@@ -243,6 +243,19 @@ class Evaluation(object):
         """
         return spec_data
 
+    def get_scan_data(self, scan_num):
+        """
+        
+
+        Args:
+            scan_num (TYPE): DESCRIPTION.
+
+        Returns:
+            TYPE: DESCRIPTION.
+
+        """
+        return self.source.get_scan_data(scan_num)
+
     def avg_N_bin_scans(self, scan_list, xgrid=np.array([]), binning=True):
         """Averages data defined by the counter list, clist, onto an optional
         xgrid. If no xgrid is given the x-axis data of the first scan in the
@@ -283,7 +296,7 @@ class Evaluation(object):
             # traverse the scan list and read data
             try:
                 # try to read the motors and data of this scan
-                spec_data = self.source.get_scan_data(scan_num)
+                spec_data = self.get_scan_data(scan_num)
             except:
                 raise
                 print('Scan #' + scan_num + ' not found, skipping')
