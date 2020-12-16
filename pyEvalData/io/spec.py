@@ -80,6 +80,8 @@ class Spec(object):
             self.spec_file.Save2HDF5(os.path.join(
                 self.h5_path, self.h5_file_name))
 
+        self.motor_names = self.spec_file.init_motor_names
+
     def write_data_to_hdf5(self, scan_num, child_name, data, data_name):
         """Write data for a given scan number to the HDF5 file.
 
