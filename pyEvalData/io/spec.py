@@ -27,6 +27,7 @@ import xrayutilities as xu
 import numpy as np
 from numpy.lib.recfunctions import append_fields
 
+
 class Spec(object):
     """Spec"""
 
@@ -44,10 +45,10 @@ class Spec(object):
         self.spec_file_name = self.name + spec_file_ext
         self.h5_file_name = self.name + '_pyEvalData.h5'
         self.file_path = file_path
-        self.hdf5_path = ''
+        self.h5_path = ''
         self.spec_file = ''
         self.update_before_read = False
-        self.overwrite_hdf5 = False
+        self.overwrite_h5 = False
         self.motor_names = []
         # load the spec data
         self.load_spec()
@@ -55,7 +56,7 @@ class Spec(object):
     def load_spec(self):
         """Load the spec data either from the hdf5 or from the spec file."""
         # check if the hdf5 file exists
-        if not os.path.exists(self.hdf5_path + self.h5_file_name):
+        if not os.path.exists(self.h5_path + self.h5_file_name):
             # no hdf5 file found --> read the spec file
             self.update_spec()
 
@@ -72,12 +73,12 @@ class Spec(object):
             self.spec_file = xu.io.SPECFile(self.spec_file_name, path=self.file_path)
             self.spec_file.Update()
 
-        if (not os.path.exists(os.path.join(self.hdf5_path, self.h5_file_name))
-                or self.overwrite_hdf5):
+        if (not os.path.exists(os.path.join(self.h5_path, self.h5_file_name))
+                or self.overwrite_h5):
             # save the new or changed spec file content to the hdf5 file
             # if it does not exist
             self.spec_file.Save2HDF5(os.path.join(
-                self.hdf5_path, self.h5_file_name))
+                self.h5_path, self.h5_file_name))
 
     def write_data_to_hdf5(self, scan_num, child_name, data, data_name):
         """Write data for a given scan number to the HDF5 file.
@@ -91,7 +92,7 @@ class Spec(object):
         """
 
         # open the HDF5 file
-        with xu.io.helper.xu_h5open(os.path.join(self.hdf5_path,
+        with xu.io.helper.xu_h5open(os.path.join(self.h5_path,
                                                  self.h5_file_name), mode='a') as h5:
 
             h5g = h5.get(list(h5.keys())[0])  # get the root
@@ -129,7 +130,7 @@ class Spec(object):
         """
 
         # open the HDF5 file
-        with xu.io.helper.xu_h5open(os.path.join(self.hdf5_path,
+        with xu.io.helper.xu_h5open(os.path.join(self.h5_path,
                                                  self.h5_file_name), mode='a') as h5:
             h5g = h5.get(list(h5.keys())[0])  # get the root
 
@@ -170,7 +171,7 @@ class Spec(object):
             self.motor_names = self.spec_file.init_motor_names
             # if no motor_names are given motors are set as empty array
             # read the data providing the motor_names
-            motors, data = xu.io.geth5_scan(os.path.join(self.hdf5_path, self.h5_file_name),
+            motors, data = xu.io.geth5_scan(os.path.join(self.h5_path, self.h5_file_name),
                                             scan_num, *self.motor_names, rettype='numpy')
 
             # convert the data array to float64 since lmfit works better
@@ -183,7 +184,6 @@ class Spec(object):
             data = data.astype(dt)
             data = np.rec.array(data, names=data.dtype.names)
 
-            
             for name in list(set(list(motors.dtype.names)) - set(list(data.dtype.names))):
                 data = append_fields(data, name, data=motors[name],
                                      dtypes=float, asrecarray=True, usemask=False)

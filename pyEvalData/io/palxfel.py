@@ -1,74 +1,80 @@
-# This file is part of the evalData module.
-#
-# eval Data is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, see <http://www.gnu.org/licenses/>.
-#
-# Copyright (C) 2015 Daniel Schick <schick.daniel@gmail.com>
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-import numpy as np
-import numpy.lib.recfunctions as recfuncs
-import collections
+# The MIT License (MIT)
+# Copyright (c) 2015-2020 Daniel Schick
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+# OR OTHER DEALINGS IN THE SOFTWARE.
+
 import os
 from xrayutilities.io import SPECFile, SPECScan
-from xrayutilities.io.helper import xu_h5open, xu_open
-from xrayutilities import config, utilities
+from xrayutilities.io.helper import xu_open
+from xrayutilities import config
 import re
-from .evalData import spec
+import numpy as np
+
+from .spec import Spec
 
 
-class PalSpec(spec):
-    
-    motorNames = ['th', 'tth', 'phen']
-    
-    def __init__(self, name, filePath, specFileExt='', file_format='{0:07d}_meta.log',
+class PalSpec(Spec):
+    """PalSpec"""
+
+    def __init__(self, name, file_path, spec_file_ext='', file_format='{0:07d}_meta.log',
                  scan_list=[], start_scan=0, stop_scan=-1):
-        
+
         self.file_format = file_format
         self.start_scan = start_scan
         self.scan_list = scan_list
-        
+
         if len(scan_list):
             self.scan_list = np.array(scan_list)
-        elif (start_scan >= 0) and (stop_scan >=start_scan):
-            self.scan_list = np.linspace(start_scan, stop_scan)        
-        
-        super(PalSpec, self).__init__(name, filePath, specFileExt)
-    
-    def updateSpec(self):
+        elif (start_scan >= 0) and (stop_scan >= start_scan):
+            self.scan_list = np.linspace(start_scan, stop_scan)
+
+        super().__init__(name, file_path, spec_file_ext)
+
+    def update_spec(self):
         """Update the current spec file if already in memory.
         Otherwise read it and write its content to the hdf5 file.
 
         """
-        
+
         try:
             # try if spec file object already exist
-            self.specFile.Update()
-        except Exception as e:
+            self.spec_file.Update()
+        except:
             # load the spec file from disc
-            self.specFile = PalSpecFile(
-                self.specFileName, path=self.filePath,
-                file_format=self.file_format, scan_in_list=self.scan_list, start_scan=self.start_scan)
-            self.specFile.Update()
+            self.spec_file = PalSpecFile(
+                self.spec_file_name, path=self.file_path,
+                file_format=self.file_format,
+                scan_in_list=self.scan_list, start_scan=self.start_scan)
+            self.spec_file.Update()
 
-        if not os.path.exists(os.path.join(self.hdf5Path, self.h5FileName)) or self.overwriteHDF5:
+        if not os.path.exists(os.path.join(self.h5_path, self.h5_file_name)) or self.overwrite_h5:
             # save the new or changed spec file content to the hdf5 file
             # if it does not exist
-            self.specFile.Save2HDF5(os.path.join(
-                self.hdf5Path, self.h5FileName))
-    
-    def addCustomCounters(self, specData, scanNum, baseCounters, motors=[]):
+            self.spec_file.Save2HDF5(os.path.join(
+                self.h5_path, self.h5_file_name))
+
+    def addCustomCounters(self, spec_data, scan_num, base_counters):
         """Add custom counters to the spec data array.
-        
+
 
         Args:
             specData (ndarray)     : Data array from the spec scan.
@@ -80,15 +86,8 @@ class PalSpec(spec):
             specData (ndarray): Updated data array from the spec scan.
 
         """
-        unusedMotors = set(baseCounters) and not set(self.motorNames)
-        # for i, motor in enumerate(unusedMotors):
-            # print('{:s}: {}'.format(motor, motors[i]))
-        if 'phen' not in baseCounters:
-            data = (np.ones((specData.size))*motors['phen'])
-            specData = recfuncs.append_fields(specData, 'phen', data, dtypes=float, asrecarray=True, usemask=False)
+        return spec_data
 
-        return specData
-    
 
 # define some uesfull regular expressions
 SPEC_time_format = re.compile(r"\d\d:\d\d:\d\d")
@@ -118,10 +117,11 @@ SPEC_newheader = re.compile(r"^#E")
 SPEC_errorbm20 = re.compile(r"^MI:")
 scan_status_flags = ["OK", "NODATA", "ABORTED", "CORRUPTED"]
 
-class PalSpecFile(SPECFile):    
-    
-    
-    def __init__(self, filename, path='', file_format='{0:07d}_meta.log', scan_in_list=[], start_scan=1):
+
+class PalSpecFile(SPECFile):
+
+    def __init__(self, filename, path='', file_format='{0:07d}_meta.log',
+                 scan_in_list=[], start_scan=1):
         """
         SPECFile init routine
 
@@ -132,29 +132,25 @@ class PalSpecFile(SPECFile):
         path :      str, optional
             path to the specfile
         """
-        
+
         self.debug = False
-        
         self.path = path
-        
         self.filename = filename
-        
+
         # we keep that empty as it has to be updated by parse_folders()
         self.full_filename = ''
-        
 
         # list holding scan objects
         self.scan_list = []
         self.fid = None
         self.last_offset = 0
         self.scan_in_list = scan_in_list
-        if len( self.scan_in_list):
+        if len(self.scan_in_list):
             self.curr_scan_nb = self.scan_in_list[0]
         else:
             self.curr_scan_nb = start_scan
-        
-        self.file_format = file_format
 
+        self.file_format = file_format
         # initially parse the file
         self.init_motor_names_fh = []  # this list will hold the names of the
         # motors saved in initial motor positions given in the file header
@@ -163,7 +159,7 @@ class PalSpecFile(SPECFile):
         self.init_motor_names = []  # this list will hold the names of the
         # motors saved in initial motor positions from either the file or
         # scan header
-        
+
         self.parse_folders()
 
     def Update(self):
@@ -181,41 +177,40 @@ class PalSpecFile(SPECFile):
             lastscan = self.scan_list[idx - 1]
             lastscan.ischanged = True
         self.parse_folders()
-        
+
     def parse_folders(self):
-        
+
         data_path = os.path.abspath(self.path)
-        
+
         if len(self.scan_in_list):
             for scan_nb in self.scan_in_list:
                 if scan_nb >= self.curr_scan_nb:
                     self.curr_scan_nb = scan_nb
-                    
+
                     if self.debug:
                         print('Look for scan number {:d}'.format(scan_nb))
-                    
+
                     data_file = os.path.join(
-                        data_path, 
+                        data_path,
                         self.file_format.format(scan_nb))
-                    
-                    
+
                     if os.path.exists(data_file):
                         self.full_filename = data_file
                         if self.debug:
                             print('Parsing Scan #{:d}'.format(scan_nb))
                         self.Parse()
-                        
+
                         # when parsing is done, we reset everything
                         self.fid = None
                         self.last_offset = 0
-                        self.init_motor_names_fh = []  # this list will hold the names of the
-                        # motors saved in initial motor positions given in the file header
-                        self.init_motor_names_sh = []  # this list will hold the names of the
-                        # motors saved in initial motor positions given in the scan header
-                        self.init_motor_names = []  # this list will hold the names of the
-                        
+                        # self.init_motor_names_fh = []  # this list will hold the names of the
+                        # # motors saved in initial motor positions given in the file header
+                        # self.init_motor_names_sh = []  # this list will hold the names of the
+                        # # motors saved in initial motor positions given in the scan header
+                        # self.init_motor_names = []  # this list will hold the names of the
+
                         # we remeber the last scan number
-                        
+
                     else:
                         if self.debug:
                             print('data file does not exists')
@@ -225,34 +220,33 @@ class PalSpecFile(SPECFile):
                 scan_nb = self.curr_scan_nb
                 if self.debug:
                     print('Look for scan number {:d}'.format(scan_nb))
-                
+
                 data_file = os.path.join(
-                    data_path, 
+                    data_path,
                     self.file_format.format(scan_nb))
-                
-                
+
                 if os.path.exists(data_file):
                     self.full_filename = data_file
                     if self.debug:
                         print('Parsing Scan #{:d}'.format(scan_nb))
                     self.Parse()
-                    
+
                     # when parsing is done, we reset everything
                     self.fid = None
                     self.last_offset = 0
-                    self.init_motor_names_fh = []  # this list will hold the names of the
-                    # motors saved in initial motor positions given in the file header
-                    self.init_motor_names_sh = []  # this list will hold the names of the
-                    # motors saved in initial motor positions given in the scan header
-                    self.init_motor_names = []  # this list will hold the names of the
-                    
+                    # self.init_motor_names_fh = []  # this list will hold the names of the
+                    # # motors saved in initial motor positions given in the file header
+                    # self.init_motor_names_sh = []  # this list will hold the names of the
+                    # # motors saved in initial motor positions given in the scan header
+                    # self.init_motor_names = []  # this list will hold the names of the
+
                     # we remeber the last scan number
                     self.curr_scan_nb = self.curr_scan_nb + 1
                 else:
                     if self.debug:
                         print('data file does not exists')
                     break
-            
+
     def Parse(self):
         """
         Parses the file from the starting at last_offset and adding found scans
@@ -299,7 +293,7 @@ class PalSpecFile(SPECFile):
                         print("XU.io.SPECFile.Parse: found scan")
                     line_list = SPEC_multi_blank.split(line)
                     scannr = int(line_list[1])
-                    #scancmd = "".join(" " + x + " " for x in line_list[2:])
+                    # scancmd = "".join(" " + x + " " for x in line_list[2:])
                     scan_started = True
                     scan_has_mca = False
                     scan_header_offset = self.last_offset
@@ -317,7 +311,7 @@ class PalSpecFile(SPECFile):
                     self.init_motor_names = self.init_motor_names_fh
 
                     # if the line contains the date and time information
-                
+
                 elif SPEC_cmd.match(line) and scan_started:
                     line = SPEC_cmd.sub("", line)
                     scancmd = line.strip()
@@ -459,14 +453,14 @@ class PalSpecFile(SPECFile):
                               "(after aborted scan)")
                     line_list = SPEC_multi_blank.split(line)
                     scannr = int(line_list[1])
-                    #scancmd = "".join(" " + x + " " for x in line_list[2:])
+                    # scancmd = "".join(" " + x + " " for x in line_list[2:])
                     scan_started = True
                     scan_has_mca = False
                     scan_header_offset = self.last_offset
                     scan_status = "OK"
                     self.init_motor_names_sh = []
                     self.init_motor_names = self.init_motor_names_fh
-                
+
                 # else:
                 #     print('cannot read that shit: {:s}'.format(line))
                 # store the position of the file pointer
@@ -475,5 +469,3 @@ class PalSpecFile(SPECFile):
             # if reading of the file is finished store the data offset of the
             # last scan as the last offset for the next parsing run of the file
             self.last_offset = self.scan_list[-1].doffset
-
-    
