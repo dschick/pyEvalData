@@ -33,26 +33,9 @@ from .helpers import bin_data
 
 
 class Evaluation(object):
-    """
-    eval module provide class definitions to read, average, plot, and fit data
-    from spec files. The base class "spec" supports only spec files. The spec class
-    allows for user-defined counters as predefinitions or even at run-time.
-    The spec file is converted into a hdf5 file.
-    All file I/O are handled by the xrayutility package.
-    The child-class pilatusXPP inherits from spec and has additional methods to read
-    Pilatus ((C) Dectris Ltd.) .tiff files and further convert them to q-space
-    using the xrayutility package.
-
+    """Evaluation
+    
     Attributes:
-        name (str)              : Name of the spec file.
-        specFileName (str)      : Full file name of the spec file.
-        h5FileName (str)        : Full file name of the HDF5 file.
-        filePath (str)          : Base path of the spec file.
-        hdf5Path (str)          : Base path of the HDF5 file.
-        specFile (object)       : specFile object of xrayutility package.
-        updateBeforeRead (bool) : Boolean to force an update of the spec file
-                                  prior reading each scan.
-        overwriteHDF5 (bool)    : Boolean to force overwriting the HDF5 file.
         clist (List[str])       : List of counter names to evaluate.
         cdef (Dict{str:str})    : Dict of predefined counter names and
                                   definitions.
@@ -60,8 +43,6 @@ class Evaluation(object):
         t0 (float)              : approx. time zero for delay scans to
                                   determine the unpumped region of the data
                                   for normalization.
-        motorNames (List[str])  : default axis of the goniometer for reading
-                                  spec files by xrayutilities.
         custom_counters (List[str]): List of custom counters - default is []
         math_keys (List[str])    : List of keywords which are not replaced in
                                   counter names
