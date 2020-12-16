@@ -35,7 +35,7 @@ from .spec import Spec
 class PalSpec(Spec):
     """PalSpec"""
 
-    def __init__(self, name, file_path, spec_file_ext='', file_format='{0:07d}_meta.log',
+    def __init__(self, name, file_path, spec_file_ext='', h5_path='', file_format='{0:07d}_meta.log',
                  scan_list=[], start_scan=0, stop_scan=-1):
 
         self.file_format = file_format
@@ -47,7 +47,7 @@ class PalSpec(Spec):
         elif (start_scan >= 0) and (stop_scan >= start_scan):
             self.scan_list = np.linspace(start_scan, stop_scan)
 
-        super().__init__(name, file_path, spec_file_ext)
+        super().__init__(name, file_path, spec_file_ext, h5_path)
 
     def update_spec(self):
         """Update the current spec file if already in memory.
