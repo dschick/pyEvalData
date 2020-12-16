@@ -256,7 +256,8 @@ class Evaluation(object):
         """
         res = []
         for data_filter in self.data_filters:
-            idx = eval(self.col_string_to_eval_string(data_filter, array_name='data'))
+            name, _ = self.resolve_counter_name(data_filter)
+            idx = eval(self.col_string_to_eval_string(name, array_name='data'))
             if len(res) == 0:
                 res = idx
             else:
