@@ -31,7 +31,7 @@ from numpy.lib.recfunctions import append_fields
 class Spec(object):
     """Spec"""
 
-    def __init__(self, name, file_path, spec_file_ext=''):
+    def __init__(self, name, file_path, spec_file_ext='', h5_path=''):
         """Initialize the class, set all file names and load the spec file.
 
         Args:
@@ -45,7 +45,7 @@ class Spec(object):
         self.spec_file_name = self.name + spec_file_ext
         self.h5_file_name = self.name + '_pyEvalData.h5'
         self.file_path = file_path
-        self.h5_path = ''
+        self.h5_path = h5_path
         self.spec_file = ''
         self.update_before_read = False
         self.overwrite_h5 = False
@@ -77,6 +77,7 @@ class Spec(object):
                 or self.overwrite_h5):
             # save the new or changed spec file content to the hdf5 file
             # if it does not exist
+            print()
             self.spec_file.Save2HDF5(os.path.join(
                 self.h5_path, self.h5_file_name))
 
