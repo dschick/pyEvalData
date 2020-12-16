@@ -65,8 +65,8 @@ class Evaluation(object):
                           'pi', 'exp', 'log', 'log10', 'sqrt']
         self.statistic_type = 'gauss'
         self.propagate_errors = True
-        self.remove_outliners = False
-        self.sigma_outliners = 0.1
+        self.apply_data_filter = False
+        self.data_filters = ['evaluatable statement']
 
     def get_clist(self):
         """Return the list of counters to evaluate as list even if they are
@@ -243,6 +243,27 @@ class Evaluation(object):
         """
         return spec_data
 
+    def filter_data(self, data):
+        """filter_data
+        
+
+        Args:
+            data (TYPE): DESCRIPTION.
+
+        Returns:
+            TYPE: DESCRIPTION.
+
+        """
+        res = []
+        for data_filter in self.data_filters:
+            idx = eval(self.col_string_to_eval_string(data_filter, array_name='data'))
+            if len(res) == 0:
+                res = idx
+            else:
+                res = np.logical_and(res, idx)
+
+        return data[res]
+
     def get_scan_data(self, scan_num):
         """
         
@@ -254,7 +275,10 @@ class Evaluation(object):
             TYPE: DESCRIPTION.
 
         """
-        return self.source.get_scan_data(scan_num)
+        data = self.source.get_scan_data(scan_num)
+        if self.apply_data_filter:
+            data = self.filter_data(data)
+        return data
 
     def avg_N_bin_scans(self, scan_list, xgrid=np.array([]), binning=True):
         """Averages data defined by the counter list, clist, onto an optional
@@ -574,7 +598,7 @@ class Evaluation(object):
 
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
-    def plotMeshScan(self, scan_num, skip_plot=False, grid_on=False, ytext='', xtext='',
+    def plot_mesh_scan(self, scan_num, skip_plot=False, grid_on=False, ytext='', xtext='',
                      levels=20, cbar=True):
         """Plot a single mesh scan from the spec file.
         Various plot parameters are provided.
@@ -601,7 +625,7 @@ class Evaluation(object):
         # read data from spec file
         try:
             # try to read data of this scan
-            spec_data = self.source.get_scan_data(scan_num)
+            spec_data = self.get_scan_data(scan_num)
         except:
             print('Scan #' + int(scan_num) + ' not found, skipping')
 
