@@ -77,7 +77,6 @@ class Spec(object):
                 or self.overwrite_h5):
             # save the new or changed spec file content to the hdf5 file
             # if it does not exist
-            print()
             self.spec_file.Save2HDF5(os.path.join(
                 self.h5_path, self.h5_file_name))
 
