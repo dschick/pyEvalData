@@ -31,6 +31,150 @@ import numpy as np
 
 from .spec import Spec
 
+class PalSpecScan(SPECScan):
+    """
+    Represents a single SPEC scan. This class is usually not called by the
+    user directly but used via the SPECFile class.
+    """
+
+    def __init__(self, name, scannr, command, date, time, itime, colnames,
+                 hoffset, doffset, fname, imopnames, imopvalues, scan_status):
+        super().__init__(name, scannr, command, date, time, itime, colnames,
+                 hoffset, doffset, fname, imopnames, imopvalues, scan_status)
+
+    def ReadData(self):
+        """
+        Set the data attribute of the scan class.
+        """
+
+        if self.scan_status == "NODATA":
+            if config.VERBOSITY >= config.INFO_LOW:
+                print("XU.io.SPECScan.ReadData: %s has been aborted - "
+                      "no data available!" % self.name)
+            self.data = None
+            return None
+
+        if not self.has_mca:
+            if config.VERBOSITY >= config.INFO_ALL:
+                print("XU.io.SPECScan.ReadData: scan %d contains no MCA data"
+                      % self.nr)
+
+        with xu_open(self.fname) as self.fid:
+            # read header lines
+            self.fid.seek(self.hoffset, 0)
+            self.header = []
+            while self.fid.tell() < self.doffset:
+                line = self.fid.readline().decode('ascii', 'ignore')
+                self.header.append(line.strip())
+
+            self.fid.seek(self.doffset, 0)
+
+            # create dictionary to hold the data
+            if self.has_mca:
+                type_desc = {"names": self.colnames + ["MCA"],
+                             "formats": len(self.colnames) * [numpy.float32] +
+                             [(numpy.uint32, self.mca_channels)]}
+            else:
+                type_desc = {"names": self.colnames,
+                             "formats": len(self.colnames) * [numpy.float32]}
+
+            if config.VERBOSITY >= config.DEBUG:
+                print("xu.io.SPECScan.ReadData: type descriptor: %s"
+                      % (repr(type_desc)))
+
+            record_list = []  # from this list the record array while be built
+
+            mca_counter = 0
+            scan_aborted_flag = False
+
+            for line in self.fid:
+                line = line.decode('ascii', 'ignore')
+                line = line.strip()
+                if not line:
+                    continue
+
+                # check if scan is broken
+                if (SPEC_scanbroken.findall(line) != [] or
+                        scan_aborted_flag):
+                    # need to check next line(s) to know if scan is resumed
+                    # read until end of comment block or end of file
+                    if not scan_aborted_flag:
+                        scan_aborted_flag = True
+                        self.scan_status = "ABORTED"
+                        if config.VERBOSITY >= config.INFO_ALL:
+                            print("XU.io.SPECScan.ReadData: %s aborted"
+                                  % self.name)
+                        continue
+                    elif SPEC_scanresumed.match(line):
+                        self.scan_status = "OK"
+                        scan_aborted_flag = False
+                        if config.VERBOSITY >= config.INFO_ALL:
+                            print("XU.io.SPECScan.ReadData: %s resumed"
+                                  % self.name)
+                        continue
+                    elif SPEC_commentline.match(line):
+                        continue
+                    elif SPEC_errorbm20.match(line):
+                        print(line)
+                        continue
+                    else:
+                        break
+
+                if SPEC_headerline.match(line) or \
+                   SPEC_commentline.match(line):
+                    if SPEC_scanresumed.match(line):
+                        continue
+                    elif SPEC_commentline.match(line):
+                        continue
+                    else:
+                        break
+
+                if mca_counter == 0:
+                    # the line is a scalar data line
+                    line_list = SPEC_num_value.findall(line)
+                    if config.VERBOSITY >= config.DEBUG:
+                        print("XU.io.SPECScan.ReadData: %s" % line)
+                        print("XU.io.SPECScan.ReadData: read scalar values %s"
+                              % repr(line_list))
+                    # convert strings to numbers
+                    line_list = map(float, line_list)
+
+                    # increment the MCA counter if MCA data is stored
+                    if self.has_mca:
+                        mca_counter = mca_counter + 1
+                        # create a temporary list for the mca data
+                        mca_tmp_list = []
+                    else:
+                        record_list.append(tuple(line_list))
+                else:
+                    # reading MCA spectrum
+                    mca_tmp_list += map(int, SPEC_int_value.findall(line))
+
+                    # increment MCA counter
+                    mca_counter = mca_counter + 1
+                    # if mca_counter exceeds the number of lines used to store
+                    # MCA data: append everything to the record list
+                    if mca_counter > self.mca_nof_lines:
+                        record_list.append(tuple(list(line_list) +
+                                                 [mca_tmp_list]))
+                        mca_counter = 0
+
+            # convert the data to numpy arrays
+            ncol = len(record_list[0])
+            if config.VERBOSITY >= config.INFO_LOW:
+                print("XU.io.SPECScan.ReadData: %s: %d %d %d"
+                      % (self.name, len(record_list), ncol,
+                         len(type_desc["names"])))
+            if ncol == len(type_desc["names"]):
+                try:
+                    self.data = numpy.rec.fromrecords(record_list,
+                                                      dtype=type_desc)
+                except ValueError:
+                    self.scan_status = 'NODATA'
+                    print("XU.io.SPECScan.ReadData: %s exception while "
+                          "parsing data" % self.name)
+            else:
+                self.scan_status = 'NODATA'
 
 class PalSpec(Spec):
     """PalSpec"""
@@ -385,7 +529,7 @@ class PalSpecFile(SPECFile):
                     # been written, but nevertheless a comment is in the file
                     # that tells us that the scan was aborted
                     scan_data_offset = self.last_offset
-                    s = SPECScan("scan_%i" % (scannr), scannr, scancmd,
+                    s = PalSpecScan("scan_%i" % (scannr), scannr, scancmd,
                                  date, time, itime, col_names,
                                  scan_header_offset, scan_data_offset,
                                  self.full_filename, self.init_motor_names,
@@ -411,7 +555,7 @@ class PalSpecFile(SPECFile):
                     # list the name of the group consists of the prefix scan
                     # and the number of the scan in the file - this shoule make
                     # it easier to find scans in the HDF5 file.
-                    s = SPECScan("scan_%i" % (scannr), scannr, scancmd, date,
+                    s = PalSpecScan("scan_%i" % (scannr), scannr, scancmd, date,
                                  time, itime, col_names, scan_header_offset,
                                  scan_data_offset, self.full_filename,
                                  self.init_motor_names, init_motor_values,
@@ -433,7 +577,7 @@ class PalSpecFile(SPECFile):
                     # consecutive file headers in the data file without any
                     # data or abort notice of the first scan; first store
                     # current scan as aborted then start new scan parsing
-                    s = SPECScan("scan_%i" % (scannr), scannr, scancmd,
+                    s = PalSpecScan("scan_%i" % (scannr), scannr, scancmd,
                                  date, time, itime, col_names,
                                  scan_header_offset, None,
                                  self.full_filename, self.init_motor_names,
