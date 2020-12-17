@@ -71,6 +71,8 @@ class PalSpec(Spec):
             # if it does not exist
             print('save hdf5')
             self.spec_file.Save2HDF5(os.path.join(self.h5_path, self.h5_file_name))
+        else:
+            print('not saving to hdf5')
 
     def addCustomCounters(self, spec_data, scan_num, base_counters):
         """Add custom counters to the spec data array.
