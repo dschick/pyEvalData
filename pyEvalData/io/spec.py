@@ -178,12 +178,12 @@ class Spec(object):
 
             # convert the data array to float64 since lmfit works better
             # is there a smarter way to do so?
-            # dt = data.dtype
-            # dt = dt.descr
-            # for i, thisType in enumerate(dt):
-            #     dt[i] = (dt[i][0], 'float64')
-            # dt = np.dtype(dt)
-            # data = data.astype(dt)
+            dt = data.dtype
+            dt = dt.descr
+            for i, thisType in enumerate(dt):
+                dt[i] = (dt[i][0], 'float64')
+            dt = np.dtype(dt)
+            data = data.astype(dt)
             data = np.rec.array(data, names=data.dtype.names)
 
             for name in list(set(list(motors.dtype.names)) - set(list(data.dtype.names))):
