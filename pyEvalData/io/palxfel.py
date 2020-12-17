@@ -142,7 +142,7 @@ class PalSpecScan(SPECScan):
                     temp = []
                     for i, val in enumerate(line_list):
                         if type_desc["names"][i] == 'ts':
-                            temp.append(np.uint64(val))
+                            temp.append(np.bitwise_and(np.uint64(val), np.uint64(0x0001FFFF)))
                         else:
                             temp.append(np.float64(val))
 
