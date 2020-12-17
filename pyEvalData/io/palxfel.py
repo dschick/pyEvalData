@@ -132,12 +132,20 @@ class PalSpecScan(SPECScan):
                 if mca_counter == 0:
                     # the line is a scalar data line
                     line_list = SPEC_num_value.findall(line)
+                    
                     if config.VERBOSITY >= config.DEBUG:
                         print("XU.io.SPECScan.ReadData: %s" % line)
                         print("XU.io.SPECScan.ReadData: read scalar values %s"
                               % repr(line_list))
                     # convert strings to numbers
-                    line_list = map(np.float64, line_list)
+                    #line_list = map(np.float64, line_list)
+                    temp = []
+                    for i, val in enumerate(line_list):
+                        if type_desc["names"][i] == 'ts':
+                            temp.append(np.uint64(val))
+                        else:
+                            temp.append(np.float64(val))
+
 
                     # increment the MCA counter if MCA data is stored
                     if self.has_mca:
@@ -145,7 +153,7 @@ class PalSpecScan(SPECScan):
                         # create a temporary list for the mca data
                         mca_tmp_list = []
                     else:
-                        record_list.append(tuple(line_list))
+                        record_list.append(tuple(temp))
                 else:
                     # reading MCA spectrum
                     mca_tmp_list += map(int, SPEC_int_value.findall(line))
