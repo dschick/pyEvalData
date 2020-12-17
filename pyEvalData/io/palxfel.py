@@ -66,13 +66,10 @@ class PalSpec(Spec):
                 scan_in_list=self.scan_list, start_scan=self.start_scan)
             self.spec_file.Update()
 
-        # if not os.path.exists(os.path.join(self.h5_path, self.h5_file_name)) or self.overwrite_h5:
-        #     # save the new or changed spec file content to the hdf5 file
-        #     # if it does not exist
-        #     print('save hdf5')
-        self.spec_file.Save2HDF5(os.path.join(self.h5_path, self.h5_file_name))
-        # else:
-        #     print('not saving to hdf5')
+        if not os.path.exists(os.path.join(self.h5_path, self.h5_file_name)) or self.overwrite_h5:
+            # save the new or changed spec file content to the hdf5 file
+            # if it does not exist
+            self.spec_file.Save2HDF5(os.path.join(self.h5_path, self.h5_file_name))
 
     def addCustomCounters(self, spec_data, scan_num, base_counters):
         """Add custom counters to the spec data array.
