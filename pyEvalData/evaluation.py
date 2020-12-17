@@ -224,7 +224,8 @@ class Evaluation(object):
 
         # add 'np.' prefix to numpy functions/math keys
         for mk in math_keys:
-            (col_string, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, col_string)
+            if mk != '0x0001FFFF':
+                (col_string, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, col_string)
         return col_string
 
     def add_custom_counters(self, spec_data, scan_num, base_counters):
