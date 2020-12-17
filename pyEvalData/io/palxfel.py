@@ -72,11 +72,11 @@ class PalSpecScan(SPECScan):
             # create dictionary to hold the data
             if self.has_mca:
                 type_desc = {"names": self.colnames + ["MCA"],
-                             "formats": len(self.colnames) * [numpy.float32] +
-                             [(numpy.uint32, self.mca_channels)]}
+                             "formats": len(self.colnames) * [np.float64] +
+                             [(np.uint64, self.mca_channels)]}
             else:
                 type_desc = {"names": self.colnames,
-                             "formats": len(self.colnames) * [numpy.float32]}
+                             "formats": len(self.colnames) * [np.float64]}
 
             if config.VERBOSITY >= config.DEBUG:
                 print("xu.io.SPECScan.ReadData: type descriptor: %s"
@@ -137,7 +137,7 @@ class PalSpecScan(SPECScan):
                         print("XU.io.SPECScan.ReadData: read scalar values %s"
                               % repr(line_list))
                     # convert strings to numbers
-                    line_list = map(float, line_list)
+                    line_list = map(np.float64, line_list)
 
                     # increment the MCA counter if MCA data is stored
                     if self.has_mca:
@@ -167,7 +167,7 @@ class PalSpecScan(SPECScan):
                          len(type_desc["names"])))
             if ncol == len(type_desc["names"]):
                 try:
-                    self.data = numpy.rec.fromrecords(record_list,
+                    self.data = np.rec.fromrecords(record_list,
                                                       dtype=type_desc)
                 except ValueError:
                     self.scan_status = 'NODATA'
@@ -395,7 +395,6 @@ class PalSpecFile(SPECFile):
         Parses the file from the starting at last_offset and adding found scans
         to the scan list.
         """
-        import numpy
         with xu_open(self.full_filename) as self.fid:
             # move to the last read position in the file
             self.fid.seek(self.last_offset, 0)
@@ -443,7 +442,7 @@ class PalSpecFile(SPECFile):
                     scan_status = "OK"
                     # define some necessary variables which could be missing in
                     # the scan header
-                    itime = numpy.nan
+                    itime = np.nan
                     time = ''
                     if config.VERBOSITY >= config.INFO_ALL:
                         print("XU.io.SPECFile.Parse: processing scan nr. %d "
@@ -471,7 +470,7 @@ class PalSpecFile(SPECFile):
                 elif SPEC_exptime.match(line) and scan_started:
                     if config.VERBOSITY >= config.DEBUG:
                         print("XU.io.SPECFile.Parse: found exposure time")
-                    itime = float(SPEC_num_value.findall(line)[0])
+                    itime = np.float64(SPEC_num_value.findall(line)[0])
                 # read the initial motor names in the scan header if present
                 elif SPEC_initmoponames.match(line) and scan_started:
                     if config.VERBOSITY >= config.DEBUG:
@@ -494,7 +493,7 @@ class PalSpecFile(SPECFile):
                     # this should not lead to an error
                     try:
                         for value in line_list:
-                            init_motor_values.append(float(value))
+                            init_motor_values.append(np.float64(value))
                     except ValueError:
                         pass
 
