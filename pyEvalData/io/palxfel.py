@@ -197,7 +197,7 @@ class PalSpec(Spec):
         if len(scan_list):
             self.scan_list = np.array(scan_list)
         elif (start_scan >= 0) and (stop_scan >= start_scan):
-            self.scan_list = np.linspace(start_scan, stop_scan)
+            self.scan_list = np.linspace(start_scan, stop_scan, dtype=np.int32)
 
         super().__init__(name, file_path, spec_file_ext, h5_path)
 
