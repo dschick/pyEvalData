@@ -1266,9 +1266,9 @@ class Evaluation(object):
                     res[counter]['redchi'] = np.append(
                         res[counter]['redchi'], out.redchi)
                     res[counter]['CoM'] = np.append(
-                        res[counter]['CoM'], sum(y2plot*x2plot)/sum(y2plot))
+                        res[counter]['CoM'], np.sum(y2plot*x2plot)/np.sum(y2plot))
                     res[counter]['int'] = np.append(
-                        res[counter]['int'], sum(y2plot))
+                        res[counter]['int'], np.sum(y2plot))
                     res[counter]['fit'] = np.append(res[counter]['fit'], out)
 
                     k += 1
