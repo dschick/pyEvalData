@@ -51,7 +51,7 @@ class Spec(object):
         self.overwrite_h5 = False
         self.motor_names = []
         # load the spec data
-        self.update_spec()
+        self.load_spec()
 
     def load_spec(self):
         """Load the spec data either from the hdf5 or from the spec file."""
