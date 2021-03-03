@@ -978,7 +978,7 @@ class Evaluation(object):
 
         if not fig_size:
             # use default figure size if none is given
-            fig_size = mpl.rcParams['figure.fig_size']
+            fig_size = mpl.rcParams['figure.figsize']
 
         # initialization of returns
         res = {}  # initialize the results dict
