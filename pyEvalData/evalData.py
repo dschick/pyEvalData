@@ -766,8 +766,9 @@ class spec(object):
 
         """
 
-        from matplotlib.mlab import griddata
+        from scipy.interpolate import griddata
         from matplotlib import gridspec
+        from numpy import vstack, meshgrid
 
         # read data from spec file
         try:
@@ -795,7 +796,7 @@ class spec(object):
 
         Z = specData[cList[0]]
 
-        zz = griddata(X, Y, Z, xx, yy, interp='linear')
+        zz = griddata(vstack((X,Y)).T, Z, tuple(meshgrid(xx, yy)), method='linear')
 
         if not skipPlot:
 
