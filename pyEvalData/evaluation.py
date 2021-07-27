@@ -1189,7 +1189,7 @@ class Evaluation(object):
 
                     # show the single fits and residuals
                     if show_single:
-                        plt.figure(main_fig_num+l_plot, fig_size=fig_size)
+                        plt.figure(main_fig_num+l_plot, figsize=fig_size)
                         gs = mpl.gridspec.GridSpec(
                             2, 1, height_ratios=[1, 3], hspace=0.1)
                         ax1 = plt.subplot(gs[0])
