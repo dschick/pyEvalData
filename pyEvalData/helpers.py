@@ -36,7 +36,32 @@ def edges4grid(grid):
 
 
 def bin_data(y, x, X, statistic='mean'):
-    """Bin data y(x) on new grid X using a statistic type. """
+    """
+    Bin data y(x) on new grid X using a statistic type. 
+
+    Args:
+        y         (ndarray) : old y values
+        x         (ndarray) : old x values
+        X         (ndarray) : new grid
+        statistic (str)     : statitic type, used for
+                              scipy's binned_statistic
+
+
+    Returns:
+        Y     (ndarray)  : binned Y data without NaNs
+        X     (ndarray)  : new X grid, same shape as Y
+        Yerr  (ndarray)  : Error for Y, according to statistic, same shape as X and Y
+        Xerr  (ndarray)  : Error for Y, according to statistic, same shape as X and Y
+        Ystd  (ndarray)  : Std for Y, according to statistic, same shape as X and Y
+        Xstd  (ndarray)  : Std for X, according to statistic, same shape as X and Y
+        edges (ndarray)  : Edges of binned data, same shape as X and Y
+        bins  (ndarray)  : Indices of the bins, same shape as X and Y
+        n     (ndarray)  : Number of values per given bin, same shape as X and Y
+
+    wrapper around scipy's binned_statistic
+    for more info refer to:
+    docs.scipy.org/doc/scipy/reference/generated/scipy.stats.binned_statistic.html
+    """
 
     y = y.flatten('F')
     x = x.flatten('F')
