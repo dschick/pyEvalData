@@ -36,10 +36,15 @@ class Scan(object):
 
     Args:
         number (uint): number of the scan.
-        meta (dict): meta data dictionary.
         data (ndarray[float]): all data recarray
 
     Keyword Args:
+        cmd (str): scan command.
+        user (str): scan user.
+        date (str): scan date.
+        time (str): scan time.
+        init_mopo (dict(float)): initial motor position.
+        header (str): full scan header.
 
     Attributes:
         number (uint): number of the scan.
@@ -62,21 +67,19 @@ class Scan(object):
         self.index_data()
         self.meta = {}
         self.meta['cmd'] = kwargs.get('cmd', '')
-        self.meta['user'] = kwargs.get('cmd', '')
-        self.meta['date'] = kwargs.get('cmd', '')
-        self.meta['time'] = kwargs.get('cmd', '')
+        self.meta['user'] = kwargs.get('user', '')
+        self.meta['date'] = kwargs.get('date', '')
+        self.meta['time'] = kwargs.get('time', '')
         self.meta['init_mopo'] = kwargs.get('init_mopo', {})
         self.meta['header'] = kwargs.get('header', '')
 
     def __getattr__(self, attr):
         """__getattr__
 
-        return scanX objects where X stands for the scan number in the SPECFile
-        which for this purpose is assumed to be unique. (otherwise the first
-        instance of scan number X is returned)
+        Allows to access the data and meta(init_mopo) keys as scan attributes.
 
         Returns:
-
+            attr (ndarray[float]|float|str): data/meta values.
 
         """
         # check data recarray
