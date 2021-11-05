@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pyEvalData',
-    version='1.0',
+    version='0.1.0',
     packages=find_packages(),
     url='https://github.com/dschick/pyEvalData',
     install_requires=['numpy',
@@ -22,5 +22,5 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     python_requires='>=3.5',
-    keywords='ultrafast dynamics condensed matter 1D',
+    keywords='data evaluation',
 )
