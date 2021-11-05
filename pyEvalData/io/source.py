@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # The MIT License (MIT)
-# Copyright (c) 2015-2020 Daniel Schick
+# Copyright (c) 2015-2021 Daniel Schick
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -84,6 +84,9 @@ class Source(object):
         self.read_all_data = kwargs.get('read_all_data', False)
         self.update_before_read = kwargs.get('update_before_read', True)
         self.overwrite_h5 = kwargs.get('overwrite_h5', False)
+
+        # parse the source
+        self.parse()
 
     def parse(self):
         """parse
