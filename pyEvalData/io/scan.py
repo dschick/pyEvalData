@@ -36,7 +36,6 @@ class Scan(object):
 
     Args:
         number (uint): number of the scan.
-        data (ndarray[float]): all data recarray
 
     Keyword Args:
         cmd (str): scan command.
@@ -53,14 +52,11 @@ class Scan(object):
 
     """
 
-    def __init__(self, number, data, **kwargs):
+    def __init__(self, number, **kwargs):
         self.number = np.uint64(number)
-
-        if isinstance(data, np.recarray):
-            self.data = data
-        else:
-            raise TypeError('data must be numpy recarray')
-
+        # initialize empty data array and circumvent
+        # check for recarray here
+        self._data = np.array([])
         self.scalar_data_names = []
         self.oned_data_names = []
         self.twod_data_names = []
@@ -157,3 +153,14 @@ class Scan(object):
             return np.array([])
         else:
             return self.data[self.twod_data_names]
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        if isinstance(data, np.recarray):
+            self._data = data
+        else:
+            raise TypeError('data must be numpy recarray')
