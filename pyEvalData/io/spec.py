@@ -22,6 +22,7 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
+from numpy import uint64
 import xrayutilities as xu
 import os.path as path
 
@@ -45,10 +46,11 @@ class Spec(Source):
         self.scan_dict = {}
         for spec_scan in self.spec_file.scan_list:
             self.scan_dict[spec_scan.nr] = \
-                Scan(spec_scan.nr,
+                Scan(uint64(spec_scan.nr),
                      cmd=spec_scan.command,
                      date=spec_scan.date,
                      time=spec_scan.time,
+                     int_time=float(spec_scan.itime),
                      header=spec_scan.header,
                      init_mopo=spec_scan.init_motor_pos)
             if self.read_all_data:
