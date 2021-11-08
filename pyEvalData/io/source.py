@@ -65,6 +65,7 @@ class Source(object):
         read_all_data (bool): read all data on parsing.
         update_before_read (bool): always update from source
           before reading scan data.
+        use_h5 (bool): use h5 file to join/compress raw data.
         overwrite_h5 (bool): overwrite generated h5 file even
           if already existent.
 
@@ -83,10 +84,11 @@ class Source(object):
         self.check_h5_file_exists()
         self.read_all_data = kwargs.get('read_all_data', False)
         self.update_before_read = kwargs.get('update_before_read', True)
+        self.use_h5 = kwargs.get('use_h5', True)
         self.overwrite_h5 = kwargs.get('overwrite_h5', False)
 
-        # parse the source
-        self.parse()
+        # update from the source
+        self.update()
 
     def parse(self):
         """parse
@@ -130,6 +132,9 @@ class Source(object):
             scan (Scan): scan object.
 
         """
+        if self.update_before_read:
+            self.update()
+
         try:
             scan = self.scan_dict[scan_number]
         except KeyError:
@@ -139,6 +144,38 @@ class Source(object):
             self.read_scan_data(scan)
 
         return scan
+
+    def get_scan_list(self, scan_number_list, read_data=True):
+        """get_scan_list
+
+        Returns a list of scan object from the scan list determined by
+        the list of scan_number.
+
+        Args:
+            scan_number_list (list(uint)): list of numbers of the scan.
+            read_data (bool, optional): read data from source.
+              Defaults to `False`.
+
+        Returns:
+            scans (list(Scan)): list of scan object.
+
+        """
+        if self.update_before_read:
+            self.update()
+
+        scans = []
+        for scan_number in scan_number_list:
+            try:
+                scan = self.scan_dict[scan_number]
+            except KeyError:
+                raise KeyError('Scan #{:d} not found in scan list.'.format(scan_number))
+
+            if read_data:
+                self.read_scan_data(scan)
+
+            scans.append(scan)
+
+        return scans
 
     def read_scan_data(self, scan):
         """read_scan_data
