@@ -81,7 +81,7 @@ class Scan(object):
         # check data recarray
         try:
             return self.data[attr]
-        except (ValueError, IndexError):
+        except (ValueError, IndexError, TypeError):
             pass
 
         # check meta dict
