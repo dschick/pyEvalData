@@ -56,7 +56,7 @@ class Scan(object):
         self.number = np.uint64(number)
         # initialize empty data array and circumvent
         # check for recarray here
-        self._data = np.array([])
+        self._data = None
         self.scalar_data_names = []
         self.oned_data_names = []
         self.twod_data_names = []
@@ -122,7 +122,7 @@ class Scan(object):
 
         """
         if self.scalar_data_names == []:
-            return np.array([])
+            return None
         else:
             return self.data[self.scalar_data_names]
 
@@ -136,7 +136,7 @@ class Scan(object):
 
         """
         if self.oned_data_names == []:
-            return np.array([])
+            return None
         else:
             return self.data[self.oned_data_names]
 
@@ -150,12 +150,12 @@ class Scan(object):
 
         """
         if self.twod_data_names == []:
-            return np.array([])
+            return None
         else:
             return self.data[self.twod_data_names]
 
     def clear_data(self):
-        self._data = np.array([])
+        self._data = None
 
     @property
     def data(self):
@@ -167,6 +167,6 @@ class Scan(object):
             self._data = data
         elif data is None:
             print('Scan #{:d} contains no data!'.format(self.number))
-            self._data = np.array([])
+            self._data = None
         else:
             raise TypeError('data must be numpy recarray')
