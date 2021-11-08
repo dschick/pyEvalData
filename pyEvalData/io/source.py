@@ -139,10 +139,8 @@ class Source(object):
             scan = self.scan_dict[scan_number]
         except KeyError:
             raise KeyError('Scan #{:d} not found in scan list.'.format(scan_number))
-
         if read_data:
             self.read_scan_data(scan)
-
         return scan
 
     def get_scan_list(self, scan_number_list, read_data=True):
@@ -165,13 +163,7 @@ class Source(object):
 
         scans = []
         for scan_number in scan_number_list:
-            try:
-                scan = self.scan_dict[scan_number]
-            except KeyError:
-                raise KeyError('Scan #{:d} not found in scan list.'.format(scan_number))
-
-            if read_data:
-                self.read_scan_data(scan)
+            scan = self.get_scan(scan_number, read_data)
 
             scans.append(scan)
 
