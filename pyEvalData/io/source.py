@@ -151,6 +151,17 @@ class Source(object):
         """
         raise NotImplementedError('Needs to be implemented!')
 
+    def clear_scan_data(self, scan):
+        """clear_scan_data
+
+        Clear the data for a given scan object.
+
+        Args:
+            scan (Scan): scan object.
+
+        """
+        scan.clear_data()
+
     def read_all_scan_data(self):
         """read_all_scan_data
 
@@ -159,6 +170,15 @@ class Source(object):
         """
         for scan_number, scan in self.scan_dict.items():
             self.read_scan_data(scan)
+
+    def clear_all_scan_data(self):
+        """clear_all_scan_data
+
+        Clears the data for all scan objects in the `scan_list`.
+
+        """
+        for scan_number, scan in self.scan_dict.items():
+            self.clear_scan_data(scan)
 
     @property
     def h5_file_name(self):
