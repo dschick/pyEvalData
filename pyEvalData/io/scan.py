@@ -162,5 +162,8 @@ class Scan(object):
     def data(self, data):
         if isinstance(data, np.recarray):
             self._data = data
+        elif data is None:
+            print('Scan #{:d} contains no data!'.format(self.number))
+            self._data = np.array([])
         else:
             raise TypeError('data must be numpy recarray')
