@@ -42,6 +42,7 @@ class Scan(object):
         user (str): scan user.
         date (str): scan date.
         time (str): scan time.
+        int_time (float): integration time.
         init_mopo (dict(float)): initial motor position.
         header (str): full scan header.
 
@@ -66,6 +67,7 @@ class Scan(object):
         self.meta['user'] = kwargs.get('user', '')
         self.meta['date'] = kwargs.get('date', '')
         self.meta['time'] = kwargs.get('time', '')
+        self.meta['int_time'] = kwargs.get('int_time', '')
         self.meta['init_mopo'] = kwargs.get('init_mopo', {})
         self.meta['header'] = kwargs.get('header', '')
 
