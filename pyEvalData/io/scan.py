@@ -154,6 +154,9 @@ class Scan(object):
         else:
             return self.data[self.twod_data_names]
 
+    def clear_data(self):
+        self._data = np.array([])
+
     @property
     def data(self):
         return self._data
