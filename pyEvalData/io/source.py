@@ -44,6 +44,7 @@ class Source(object):
         h5_file_path (str): path for generated h5 file.
         read_all_data (bool): read all data on parsing.
           If false, data will be read only on demand.
+        read_and_forget (bool): clear data after read to save memory.
         update_before_read (bool): always update from source
           before reading scan data.
         overwrite_h5 (bool): overwrite generated h5 file even
@@ -63,6 +64,7 @@ class Source(object):
         h5_file_path (str): path for generated h5 file.
         h5_file_exists(bool): if h5 file exists.
         read_all_data (bool): read all data on parsing.
+        read_and_forget (bool): clear data after read to save memory.
         update_before_read (bool): always update from source
           before reading scan data.
         use_h5 (bool): use h5 file to join/compress raw data.
@@ -83,6 +85,7 @@ class Source(object):
         self.h5_file_path = kwargs.get('h5_file_path', self.file_path)
         self.check_h5_file_exists()
         self.read_all_data = kwargs.get('read_all_data', False)
+        self.read_and_forget = kwargs.get('read_and_forget', False)
         self.update_before_read = kwargs.get('update_before_read', True)
         self.use_h5 = kwargs.get('use_h5', True)
         self.overwrite_h5 = kwargs.get('overwrite_h5', False)
@@ -118,35 +121,57 @@ class Source(object):
         else:
             self.h5_file_exists = False
 
-    def get_scan(self, scan_number, read_data=True):
+    def get_scan(self, scan_number, read_data=True, dismiss_update=False):
         """get_scan
 
-        Returns a scan object from the scan list determined by the scan_number.
+        Returns a scan object from the scan dict determined by the scan_number.
 
         Args:
             scan_number (uint): number of the scan.
             read_data (bool, optional): read data from source.
               Defaults to `False`.
+            dismiss_update (bool, optional): Dismiss update even if set as
+              object attribute. Defaults to `False`.
 
         Returns:
             scan (Scan): scan object.
 
         """
-        if self.update_before_read:
+        if self.update_before_read and not dismiss_update:
             self.update()
 
         try:
             scan = self.scan_dict[scan_number]
         except KeyError:
-            raise KeyError('Scan #{:d} not found in scan list.'.format(scan_number))
+            raise KeyError('Scan #{:d} not found in scan dict.'.format(scan_number))
         if read_data:
             self.read_scan_data(scan)
         return scan
 
+    def get_scan_data(self, scan_number, dismiss_update=False):
+        """get_scan_data
+
+        Returns data from a scan object from the `scan_dict` determined by the scan_number.
+
+        Args:
+            scan_number (uint): number of the scan.
+            dismiss_update (bool, optional): Dismiss update even if set as
+              object attribute. Defaults to `False`.
+
+        Returns:
+            scan (Scan): scan object.
+
+        """
+        scan = self.get_scan(scan_number, dismiss_update=dismiss_update)
+        data = scan.data.copy()
+        if self.read_and_forget:
+            scan.clear_data()
+        return data
+
     def get_scan_list(self, scan_number_list, read_data=True):
         """get_scan_list
 
-        Returns a list of scan object from the scan list determined by
+        Returns a list of scan object from the `scan_dict` determined by
         the list of scan_number.
 
         Args:
@@ -163,7 +188,7 @@ class Source(object):
 
         scans = []
         for scan_number in scan_number_list:
-            scan = self.get_scan(scan_number, read_data)
+            scan = self.get_scan(scan_number, read_data, dismiss_update=True)
 
             scans.append(scan)
 
@@ -194,7 +219,7 @@ class Source(object):
     def read_all_scan_data(self):
         """read_all_scan_data
 
-        Reads the data for all scan objects in the `scan_list` from source.
+        Reads the data for all scan objects in the `scan_dict` from source.
 
         """
         for scan_number, scan in self.scan_dict.items():
@@ -203,7 +228,7 @@ class Source(object):
     def clear_all_scan_data(self):
         """clear_all_scan_data
 
-        Clears the data for all scan objects in the `scan_list`.
+        Clears the data for all scan objects in the `scan_dict`.
 
         """
         for scan_number, scan in self.scan_dict.items():
