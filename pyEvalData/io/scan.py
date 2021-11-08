@@ -103,14 +103,15 @@ class Scan(object):
         remember the names for scaler, 1d, and 2d data columns.
 
         """
-        for descr in self.data.dtype.descr:
-            try:
-                if len(descr[2]) == 1:
-                    self.oned_data_names.append(descr[0])
-                elif len(descr[2]) == 2:
-                    self.twod_data_names.append(descr[0])
-            except Exception:
-                self.scalar_data_names.append(descr[0])
+        if self.data is not None:
+            for descr in self.data.dtype.descr:
+                try:
+                    if len(descr[2]) == 1:
+                        self.oned_data_names.append(descr[0])
+                    elif len(descr[2]) == 2:
+                        self.twod_data_names.append(descr[0])
+                except Exception:
+                    self.scalar_data_names.append(descr[0])
 
     def get_scalar_data(self):
         """get_scalar_data
