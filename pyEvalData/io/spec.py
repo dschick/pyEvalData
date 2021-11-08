@@ -23,6 +23,7 @@
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
 import xrayutilities as xu
+import os.path as path
 
 from .source import Source
 from .scan import Scan
@@ -60,7 +61,13 @@ class Spec(Source):
         calling parse() or by reading from the h5 file.
 
         """
-        pass
+        if self.use_h5 and (not self.h5_file_exists or self.overwrite_h5):
+            # save the new or changed spec file content to the hdf5 file
+            # if it does not exist
+            self.spec_file.Save2HDF5(path.join(self.h5_file_path,
+                                               self.h5_file_name))
+        else:
+            self.parse()
 
     def read_scan_data(self, scan):
         """read_scan_data
@@ -72,9 +79,13 @@ class Spec(Source):
 
         """
         spec_scan = self.spec_file.__getattr__('scan{:d}'.format(scan.number))
-        spec_scan.ReadData()
-        scan.data = spec_scan.data
-        scan.meta['header'] = spec_scan.header
+        # check if scan is last in dict
+        last_scan_number = sorted(self.scan_dict.keys())[-1]
+        if (scan.data is None) or (scan.number >= last_scan_number):
+            spec_scan.ReadData()
+            scan.data = spec_scan.data
+            scan.meta['header'] = spec_scan.header
+
 
 
 
