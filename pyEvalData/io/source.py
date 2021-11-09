@@ -22,7 +22,12 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
+from .. import config
+import logging
+
 import os.path as path
+import h5py
+from xrayutilities.io.helper import xu_h5open
 
 
 class Source(object):
@@ -51,6 +56,7 @@ class Source(object):
           if already existent.
 
     Attributes:
+        log (logging.logger): logger instance from logging.
         scan_dict (dict(scan)): dict of scan objects with
           key being the scan number.
         start_scan_number (uint): start of scan numbers to parse.
@@ -72,8 +78,9 @@ class Source(object):
           if already existent.
 
     """
-
     def __init__(self, file_name, file_path, **kwargs):
+        self.log = logging.getLogger(__name__)
+        # self.log.setLevel(config.LOG_LEVEL)
         self.scan_dict = {}
         self.start_scan_number = kwargs.get('start_scan_number', 0)
         self.stop_scan_number = kwargs.get('stop_scan_number', 0)
@@ -93,22 +100,43 @@ class Source(object):
         # update from the source
         self.update()
 
-    def parse(self):
-        """parse
-
-        Parse the source file/folder and populate the scan_list.
-
-        """
-        raise NotImplementedError('Needs to be implemented!')
-
     def update(self):
         """update
 
-        update the scan_list either from the source file/folder by
-        calling parse() or by reading from the h5 file.
+        update the `scan_dict` either from the raw source file/folder
+        or from the h5 file.
+
+        """
+        self.log.debug('Update source')
+        # """update
+
+        # update the scan_list either from the source file/folder by
+        # calling parse() or by reading from the h5 file.
+
+        # """
+        # # if self.use_h5 and (not self.h5_file_exists or self.overwrite_h5):
+        # #     # save the new or changed spec file content to the hdf5 file
+        # #     # if it does not exist
+        # #     self.spec_file.Save2HDF5(path.join(self.h5_file_path,
+        # #                                        self.h5_file_name))
+        # # else:
+        # self.parse()
+
+    def parse_raw(self):
+        """parse_raw
+
+        Parse the raw source file/folder and populate the `scan_dict`.
 
         """
         raise NotImplementedError('Needs to be implemented!')
+
+    def parse_h5(self):
+        """parse_h5
+
+        Parse the h5 file and populate the `scan_dict`.
+
+        """
+        print('parsing h5 file')
 
     def check_h5_file_exists(self):
         """check_h5_file_exists
@@ -233,6 +261,32 @@ class Source(object):
         """
         for scan_number, scan in self.scan_dict.items():
             self.clear_scan_data(scan)
+
+    def save_scan_to_h5(self, scan, compression=True):
+        """clear_all_scan_data
+
+        Clears the data for all scan objects in the `scan_dict`.
+
+        """
+        with xu_h5open(path.join(self.h5_file_path,
+                                 self.h5_file_name), 'a') as h5:
+            groupname = path.splitext(path.splitext(self.file_name)[0])[0]
+            print(groupname)
+            try:
+                g = h5.create_group(groupname)
+            except ValueError:
+                g = h5.get(groupname)
+
+            g.attrs['TITLE'] = "Data of SPEC - File %s" % (self.file_name)
+            # for s in self.scan_list:
+            #     if (((s.name not in g) or s.ischanged) and
+            #             s.scan_status != "NODATA"):
+            #         s.ReadData()
+            #         if s.data is not None:
+            #             s.Save2HDF5(h5, group=g, compression=compression)
+            #             s.ClearData()
+            #             s.ischanged = False
+            h5.flush()
 
     @property
     def h5_file_name(self):

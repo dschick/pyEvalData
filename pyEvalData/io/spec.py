@@ -22,21 +22,70 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
-from numpy import uint64
+from .. import config
+
 import xrayutilities as xu
 import os.path as path
+import numpy as np
 
 from .source import Source
 from .scan import Scan
 
 
 class Spec(Source):
+    """Source
+
+    Class of default source implementation.
+
+    Args:
+        file_name (str): file name including extension,
+          can include regex pattern.
+        file_path (str): file path.
+
+    Keyword Args:
+        start_scan_number (uint): start of scan numbers to parse.
+        stop_scan_number (uint): stop of scan numbers to parse.
+          This number is included.
+        h5_file_name (str): name for generated h5 file.
+        h5_file_name_postfix (str): postfix for h5 file name.
+        h5_file_path (str): path for generated h5 file.
+        read_all_data (bool): read all data on parsing.
+          If false, data will be read only on demand.
+        read_and_forget (bool): clear data after read to save memory.
+        update_before_read (bool): always update from source
+          before reading scan data.
+        overwrite_h5 (bool): overwrite generated h5 file even
+          if already existent.
+
+    Attributes:
+        log (logging.logger): logger instance from logging.
+        scan_dict (dict(scan)): dict of scan objects with
+          key being the scan number.
+        start_scan_number (uint): start of scan numbers to parse.
+        stop_scan_number (uint): stop of scan numbers to parse.
+          This number is included.
+        file_name (str): file name including extension,
+          can include regex pattern.
+        file_path (str): file path.
+        h5_file_name (str): name for generated h5 file.
+        h5_file_name_postfix (str): postfix for h5 file name.
+        h5_file_path (str): path for generated h5 file.
+        h5_file_exists(bool): if h5 file exists.
+        read_all_data (bool): read all data on parsing.
+        read_and_forget (bool): clear data after read to save memory.
+        update_before_read (bool): always update from source
+          before reading scan data.
+        use_h5 (bool): use h5 file to join/compress raw data.
+        overwrite_h5 (bool): overwrite generated h5 file even
+          if already existent.
+
+    """
     def __init__(self, file_name, file_path, **kwargs):
         self.spec_file = xu.io.SPECFile(file_name, path=file_path)
         super().__init__(file_name, file_path, **kwargs)
 
-    def parse(self):
-        """parse
+    def parse_raw(self):
+        """parse_raw
 
         Parse the source file and populate the scan_list.
         If `read_all_data==True` the data for each scan will be read.
@@ -45,31 +94,21 @@ class Spec(Source):
         self.spec_file.Update()
         self.scan_dict = {}
         for spec_scan in self.spec_file.scan_list:
-            self.scan_dict[spec_scan.nr] = \
-                Scan(uint64(spec_scan.nr),
-                     cmd=spec_scan.command,
-                     date=spec_scan.date,
-                     time=spec_scan.time,
-                     int_time=float(spec_scan.itime),
-                     header=spec_scan.header,
-                     init_mopo=spec_scan.init_motor_pos)
-            if self.read_all_data:
+            scan = Scan(np.uint(spec_scan.nr),
+                        cmd=spec_scan.command,
+                        date=spec_scan.date,
+                        time=spec_scan.time,
+                        int_time=float(spec_scan.itime),
+                        header=spec_scan.header,
+                        init_mopo=spec_scan.init_motor_pos)
+            self.scan_dict[spec_scan.nr] = scan
+            if self.read_all_data or self.use_h5:
                 self.read_scan_data(self.scan_dict[spec_scan.nr])
-
-    def update(self):
-        """update
-
-        update the scan_list either from the source file/folder by
-        calling parse() or by reading from the h5 file.
-
-        """
-        if self.use_h5 and (not self.h5_file_exists or self.overwrite_h5):
-            # save the new or changed spec file content to the hdf5 file
-            # if it does not exist
-            self.spec_file.Save2HDF5(path.join(self.h5_file_path,
-                                               self.h5_file_name))
-        else:
-            self.parse()
+            # save scan to h5 file
+            if self.use_h5:
+                self.save_scan_to_h5(scan)
+            if not self.read_all_data and self.use_h5:
+                scan.clear_data()
 
     def read_scan_data(self, scan):
         """read_scan_data

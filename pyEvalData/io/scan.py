@@ -22,6 +22,9 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
+from .. import config
+import logging
+
 __all__ = ['Scan']
 
 __docformat__ = 'restructuredtext'
@@ -47,6 +50,7 @@ class Scan(object):
         header (str): full scan header.
 
     Attributes:
+        log (logging.logger): logger instance from logging.
         number (uint): number of the scan.
         meta (dict): meta data dictionary.
         data (ndarray[float]): all data recarray
@@ -54,6 +58,9 @@ class Scan(object):
     """
 
     def __init__(self, number, **kwargs):
+        self.log = logging.getLogger(__name__)
+        # self.log.setLevel(config.LOG_LEVEL)
+        self.log.info('Creating scan #{:d}'.format(self.number))
         self.number = np.uint64(number)
         # initialize empty data array and circumvent
         # check for recarray here
