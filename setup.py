@@ -9,9 +9,9 @@ setup(
                       'matplotlib',
                       'lmfit',
                       'scipy',
-                      'uncertainties'],
+                      'uncertainties',
+                      'xrayutilities'],
     extras_require={
-        'xrayutilities':  ['xrayutilities'],
         'testing': ['flake8', 'pytest'],
         'documentation': ['sphinx', 'nbsphinx', 'sphinxcontrib-napoleon'],
     },
