@@ -31,9 +31,9 @@ from .scan import Scan
 
 
 class Spec(Source):
-    """Source
+    """Spec
 
-    Class of default source implementation.
+    Source implementation for SPEC files.
 
     Args:
         file_name (str): file name including extension,
