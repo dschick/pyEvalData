@@ -252,7 +252,7 @@ class Source(object):
             scan.clear_data()
         return data, meta
 
-    def get_scan_list_data(self, scan_number_list, dismiss_update=False):
+    def get_scan_list_data(self, scan_number_list):
         """get_scan_list_data
 
         Returns data and meta information for a list of scan objects from
@@ -260,8 +260,6 @@ class Source(object):
 
         Args:
             scan_number_list (list(uint)): list of numbers of the scan.
-            dismiss_update (bool, optional): Dismiss update even if set as
-              object attribute. Defaults to `False`.
 
         Returns:
             data (list(numpy.recarray[float])): list of scan data.
