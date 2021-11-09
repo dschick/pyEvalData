@@ -54,8 +54,9 @@ class Spec(Source):
         read_and_forget (bool): clear data after read to save memory.
         update_before_read (bool): always update from source
           before reading scan data.
-        overwrite_h5 (bool): overwrite generated h5 file even
-          if already existent.
+        use_h5 (bool): use h5 file to join/compress raw data.
+        force_overwrite (bool): forced re-read of raw source and
+          re-generated of h5 file.
 
     Attributes:
         log (logging.logger): logger instance from logging.
@@ -76,56 +77,65 @@ class Spec(Source):
         update_before_read (bool): always update from source
           before reading scan data.
         use_h5 (bool): use h5 file to join/compress raw data.
-        overwrite_h5 (bool): overwrite generated h5 file even
-          if already existent.
+        force_overwrite (bool): forced re-read of raw source and
+          re-generated of h5 file.
 
     """
     def __init__(self, file_name, file_path, **kwargs):
-        self.spec_file = xu.io.SPECFile(file_name, path=file_path)
         super().__init__(file_name, file_path, **kwargs)
 
     def parse_raw(self):
         """parse_raw
 
-        Parse the source file and populate the scan_list.
-        If `read_all_data==True` the data for each scan will be read.
+        Parse the raw source file/folder and populate the `scan_dict`.
 
         """
+        self.log.debug('parse_raw')
+
+        if (not hasattr(self, 'spec_file')) or self.force_overwrite:
+            self.spec_file = xu.io.SPECFile(self.file_name,
+                                            path=self.file_path)
+
         self.spec_file.Update()
-        self.scan_dict = {}
         for spec_scan in self.spec_file.scan_list:
-            scan = Scan(np.uint(spec_scan.nr),
-                        cmd=spec_scan.command,
-                        date=spec_scan.date,
-                        time=spec_scan.time,
-                        int_time=float(spec_scan.itime),
-                        header=spec_scan.header,
-                        init_mopo=spec_scan.init_motor_pos)
-            self.scan_dict[spec_scan.nr] = scan
-            if self.read_all_data or self.use_h5:
-                self.read_scan_data(self.scan_dict[spec_scan.nr])
-            # save scan to h5 file
-            if self.use_h5:
-                self.save_scan_to_h5(scan)
-            if not self.read_all_data and self.use_h5:
-                scan.clear_data()
+            # check for scan number in given range
+            if (spec_scan.nr >= self.start_scan_number) and \
+                    ((spec_scan.nr <= self.stop_scan_number) or
+                        (self.stop_scan_number == -1)):
+                last_scan_number = self.get_last_scan_number()
+                # check if Scan needs to be re-created
+                # if scan is not present, its the last one, or force overwrite
+                if (spec_scan.nr not in self.scan_dict.keys()) or \
+                        (spec_scan.nr >= last_scan_number) or \
+                        self.force_overwrite:
 
-    def read_scan_data(self, scan):
-        """read_scan_data
+                    scan = Scan(np.uint(spec_scan.nr),
+                                cmd=spec_scan.command,
+                                date=spec_scan.date,
+                                time=spec_scan.time,
+                                int_time=float(spec_scan.itime),
+                                header=spec_scan.header,
+                                init_mopo=spec_scan.init_motor_pos)
+                    self.scan_dict[spec_scan.nr] = scan
+                    # check if the data needs to be read as well
+                    if self.read_all_data:
+                        self.read_scan_data(self.scan_dict[spec_scan.nr])
 
-        Reads the data for a given scan object from source.
+    def read_raw_scan_data(self, scan):
+        """read_raw_scan_data
+
+        Reads the data for a given scan object from raw source.
 
         Args:
             scan (Scan): scan object.
 
         """
+        self.log.debug('read_raw_scan_data for scan #{:d}'.format(scan.number))
+
         spec_scan = self.spec_file.__getattr__('scan{:d}'.format(scan.number))
-        # check if scan is last in dict
-        last_scan_number = sorted(self.scan_dict.keys())[-1]
-        if (scan.data is None) or (scan.number >= last_scan_number):
-            spec_scan.ReadData()
-            scan.data = spec_scan.data
-            scan.meta['header'] = spec_scan.header
+        spec_scan.ReadData()
+        scan.data = spec_scan.data
+        scan.meta['header'] = spec_scan.header
 
 
 

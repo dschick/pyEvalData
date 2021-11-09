@@ -59,8 +59,7 @@ class Scan(object):
 
     def __init__(self, number, **kwargs):
         self.log = logging.getLogger(__name__)
-        # self.log.setLevel(config.LOG_LEVEL)
-        self.log.info('Creating scan #{:d}'.format(self.number))
+        self.log.debug('Creating scan #{:d}'.format(number))
         self.number = np.uint64(number)
         # initialize empty data array and circumvent
         # check for recarray here
@@ -166,6 +165,7 @@ class Scan(object):
 
     def clear_data(self):
         self._data = None
+        self.log.debug('Cleared data for scan #{:d}'.format(self.number))
 
     @property
     def data(self):

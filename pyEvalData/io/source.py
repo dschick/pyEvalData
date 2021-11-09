@@ -52,8 +52,9 @@ class Source(object):
         read_and_forget (bool): clear data after read to save memory.
         update_before_read (bool): always update from source
           before reading scan data.
-        overwrite_h5 (bool): overwrite generated h5 file even
-          if already existent.
+        use_h5 (bool): use h5 file to join/compress raw data.
+        force_overwrite (bool): forced re-read of raw source and
+          re-generated of h5 file.
 
     Attributes:
         log (logging.logger): logger instance from logging.
@@ -74,16 +75,17 @@ class Source(object):
         update_before_read (bool): always update from source
           before reading scan data.
         use_h5 (bool): use h5 file to join/compress raw data.
-        overwrite_h5 (bool): overwrite generated h5 file even
-          if already existent.
+        force_overwrite (bool): forced re-read of raw source and
+          re-generated of h5 file.
 
     """
     def __init__(self, file_name, file_path, **kwargs):
         self.log = logging.getLogger(__name__)
-        # self.log.setLevel(config.LOG_LEVEL)
         self.scan_dict = {}
+        self._start_scan_number = 0
+        self._stop_scan_number = -1
         self.start_scan_number = kwargs.get('start_scan_number', 0)
-        self.stop_scan_number = kwargs.get('stop_scan_number', 0)
+        self.stop_scan_number = kwargs.get('stop_scan_number', -1)
         self.file_name = file_name
         self.file_path = file_path
         self.h5_file_name_postfix = kwargs.get('h5_file_name_postfix',
@@ -95,7 +97,7 @@ class Source(object):
         self.read_and_forget = kwargs.get('read_and_forget', False)
         self.update_before_read = kwargs.get('update_before_read', True)
         self.use_h5 = kwargs.get('use_h5', True)
-        self.overwrite_h5 = kwargs.get('overwrite_h5', False)
+        self.force_overwrite = kwargs.get('force_overwrite', False)
 
         # update from the source
         self.update()
@@ -107,20 +109,28 @@ class Source(object):
         or from the h5 file.
 
         """
-        self.log.debug('Update source')
-        # """update
+        self.log.info('Update source')
 
-        # update the scan_list either from the source file/folder by
-        # calling parse() or by reading from the h5 file.
-
-        # """
-        # # if self.use_h5 and (not self.h5_file_exists or self.overwrite_h5):
-        # #     # save the new or changed spec file content to the hdf5 file
-        # #     # if it does not exist
-        # #     self.spec_file.Save2HDF5(path.join(self.h5_file_path,
-        # #                                        self.h5_file_name))
-        # # else:
-        # self.parse()
+        if self.use_h5:
+            self.log.debug('Updating from h5')
+            # do not combine cases for better flow control
+            if not self.h5_file_exists:
+                self.log.debug('h5 file does not exist')
+                self.parse_raw()
+                self.save_all_scans_to_h5()
+            elif self.update_before_read:
+                self.log.debug('Update before read')
+                self.parse_raw()
+                self.save_all_scans_to_h5()
+            elif self.force_overwrite:
+                self.log.debug('Force overwrite')
+                self.parse_raw()
+                self.save_all_scans_to_h5()
+            else:
+                self.parse_h5()
+        else:
+            self.log.debug('Updating from raw source')
+            self.parse_raw()
 
     def parse_raw(self):
         """parse_raw
@@ -136,6 +146,7 @@ class Source(object):
         Parse the h5 file and populate the `scan_dict`.
 
         """
+        self.log.debug('parse_h5')
         print('parsing h5 file')
 
     def check_h5_file_exists(self):
@@ -148,6 +159,18 @@ class Source(object):
             self.h5_file_exists = True
         else:
             self.h5_file_exists = False
+
+    def get_last_scan_number(self):
+        """get_last_scan_number
+
+        Return the number of the last scan in the `scan_dict`.
+        If the `scan_dict` is empty return 0.
+
+        """
+        try:
+            return sorted(self.scan_dict.keys())[-1]
+        except IndexError:
+            return 0
 
     def get_scan(self, scan_number, read_data=True, dismiss_update=False):
         """get_scan
@@ -165,6 +188,8 @@ class Source(object):
             scan (Scan): scan object.
 
         """
+        self.log.debug('get_scan')
+
         if self.update_before_read and not dismiss_update:
             self.update()
 
@@ -175,26 +200,6 @@ class Source(object):
         if read_data:
             self.read_scan_data(scan)
         return scan
-
-    def get_scan_data(self, scan_number, dismiss_update=False):
-        """get_scan_data
-
-        Returns data from a scan object from the `scan_dict` determined by the scan_number.
-
-        Args:
-            scan_number (uint): number of the scan.
-            dismiss_update (bool, optional): Dismiss update even if set as
-              object attribute. Defaults to `False`.
-
-        Returns:
-            scan (Scan): scan object.
-
-        """
-        scan = self.get_scan(scan_number, dismiss_update=dismiss_update)
-        data = scan.data.copy()
-        if self.read_and_forget:
-            scan.clear_data()
-        return data
 
     def get_scan_list(self, scan_number_list, read_data=True):
         """get_scan_list
@@ -211,6 +216,8 @@ class Source(object):
             scans (list(Scan)): list of scan object.
 
         """
+        self.log.debug('get_scan_list')
+
         if self.update_before_read:
             self.update()
 
@@ -222,16 +229,99 @@ class Source(object):
 
         return scans
 
+    def get_scan_data(self, scan_number):
+        """get_scan_data
+
+        Returns data and meta information from a scan object from the `scan_dict`
+        determined by the scan_number.
+
+        Args:
+            scan_number (uint): number of the scan.
+
+        Returns:
+            data (numpy.recarray[float]): scan data.
+            meta (dict()): scan meta information.
+
+        """
+        self.log.debug('get_scan_data')
+
+        scan = self.get_scan(scan_number)
+        data = scan.data.copy()
+        meta = scan.meta.copy()
+        if self.read_and_forget:
+            scan.clear_data()
+        return data, meta
+
+    def get_scan_list_data(self, scan_number_list, dismiss_update=False):
+        """get_scan_list_data
+
+        Returns data and meta information for a list of scan objects from
+        the `scan_dict` determined by the scan_numbers.
+
+        Args:
+            scan_number_list (list(uint)): list of numbers of the scan.
+            dismiss_update (bool, optional): Dismiss update even if set as
+              object attribute. Defaults to `False`.
+
+        Returns:
+            data (list(numpy.recarray[float])): list of scan data.
+            meta (list(dict())): list scan meta information.
+
+        """
+        self.log.debug('get_scan_list_data')
+
+        data_list = []
+        meta_list = []
+        for scan in self.get_scan_list(scan_number_list):
+            data_list.append(scan.data.copy())
+            meta_list.append(scan.meta.copy())
+            if self.read_and_forget:
+                scan.clear_data()
+        return data_list, meta_list
+
     def read_scan_data(self, scan):
         """read_scan_data
 
-        Reads the data for a given scan object from source.
+        Reads the data for a given scan object.
+
+        Args:
+            scan (Scan): scan object.
+
+        """
+        self.log.debug('read_scan_data for scan #{:d}'.format(scan.number))
+
+        last_scan_number = self.get_last_scan_number()
+
+        if (scan.data is None) or \
+                (scan.number >= last_scan_number) or self.force_overwrite:
+            if self.use_h5:
+                self.read_h5_scan_data(scan)
+            else:
+                self.read_raw_scan_data(scan)
+        else:
+            self.log.debug('data not updated for scan #{:d}'.format(scan.number))
+
+    def read_raw_scan_data(self, scan):
+        """read_raw_scan_data
+
+        Reads the data for a given scan object from raw source.
 
         Args:
             scan (Scan): scan object.
 
         """
         raise NotImplementedError('Needs to be implemented!')
+
+    def read_h5_scan_data(self, scan):
+        """read_h5_scan_data
+
+        Reads the data for a given scan object from the h5 file.
+
+        Args:
+            scan (Scan): scan object.
+
+        """
+        self.log.debug('read_h5_scan_data for scan #{:d}'.format(scan.number))
 
     def clear_scan_data(self, scan):
         """clear_scan_data
@@ -242,6 +332,8 @@ class Source(object):
             scan (Scan): scan object.
 
         """
+        self.log.debug('clear_scan_data')
+
         scan.clear_data()
 
     def read_all_scan_data(self):
@@ -250,6 +342,8 @@ class Source(object):
         Reads the data for all scan objects in the `scan_dict` from source.
 
         """
+        self.log.debug('read_all_scan_data')
+
         for scan_number, scan in self.scan_dict.items():
             self.read_scan_data(scan)
 
@@ -259,6 +353,8 @@ class Source(object):
         Clears the data for all scan objects in the `scan_dict`.
 
         """
+        self.log.debug('clear_all_scan_data')
+
         for scan_number, scan in self.scan_dict.items():
             self.clear_scan_data(scan)
 
@@ -268,10 +364,17 @@ class Source(object):
         Clears the data for all scan objects in the `scan_dict`.
 
         """
+        self.log.debug('save_scan_to_h5 scan #{:d}'.format(scan.number))
+
+        last_scan_number = self.get_last_scan_number()
+        # check if the scan must me saved
+        # if scan does not exist in file
+        # if scan is last one
+        # if force_overwrite
+
         with xu_h5open(path.join(self.h5_file_path,
                                  self.h5_file_name), 'a') as h5:
             groupname = path.splitext(path.splitext(self.file_name)[0])[0]
-            print(groupname)
             try:
                 g = h5.create_group(groupname)
             except ValueError:
@@ -288,6 +391,17 @@ class Source(object):
             #             s.ischanged = False
             h5.flush()
 
+    def save_all_scans_to_h5(self):
+        """save_all_scans_to_h5
+
+        Saves all scan objects in the `scan_dict` to the h5 file.
+
+        """
+        self.log.debug('save_all_scans_to_h5')
+
+        for scan_number, scan in self.scan_dict.items():
+            self.save_scan_to_h5(scan)
+
     @property
     def h5_file_name(self):
         return self._h5_file_name
@@ -295,3 +409,33 @@ class Source(object):
     @h5_file_name.setter
     def h5_file_name(self, h5_file_name):
         self._h5_file_name = h5_file_name + self.h5_file_name_postfix + '.h5'
+
+    @property
+    def start_scan_number(self):
+        return self._start_scan_number
+
+    @start_scan_number.setter
+    def start_scan_number(self, start_scan_number):
+        if start_scan_number < 0:
+            self.log.warning('start_scan_number must not be negative!')
+            return
+        elif (start_scan_number > self.stop_scan_number) and (self.stop_scan_number > -1):
+            self.log.warning('start_scan_number must be <= stop_scan_number!')
+            return
+        else:
+            self._start_scan_number = start_scan_number
+
+    @property
+    def stop_scan_number(self):
+        return self._stop_scan_number
+
+    @stop_scan_number.setter
+    def stop_scan_number(self, stop_scan_number):
+        if stop_scan_number < -1:
+            self.log.warning('stop_scan_number cannot be smaller than -1!')
+            return
+        elif (stop_scan_number < self.start_scan_number) and (stop_scan_number > -1):
+            self.log.warning('stop_scan_number must be >= start_scan_number!')
+            return
+        else:
+            self._stop_scan_number = stop_scan_number
