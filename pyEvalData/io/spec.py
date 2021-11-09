@@ -90,7 +90,8 @@ class Spec(Source):
         """
         self.log.info('parse_raw')
 
-        if (not hasattr(self, 'spec_file')) or self.force_overwrite:
+        if ('spec_file' not in dir(self)) or self.force_overwrite:
+            self.log.info('Create spec_file from xrayutilities')
             self.spec_file = xu.io.SPECFile(self.file_name,
                                             path=self.file_path)
 

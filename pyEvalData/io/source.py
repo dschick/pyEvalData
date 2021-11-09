@@ -102,6 +102,27 @@ class Source(object):
         # update from the source
         self.update()
 
+    def __getattr__(self, attr):
+        """__getattr__
+
+        Allows to access scans as source attributes.
+
+        Returns:
+            scan (Scan): scan object.
+
+        """
+        if attr.startswith("scan"):
+            index = attr[4:]
+
+            try:
+                scan_number = int(index)
+            except ValueError:
+                self.log.exception('Scan number must be convertable to an integer!')
+
+            return self.get_scan(scan_number)
+        else:
+            self.log.error('{:s} has no attribute {:s}'.format(__name__, attr))
+
     def update(self):
         """update
 
@@ -146,8 +167,12 @@ class Source(object):
         Parse the h5 file and populate the `scan_dict`.
 
         """
-        self.log.debug('parse_h5')
-        print('parsing h5 file')
+        self.log.info('parse_h5')
+        root_name = path.splitext(self.file_name)[0]
+        print(root_name)
+        with xu_h5open(path.join(self.h5_file_path, self.h5_file_name), 'r') as h5:
+            root = h5.get(root_name)
+            print(root.keys())
 
     def check_h5_file_exists(self):
         """check_h5_file_exists
@@ -356,22 +381,24 @@ class Source(object):
         for scan_number, scan in self.scan_dict.items():
             self.clear_scan_data(scan)
 
-    def save_scan_to_h5(self, scan, compression=True):
+    def save_scan_to_h5(self, scan, h5_fid=None):
         """clear_all_scan_data
 
         Clears the data for all scan objects in the `scan_dict`.
 
         """
-        self.log.debug('save_scan_to_h5 scan #{:d}'.format(scan.number))
+        self.log.info('save_scan_to_h5 scan #{:d}'.format(scan.number))
 
-        last_scan_number = self.get_last_scan_number()
+        #last_scan_number = self.get_last_scan_number()
         # check if the scan must me saved
         # if scan does not exist in file
         # if scan is last one
         # if force_overwrite
 
-        with xu_h5open(path.join(self.h5_file_path,
-                                 self.h5_file_name), 'a') as h5:
+        if h5_fid is None:
+            h5_fid = path.join(self.h5_file_path, self.h5_file_name)
+
+        with xu_h5open(h5_fid, 'a') as h5:
             groupname = path.splitext(path.splitext(self.file_name)[0])[0]
             try:
                 g = h5.create_group(groupname)
@@ -395,10 +422,18 @@ class Source(object):
         Saves all scan objects in the `scan_dict` to the h5 file.
 
         """
-        self.log.debug('save_all_scans_to_h5')
+        self.log.info('save_all_scans_to_h5')
 
-        for scan_number, scan in self.scan_dict.items():
-            self.save_scan_to_h5(scan)
+        root_name = path.splitext(self.file_name)[0]
+        print(root_name)
+        with xu_h5open(path.join(self.h5_file_path, self.h5_file_name), 'a') as h5:
+            try:
+                root = h5.create_group(root_name)
+            except ValueError:
+                root = h5.get(root_name)
+
+            for scan_number, scan in self.scan_dict.items():
+                self.save_scan_to_h5(scan, h5, group)
 
     @property
     def h5_file_name(self):
