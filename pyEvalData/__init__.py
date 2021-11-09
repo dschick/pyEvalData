@@ -7,5 +7,6 @@ logging.basicConfig(stream=sys.stdout,
                     format=config.LOG_FORMAT)
 
 from .evaluation import Evaluation
+from . import io
 
-__all__ = ['Evaluation']
+__all__ = ['Evaluation', 'io']
