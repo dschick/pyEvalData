@@ -90,7 +90,7 @@ class Spec(Source):
         Parse the raw source file/folder and populate the `scan_dict`.
 
         """
-        self.log.debug('parse_raw')
+        self.log.info('parse_raw')
 
         if (not hasattr(self, 'spec_file')) or self.force_overwrite:
             self.spec_file = xu.io.SPECFile(self.file_name,
@@ -130,7 +130,7 @@ class Spec(Source):
             scan (Scan): scan object.
 
         """
-        self.log.debug('read_raw_scan_data for scan #{:d}'.format(scan.number))
+        self.log.info('read_raw_scan_data for scan #{:d}'.format(scan.number))
 
         spec_scan = self.spec_file.__getattr__('scan{:d}'.format(scan.number))
         spec_scan.ReadData()

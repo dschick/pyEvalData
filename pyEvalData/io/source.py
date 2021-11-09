@@ -95,7 +95,7 @@ class Source(object):
         self.check_h5_file_exists()
         self.read_all_data = kwargs.get('read_all_data', False)
         self.read_and_forget = kwargs.get('read_and_forget', False)
-        self.update_before_read = kwargs.get('update_before_read', True)
+        self.update_before_read = kwargs.get('update_before_read', False)
         self.use_h5 = kwargs.get('use_h5', True)
         self.force_overwrite = kwargs.get('force_overwrite', False)
 
