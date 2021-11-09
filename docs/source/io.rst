@@ -1,5 +1,5 @@
-``structures.structure``
-========================
+``io``
+======
 
 .. automodule:: pyEvalData.io
     :show-inheritance:
