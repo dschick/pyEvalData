@@ -69,6 +69,7 @@ class Scan(object):
         self.twod_data_names = []
         self.index_data()
         self.meta = {}
+        self.meta['number'] = self.number
         self.meta['cmd'] = kwargs.get('cmd', '')
         self.meta['user'] = kwargs.get('user', '')
         self.meta['date'] = kwargs.get('date', '')
