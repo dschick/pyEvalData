@@ -10,38 +10,6 @@ Welcome to pyEvalData documentation!
     Examples <examples>
     API Documentation <api>
 
-The *pyEvalData* toolbox is a collection of Python classes and routines to
-simulate the thermal, structural, and magnetic dynamics after laser excitation
-as well as the according X-ray scattering response in one-dimensional sample
-structures after ultrafast excitation.
-
-The toolbox provides the capabilities to define arbitrary layered structures
-on the atomic level including a rich database of element-specific physical
-properties. 
-The excitation of ultrafast dynamics is represented by an
-:math:`N`-temperature-model which is commonly applied for ultrafast optical
-excitations. 
-Structural dynamics due to thermal stresses are calculated by a linear-chain
-model of masses and springs.
-The implementation of magnetic dynamics can be easily accomplished by the user
-for the individual problem.
-
-The resulting X-ray diffraction response is computed by kinematical or
-dynamical X-ray theory which can also include magnetic scattering.
-
-The *udkm1Dsim* toolbox is highly modular and allows to introduce user-defined
-results at any step in the simulation procedure.
-
-The *udkm1Dsim* toolbox was initially developed for MATLAB® in the
-*Ultrafast Dynamics in Condensed Matter* group of Prof. Matias Bargheer at the
-*University of Potsdam*, Germany.
-The MATLAB® source code is still available at
-`github.com/dschick/udkm1DsimML <https://github.com/dschick/udkm1DsimML>`_.
-
-The current toolbox, written in Python, is maintained by Daniel Schick at the
-*Max-Born-Institute*, Berlin, Germany.
-
-
 Installation
 ============
 
@@ -49,43 +17,42 @@ You can either install directly from pypi.org using the command
 
 ::
 
-    pip install udkm1Dsim
+    pip install pyEvalData
 
 or if you want to work on the latest develop release you can clone 
 udkm1Dsim from the main git repository:
 
 ::
 
-    git clone https://github.com/dschick/udkm1Dsim.git udkm1Dsim
+    git clone https://github.com/dschick/pyEvalData.git pyEvalData
 
 To work in editable mode (source is only linked 
 but not copied to the python site-packages), just do:
 
 ::
 
-    pip install -e ./udkm1Dsim
+    pip install -e ./pyEvalData
 
 Or to do a normal install with
 
 ::
 
-    pip install ./udkm1Dsim
+    pip install ./pyEvalData
 
 Optionally, you can also let pip install directly from the repository: 
 
 
 ::
 
-    pip install git+https://github.com/dschick/udkm1Dsim.git
+    pip install git+https://github.com/dschick/pyEvalData.git
 
-You can have the following optional installation to enable parallel
-computations, unit tests, as well as building the documentation:
+You can have the following optional installation to enable unit tests,
+as well as building the documentation:
 
 ::
 
-    pip install udkm1Dsim[parallel]
-    pip install udkm1Dsim[testing]
-    pip install udkm1Dsim[documentation]
+    pip install pyEvalData[testing]
+    pip install pyEvalData[documentation]
 
 Indices and tables
 ==================

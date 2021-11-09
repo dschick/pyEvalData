@@ -7,5 +7,4 @@ API Documentation
 
    io
    evaluation
-   plotting
    helpers
