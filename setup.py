@@ -10,7 +10,8 @@ setup(
                       'lmfit',
                       'scipy',
                       'uncertainties',
-                      'xrayutilities'],
+                      'xrayutilities',
+                      'nexusformat'],
     extras_require={
         'testing': ['flake8', 'pytest'],
         'documentation': ['sphinx', 'nbsphinx', 'sphinxcontrib-napoleon'],

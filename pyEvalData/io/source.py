@@ -22,12 +22,10 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
-from .. import config
 import logging
 
 import os.path as path
-import h5py
-from xrayutilities.io.helper import xu_h5open
+import nexusformat.nexus as nxs
 
 
 class Source(object):
@@ -44,17 +42,17 @@ class Source(object):
         start_scan_number (uint): start of scan numbers to parse.
         stop_scan_number (uint): stop of scan numbers to parse.
           This number is included.
-        h5_file_name (str): name for generated h5 file.
-        h5_file_name_postfix (str): postfix for h5 file name.
-        h5_file_path (str): path for generated h5 file.
+        nexus_file_name (str): name for generated nexus file.
+        nexus_file_name_postfix (str): postfix for nexus file name.
+        nexus_file_path (str): path for generated nexus file.
         read_all_data (bool): read all data on parsing.
           If false, data will be read only on demand.
         read_and_forget (bool): clear data after read to save memory.
         update_before_read (bool): always update from source
           before reading scan data.
-        use_h5 (bool): use h5 file to join/compress raw data.
+        use_nexus (bool): use nexus file to join/compress raw data.
         force_overwrite (bool): forced re-read of raw source and
-          re-generated of h5 file.
+          re-generated of nexus file.
 
     Attributes:
         log (logging.logger): logger instance from logging.
@@ -66,17 +64,17 @@ class Source(object):
         file_name (str): file name including extension,
           can include regex pattern.
         file_path (str): file path.
-        h5_file_name (str): name for generated h5 file.
-        h5_file_name_postfix (str): postfix for h5 file name.
-        h5_file_path (str): path for generated h5 file.
-        h5_file_exists(bool): if h5 file exists.
+        nexus_file_name (str): name for generated nexus file.
+        nexus_file_name_postfix (str): postfix for nexus file name.
+        nexus_file_path (str): path for generated nexus file.
+        nexus_file_exists(bool): if nexus file exists.
         read_all_data (bool): read all data on parsing.
         read_and_forget (bool): clear data after read to save memory.
         update_before_read (bool): always update from source
           before reading scan data.
-        use_h5 (bool): use h5 file to join/compress raw data.
+        use_nexus (bool): use nexus file to join/compress raw data.
         force_overwrite (bool): forced re-read of raw source and
-          re-generated of h5 file.
+          re-generated of nexus file.
 
     """
     def __init__(self, file_name, file_path, **kwargs):
@@ -88,15 +86,15 @@ class Source(object):
         self.stop_scan_number = kwargs.get('stop_scan_number', -1)
         self.file_name = file_name
         self.file_path = file_path
-        self.h5_file_name_postfix = kwargs.get('h5_file_name_postfix',
-                                               '.pyevaldata')
-        self.h5_file_name = kwargs.get('h5_file_name', self.file_name)
-        self.h5_file_path = kwargs.get('h5_file_path', self.file_path)
-        self.check_h5_file_exists()
+        self.nexus_file_name_postfix = kwargs.get('nexus_file_name_postfix',
+                                                  '.pyevaldata')
+        self.nexus_file_name = kwargs.get('nexus_file_name', self.file_name)
+        self.nexus_file_path = kwargs.get('nexus_file_path', self.file_path)
+        self.check_nexus_file_exists()
         self.read_all_data = kwargs.get('read_all_data', False)
         self.read_and_forget = kwargs.get('read_and_forget', False)
         self.update_before_read = kwargs.get('update_before_read', False)
-        self.use_h5 = kwargs.get('use_h5', True)
+        self.use_nexus = kwargs.get('use_nexus', True)
         self.force_overwrite = kwargs.get('force_overwrite', False)
 
         # update from the source
@@ -127,28 +125,28 @@ class Source(object):
         """update
 
         update the `scan_dict` either from the raw source file/folder
-        or from the h5 file.
+        or from the nexus file.
 
         """
         self.log.info('Update source')
 
-        if self.use_h5:
-            self.log.debug('Updating from h5')
+        if self.use_nexus:
+            self.log.debug('Updating from nexus')
             # do not combine cases for better flow control
-            if not self.h5_file_exists:
-                self.log.debug('h5 file does not exist')
+            if not self.nexus_file_exists:
+                self.log.debug('nexus file does not exist')
                 self.parse_raw()
-                self.save_all_scans_to_h5()
+                self.save_all_scans_to_nexus()
             elif self.update_before_read:
                 self.log.debug('Update before read')
                 self.parse_raw()
-                self.save_all_scans_to_h5()
+                self.save_all_scans_to_nexus()
             elif self.force_overwrite:
                 self.log.debug('Force overwrite')
                 self.parse_raw()
-                self.save_all_scans_to_h5()
+                self.save_all_scans_to_nexus()
             else:
-                self.parse_h5()
+                self.parse_nexus()
         else:
             self.log.debug('Updating from raw source')
             self.parse_raw()
@@ -161,29 +159,27 @@ class Source(object):
         """
         raise NotImplementedError('Needs to be implemented!')
 
-    def parse_h5(self):
-        """parse_h5
+    def parse_nexus(self):
+        """parse_nexus
 
-        Parse the h5 file and populate the `scan_dict`.
+        Parse the nexus file and populate the `scan_dict`.
 
         """
-        self.log.info('parse_h5')
-        root_name = path.splitext(self.file_name)[0]
-        print(root_name)
-        with xu_h5open(path.join(self.h5_file_path, self.h5_file_name), 'r') as h5:
-            root = h5.get(root_name)
+        self.log.info('parse_nexus')
+        with xu_nexusopen(path.join(self.nexus_file_path, self.nexus_file_name), 'r') as nexus:
+            root = nexus.get(root_name)
             print(root.keys())
 
-    def check_h5_file_exists(self):
-        """check_h5_file_exists
+    def check_nexus_file_exists(self):
+        """check_nexus_file_exists
 
-        Check if the h5 file is present and set `self.h5_file_exists`.
+        Check if the nexus file is present and set `self.nexus_file_exists`.
 
         """
-        if path.exists(path.join(self.h5_file_path, self.h5_file_name)):
-            self.h5_file_exists = True
+        if path.exists(path.join(self.nexus_file_path, self.nexus_file_name)):
+            self.nexus_file_exists = True
         else:
-            self.h5_file_exists = False
+            self.nexus_file_exists = False
 
     def get_last_scan_number(self):
         """get_last_scan_number
@@ -317,8 +313,8 @@ class Source(object):
 
         if (scan.data is None) or \
                 (scan.number >= last_scan_number) or self.force_overwrite:
-            if self.use_h5:
-                self.read_h5_scan_data(scan)
+            if self.use_nexus:
+                self.read_nexus_scan_data(scan)
             else:
                 self.read_raw_scan_data(scan)
         else:
@@ -335,16 +331,16 @@ class Source(object):
         """
         raise NotImplementedError('Needs to be implemented!')
 
-    def read_h5_scan_data(self, scan):
-        """read_h5_scan_data
+    def read_nexus_scan_data(self, scan):
+        """read_nexus_scan_data
 
-        Reads the data for a given scan object from the h5 file.
+        Reads the data for a given scan object from the nexus file.
 
         Args:
             scan (Scan): scan object.
 
         """
-        self.log.debug('read_h5_scan_data for scan #{:d}'.format(scan.number))
+        self.log.debug('read_nexus_scan_data for scan #{:d}'.format(scan.number))
 
     def clear_scan_data(self, scan):
         """clear_scan_data
@@ -381,67 +377,72 @@ class Source(object):
         for scan_number, scan in self.scan_dict.items():
             self.clear_scan_data(scan)
 
-    def save_scan_to_h5(self, scan, h5_fid=None):
-        """clear_all_scan_data
+    def save_scan_to_nexus(self, scan, nxs_file):
+        """save_scan_to_nexus
 
-        Clears the data for all scan objects in the `scan_dict`.
-
-        """
-        self.log.info('save_scan_to_h5 scan #{:d}'.format(scan.number))
-
-        #last_scan_number = self.get_last_scan_number()
-        # check if the scan must me saved
-        # if scan does not exist in file
-        # if scan is last one
-        # if force_overwrite
-
-        if h5_fid is None:
-            h5_fid = path.join(self.h5_file_path, self.h5_file_name)
-
-        with xu_h5open(h5_fid, 'a') as h5:
-            groupname = path.splitext(path.splitext(self.file_name)[0])[0]
-            try:
-                g = h5.create_group(groupname)
-            except ValueError:
-                g = h5.get(groupname)
-
-            g.attrs['TITLE'] = "Data of SPEC - File %s" % (self.file_name)
-            # for s in self.scan_list:
-            #     if (((s.name not in g) or s.ischanged) and
-            #             s.scan_status != "NODATA"):
-            #         s.ReadData()
-            #         if s.data is not None:
-            #             s.Save2HDF5(h5, group=g, compression=compression)
-            #             s.ClearData()
-            #             s.ischanged = False
-            h5.flush()
-
-    def save_all_scans_to_h5(self):
-        """save_all_scans_to_h5
-
-        Saves all scan objects in the `scan_dict` to the h5 file.
+        Saves a scan to the nexus file.
 
         """
-        self.log.info('save_all_scans_to_h5')
+        last_scan_number = self.get_last_scan_number()
+        entry_name = 'entry{:d}'.format(scan.number)
 
-        root_name = path.splitext(self.file_name)[0]
-        print(root_name)
-        with xu_h5open(path.join(self.h5_file_path, self.h5_file_name), 'a') as h5:
-            try:
-                root = h5.create_group(root_name)
-            except ValueError:
-                root = h5.get(root_name)
+        try:
+            _ = nxs_file[entry_name]
+            scan_in_nexus = True
+        except nxs.NeXusError:
+            scan_in_nexus = False
 
-            for scan_number, scan in self.scan_dict.items():
-                self.save_scan_to_h5(scan, h5, group)
+        if (not scan_in_nexus) or (scan.number >= last_scan_number) or self.force_overwrite:
+            # evaluate if we need to forget the data again
+            self.read_raw_scan_data(scan)
+            self.log.info('save_scan_to_nexus for scan #{:d}'.format(scan.number))
+            with nxs_file.nxfile:
+                # if the entry already exists, it must be deleted in advance
+                if scan_in_nexus:
+                    del nxs_file[entry_name]
+                # (re-)create entry
+                entry = nxs_file[entry_name] = nxs.NXentry()
+                # iterate meta information
+                for key, value in scan.meta.items():
+                    if key == 'init_mopo':
+                        # create dedicated collection for initial motor positions
+                        entry['init_mopo'] = nxs.NXcollection()
+                        # iterate through initial motor positions
+                        for mopo_key, mopo_value in scan.meta['init_mopo'].items():
+                            entry.init_mopo[mopo_key] = nxs.NXfield(mopo_value)
+                    else:
+                        # add meta information as attribute to entry
+                        entry.attrs[key] = value
+                # create dedicated collection for data
+                entry['data'] = nxs.NXcollection()
+                # iterate data
+                for col in scan.data.dtype.names:
+                    entry.data[col] = nxs.NXfield(scan.data[col])
+
+    def save_all_scans_to_nexus(self):
+        """save_all_scans_to_nexus
+
+        Saves all scan objects in the `scan_dict` to the nexus file.
+
+        """
+        self.log.info('save_all_scans_to_nexus')
+
+        try:
+            nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='rw')
+        except nxs.NeXusError:
+            nxs.NXroot().save(path.join(self.nexus_file_path, self.nexus_file_name))
+            nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='rw')
+
+        for scan_number, scan in self.scan_dict.items():
+            self.save_scan_to_nexus(scan, nxs_file)
 
     @property
-    def h5_file_name(self):
-        return self._h5_file_name
+    def nexus_file_name(self):
+        return self._nexus_file_name
 
-    @h5_file_name.setter
-    def h5_file_name(self, h5_file_name):
-        self._h5_file_name = h5_file_name + self.h5_file_name_postfix + '.h5'
+    @nexus_file_name.setter
+    def nexus_file_name(self, nexus_file_name):
+        self._nexus_file_name = nexus_file_name + self.nexus_file_name_postfix + '.nxs'
 
     @property
     def start_scan_number(self):
