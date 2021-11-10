@@ -1,0 +1,15 @@
+on: [push, pull_request]
+
+jobs:
+  python-lint:
+    runs-on: ubuntu-latest
+    name: CI workflow
+    steps:
+      - name: checkout source repo
+        uses: actions/checkout@v2      
+      - name: Set up Python environment
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+      - name: linting flake8
+        uses:  py-actions/flake8 @v1
