@@ -204,7 +204,7 @@ class Source(object):
                         self.scan_dict[nxs_file[entry].number] = scan
                         # check if the data needs to be read as well
                         if self.read_all_data:
-                            self.read_scan_data(self.scan_dict[nxs_file[entry]])
+                            self.read_scan_data(self.scan_dict[nxs_file[entry].number])
 
     def check_nexus_file_exists(self):
         """check_nexus_file_exists
