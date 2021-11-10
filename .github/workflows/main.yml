@@ -12,4 +12,4 @@ jobs:
         with:
           python-version: "3.8"
       - name: linting flake8
-        uses:  py-actions/flake8 @v1
+        uses:  py-actions/flake8@v1
