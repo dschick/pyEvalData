@@ -24,7 +24,6 @@
 
 
 import xrayutilities as xu
-import numpy as np
 
 from .source import Source
 from .scan import Scan
@@ -114,7 +113,7 @@ class Spec(Source):
                     for key, value in spec_scan.init_motor_pos.items():
                         init_motor_pos[key.replace('INIT_MOPO_', '')] = value
                     # create scan object
-                    scan = Scan(np.uint(spec_scan.nr),
+                    scan = Scan(int(spec_scan.nr),
                                 cmd=spec_scan.command,
                                 date=spec_scan.date,
                                 time=spec_scan.time,
