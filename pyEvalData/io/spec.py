@@ -140,4 +140,5 @@ class Spec(Source):
         spec_scan = self.spec_file.__getattr__('scan{:d}'.format(scan.number))
         spec_scan.ReadData()
         scan.data = spec_scan.data
+        spec_scan.ClearData()
         scan.meta['header'] = spec_scan.header
