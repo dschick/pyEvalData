@@ -25,6 +25,7 @@
 import logging
 
 import os.path as path
+from numpy.core.records import fromarrays
 import nexusformat.nexus as nxs
 
 
@@ -341,6 +342,26 @@ class Source(object):
 
         """
         self.log.debug('read_nexus_scan_data for scan #{:d}'.format(scan.number))
+        # try to open the file
+        try:
+            nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='r')
+        except nxs.NeXusError:
+            self.log.exception('NeXus file not present!')
+            return
+        entry_name = 'entry{:d}'.format(scan.number)
+        # try to enter entry
+        try:
+            entry = nxs_file[entry_name]
+        except nxs.NeXusError:
+            self.log.exception('Entry #{:d} not present in NeXus file!'.format(scan.number))
+            return
+        # iterate through data fields
+        data_list = []
+        dtype_list = []
+        for field in entry.data:
+            data_list.append(entry.data[field])
+            dtype_list.append((field, entry.data[field].dtype, entry.data[field].shape))
+        scan.data = fromarrays(data_list, dtype=dtype_list)
 
     def clear_scan_data(self, scan):
         """clear_scan_data
