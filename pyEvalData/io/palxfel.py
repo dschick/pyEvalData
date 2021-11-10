@@ -35,7 +35,8 @@ from .spec import Spec
 class PalSpec(Spec):
     """PalSpec"""
 
-    def __init__(self, name, file_path, spec_file_ext='', h5_path='', file_format='{0:07d}_meta.log',
+    def __init__(self, name, file_path, spec_file_ext='', h5_path='',
+                 file_format='{0:07d}_meta.log',
                  scan_list=[], start_scan=0, stop_scan=-1):
 
         self.file_format = file_format
@@ -58,7 +59,7 @@ class PalSpec(Spec):
         try:
             # try if spec file object already exist
             self.spec_file.Update()
-        except:
+        except ValueError:
             # load the spec file from disc
             self.spec_file = PalSpecFile(
                 self.spec_file_name, path=self.file_path,

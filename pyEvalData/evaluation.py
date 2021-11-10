@@ -23,7 +23,6 @@
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
 import numpy as np
-import numpy.lib.recfunctions as recfuncs
 import collections
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -34,7 +33,7 @@ from .helpers import bin_data
 
 class Evaluation(object):
     """Evaluation
-    
+
     Attributes:
         clist (List[str])       : List of counter names to evaluate.
         cdef (Dict{str:str})    : Dict of predefined counter names and
@@ -98,7 +97,7 @@ class Evaluation(object):
         try:
             # get the number of all opened figures
             fig_number = mpl._pylab_helpers.Gcf.get_active().num
-        except:
+        except Exception:
             # there are no figures open
             fig_number = 1
 
@@ -246,7 +245,6 @@ class Evaluation(object):
 
     def filter_data(self, data):
         """filter_data
-        
 
         Args:
             data (TYPE): DESCRIPTION.
@@ -268,7 +266,6 @@ class Evaluation(object):
 
     def get_scan_data(self, scan_num):
         """
-        
 
         Args:
             scan_num (TYPE): DESCRIPTION.
@@ -323,7 +320,7 @@ class Evaluation(object):
             try:
                 # try to read the motors and data of this scan
                 spec_data = self.get_scan_data(scan_num)
-            except:
+            except Exception:
                 raise
                 print('Scan #' + scan_num + ' not found, skipping')
 
@@ -466,7 +463,7 @@ class Evaluation(object):
                     std_data[col_name] = 0
                     std_data[self.xcol] = 0
 
-        except:
+        except Exception:
             raise
             print('xcol and ycol must have the same length --> probably you try plotting a custom'
                   ' counter together with a spec counter')
@@ -601,7 +598,7 @@ class Evaluation(object):
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
     def plot_mesh_scan(self, scan_num, skip_plot=False, grid_on=False, ytext='', xtext='',
-                     levels=20, cbar=True):
+                       levels=20, cbar=True):
         """Plot a single mesh scan from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -628,7 +625,7 @@ class Evaluation(object):
         try:
             # try to read data of this scan
             spec_data = self.get_scan_data(scan_num)
-        except:
+        except Exception:
             print('Scan #' + int(scan_num) + ' not found, skipping')
 
         dt = spec_data.dtype
