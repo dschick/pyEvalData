@@ -22,6 +22,7 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
+from .. import config
 import logging
 
 import os.path as path
@@ -80,6 +81,7 @@ class Source(object):
     """
     def __init__(self, file_name, file_path, **kwargs):
         self.log = logging.getLogger(__name__)
+        self.log.setLevel(config.LOG_LEVEL)
         self.scan_dict = {}
         self._start_scan_number = 0
         self._stop_scan_number = -1
@@ -415,6 +417,11 @@ class Source(object):
 
         if (not scan_in_nexus) or (scan.number >= last_scan_number) or self.force_overwrite:
             # evaluate if we need to forget the data again
+            if scan.data is None:
+                clear_data = True
+            else:
+                clear_data = False
+            # read the raw data
             self.read_raw_scan_data(scan)
             self.log.info('save_scan_to_nexus for scan #{:d}'.format(scan.number))
             with nxs_file.nxfile:
@@ -439,6 +446,10 @@ class Source(object):
                 # iterate data
                 for col in scan.data.dtype.names:
                     entry.data[col] = nxs.NXfield(scan.data[col])
+                # clear data of the scan if it was not present before
+                # or read and forget
+                if clear_data or self.read_and_forget:
+                    scan.clear_data()
 
     def save_all_scans_to_nexus(self):
         """save_all_scans_to_nexus
