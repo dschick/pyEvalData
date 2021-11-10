@@ -95,7 +95,9 @@ class Spec(Source):
             self.spec_file = xu.io.SPECFile(self.file_name,
                                             path=self.file_path)
 
+        # update the xu.spec_file
         self.spec_file.Update()
+        # iterate through scan list in xu.spec_file
         for spec_scan in self.spec_file.scan_list:
             # check for scan number in given range
             if (spec_scan.nr >= self.start_scan_number) and \
@@ -107,14 +109,18 @@ class Spec(Source):
                 if (spec_scan.nr not in self.scan_dict.keys()) or \
                         (spec_scan.nr >= last_scan_number) or \
                         self.force_overwrite:
-
+                    # rename init_motor_pos keys without prefix
+                    init_motor_pos = {}
+                    for key, value in spec_scan.init_motor_pos.items():
+                        init_motor_pos[key.replace('INIT_MOPO_', '')] = value
+                    # create scan object
                     scan = Scan(np.uint(spec_scan.nr),
                                 cmd=spec_scan.command,
                                 date=spec_scan.date,
                                 time=spec_scan.time,
                                 int_time=float(spec_scan.itime),
                                 header=spec_scan.header,
-                                init_mopo=spec_scan.init_motor_pos)
+                                init_mopo=init_motor_pos)
                     self.scan_dict[spec_scan.nr] = scan
                     # check if the data needs to be read as well
                     if self.read_all_data:
