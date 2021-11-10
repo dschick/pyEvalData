@@ -25,6 +25,8 @@
 from .. import config
 import logging
 
+from .scan import Scan
+
 import os.path as path
 from numpy.core.records import fromarrays
 import nexusformat.nexus as nxs
@@ -169,9 +171,40 @@ class Source(object):
 
         """
         self.log.info('parse_nexus')
-        with xu_nexusopen(path.join(self.nexus_file_path, self.nexus_file_name), 'r') as nexus:
-            root = nexus.get(root_name)
-            print(root.keys())
+        try:
+            nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='r')
+        except nxs.NeXusError:
+            self.log.exception('NeXus file does not exist!')
+            return
+
+        with nxs_file.nxfile:
+            for entry in nxs_file:
+                # check for scan number in given range
+                if (nxs_file[entry].number >= self.start_scan_number) and \
+                        ((nxs_file[entry].number <= self.stop_scan_number) or
+                            (self.stop_scan_number == -1)):
+                    last_scan_number = self.get_last_scan_number()
+                    # check if Scan needs to be re-created
+                    # if scan is not present, its the last one, or force overwrite
+                    if (nxs_file[entry].number not in self.scan_dict.keys()) or \
+                            (nxs_file[entry].number >= last_scan_number) or \
+                            self.force_overwrite:
+                        # create scan object
+                        init_mopo = {}
+                        for field in nxs_file[entry].init_mopo:
+                            init_mopo[field] = nxs_file[entry]['init_mopo'][field]
+
+                        scan = Scan(int(nxs_file[entry].number),
+                                    cmd=nxs_file[entry].cmd,
+                                    date=nxs_file[entry].date,
+                                    time=nxs_file[entry].time,
+                                    int_time=float(nxs_file[entry].int_time),
+                                    header=nxs_file[entry].header,
+                                    init_mopo=init_mopo)
+                        self.scan_dict[nxs_file[entry].number] = scan
+                        # check if the data needs to be read as well
+                        if self.read_all_data:
+                            self.read_scan_data(self.scan_dict[nxs_file[entry]])
 
     def check_nexus_file_exists(self):
         """check_nexus_file_exists
