@@ -157,9 +157,7 @@ class SardanaNeXus(Source):
         for field in entry.measurement:
             # do not add data which is already in the pre-scan snapshot
             # that is tricky if it is in the snapshot and scanned ...
-            if (field not in scan.meta['init_mopo'].keys()) and \
-                    (field != 'pre_scan_snapshot'):
-                print(field)
+            if field != 'pre_scan_snapshot':
                 data_list.append(entry.measurement[field])
                 dtype_list.append((field,
                                    entry.measurement[field].dtype,
