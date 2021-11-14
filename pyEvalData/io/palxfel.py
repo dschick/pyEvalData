@@ -131,12 +131,16 @@ class PalH5(Source):
                                         header['motor_init_pos/{:s}'.format(key)][()]
 
                                 # create scan object
+                                try:
+                                    # this is a fixQ fix
+                                    int_time = float(header['scan_cmd'].asstr()[()].split(' ')[-1])
+                                except ValueError:
+                                    int_time = float(header['scan_cmd'].asstr()[()].split(' ')[-2])
                                 scan = Scan(int(scan_number),
                                             cmd=header['scan_cmd'].asstr()[()],
                                             date=header['time'].asstr()[()].split(' ')[0],
                                             time=header['time'].asstr()[()].split(' ')[1],
-                                            int_time=float(
-                                                header['scan_cmd'].asstr()[()].split(' ')[-1]),
+                                            int_time=int_time,
                                             header='',
                                             init_mopo=init_motor_pos)
                                 self.scan_dict[scan_number] = scan
