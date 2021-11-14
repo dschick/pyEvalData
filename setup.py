@@ -11,6 +11,7 @@ setup(
                       'scipy',
                       'uncertainties',
                       'xrayutilities',
+                      'h5py>=3.0',
                       'nexusformat'],
     extras_require={
         'testing': ['flake8', 'pytest'],
