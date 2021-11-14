@@ -23,7 +23,6 @@
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
 import numpy as np
-import numpy.lib.recfunctions as recfuncs
 import collections
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -376,7 +375,7 @@ class Evaluation(object):
                 if len(data) == 0:
                     data = np.array(eval(eval_string), dtype=[(col_name, float)])
                 elif col_name not in data.dtype.names:
-                    data = eval('recfuncs.append_fields(data,\''
+                    data = eval('np.lib.recfunctions.append_fields(data,\''
                                 + col_name + '\',data=(' + eval_string
                                 + '), dtypes=float, asrecarray=True, usemask=False)')
 
