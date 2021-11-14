@@ -60,6 +60,7 @@ class Source(object):
 
     Attributes:
         log (logging.logger): logger instance from logging.
+        name (str): name of the source
         scan_dict (dict(scan)): dict of scan objects with
           key being the scan number.
         start_scan_number (uint): start of scan numbers to parse.
@@ -84,6 +85,7 @@ class Source(object):
     def __init__(self, file_name, file_path, **kwargs):
         self.log = logging.getLogger(__name__)
         self.log.setLevel(config.LOG_LEVEL)
+        self.name = file_name
         self.scan_dict = {}
         self._start_scan_number = 0
         self._stop_scan_number = -1

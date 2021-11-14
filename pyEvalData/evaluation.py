@@ -23,6 +23,7 @@
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
 import numpy as np
+import numpy.lib.recfunctions as recfuncs
 import collections
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -274,7 +275,7 @@ class Evaluation(object):
             TYPE: DESCRIPTION.
 
         """
-        data = self.source.get_scan_data(scan_num)
+        data, meta = self.source.get_scan_data(scan_num)
         if self.apply_data_filter:
             data = self.filter_data(data)
         return data

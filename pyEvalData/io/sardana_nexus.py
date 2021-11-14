@@ -59,6 +59,7 @@ class SardanaNeXus(Source):
 
     Attributes:
         log (logging.logger): logger instance from logging.
+        name (str): name of the source
         scan_dict (dict(scan)): dict of scan objects with
           key being the scan number.
         start_scan_number (uint): start of scan numbers to parse.

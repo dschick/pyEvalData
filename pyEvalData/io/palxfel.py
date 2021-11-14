@@ -59,6 +59,7 @@ class PalH5(Source):
 
     Attributes:
         log (logging.logger): logger instance from logging.
+        name (str): name of the source
         scan_dict (dict(scan)): dict of scan objects with
           key being the scan number.
         start_scan_number (uint): start of scan numbers to parse.
@@ -80,8 +81,9 @@ class PalH5(Source):
           re-generated of h5 file.
 
     """
-    def __init__(self, file_name, file_path, **kwargs):
+    def __init__(self, name, file_name, file_path, **kwargs):
         super().__init__(file_name, file_path, **kwargs)
+        self.name = name
 
     def parse_raw(self):
         """parse_raw
