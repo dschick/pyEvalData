@@ -502,7 +502,6 @@ class Source(object):
 
         """
         self.log.info('save_all_scans_to_nexus')
-
         try:
             nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='rw')
         except nxs.NeXusError:

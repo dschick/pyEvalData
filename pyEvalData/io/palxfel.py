@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # The MIT License (MIT)
-# Copyright (c) 2015-2020 Daniel Schick
+# Copyright (c) 2015-2021 Daniel Schick
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,450 +22,160 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
+
+from numpy.core.records import fromarrays
 import os
-from xrayutilities.io import SPECFile, SPECScan
-from xrayutilities.io.helper import xu_open
-from xrayutilities import config
-import re
-import numpy as np
+import h5py
 
-from .spec import Spec
+from .source import Source
+from .scan import Scan
 
 
-class PalSpec(Spec):
-    """PalSpec"""
+class PalH5(Source):
+    """PalH5
 
-    def __init__(self, name, file_path, spec_file_ext='', h5_path='',
-                 file_format='{0:07d}_meta.log',
-                 scan_list=[], start_scan=0, stop_scan=-1):
+    Source implementation for PalH5 folder/files.
 
-        self.file_format = file_format
-        self.start_scan = start_scan
-        self.scan_list = scan_list
+    Args:
+        file_name (str): file name including extension,
+          can include regex pattern.
+        file_path (str): file path.
 
-        if len(scan_list):
-            self.scan_list = np.array(scan_list)
-        elif (start_scan >= 0) and (stop_scan >= start_scan):
-            self.scan_list = np.linspace(start_scan, stop_scan)
+    Keyword Args:
+        start_scan_number (uint): start of scan numbers to parse.
+        stop_scan_number (uint): stop of scan numbers to parse.
+          This number is included.
+        h5_file_name (str): name for generated h5 file.
+        h5_file_name_postfix (str): postfix for h5 file name.
+        h5_file_path (str): path for generated h5 file.
+        read_all_data (bool): read all data on parsing.
+          If false, data will be read only on demand.
+        read_and_forget (bool): clear data after read to save memory.
+        update_before_read (bool): always update from source
+          before reading scan data.
+        use_h5 (bool): use h5 file to join/compress raw data.
+        force_overwrite (bool): forced re-read of raw source and
+          re-generated of h5 file.
 
-        super().__init__(name, file_path, spec_file_ext, h5_path)
+    Attributes:
+        log (logging.logger): logger instance from logging.
+        scan_dict (dict(scan)): dict of scan objects with
+          key being the scan number.
+        start_scan_number (uint): start of scan numbers to parse.
+        stop_scan_number (uint): stop of scan numbers to parse.
+          This number is included.
+        file_name (str): file name including extension,
+          can include regex pattern.
+        file_path (str): file path.
+        h5_file_name (str): name for generated h5 file.
+        h5_file_name_postfix (str): postfix for h5 file name.
+        h5_file_path (str): path for generated h5 file.
+        h5_file_exists(bool): if h5 file exists.
+        read_all_data (bool): read all data on parsing.
+        read_and_forget (bool): clear data after read to save memory.
+        update_before_read (bool): always update from source
+          before reading scan data.
+        use_h5 (bool): use h5 file to join/compress raw data.
+        force_overwrite (bool): forced re-read of raw source and
+          re-generated of h5 file.
 
-    def update_spec(self):
-        """Update the current spec file if already in memory.
-        Otherwise read it and write its content to the hdf5 file.
+    """
+    def __init__(self, file_name, file_path, **kwargs):
+        super().__init__(file_name, file_path, **kwargs)
+
+    def parse_raw(self):
+        """parse_raw
+
+        Parse the PalH5 folder and populate the `scan_dict`.
 
         """
+        self.log.info('parse_raw')
 
-        try:
-            # try if spec file object already exist
-            self.spec_file.Update()
-        except ValueError:
-            # load the spec file from disc
-            self.spec_file = PalSpecFile(
-                self.spec_file_name, path=self.file_path,
-                file_format=self.file_format,
-                scan_in_list=self.scan_list, start_scan=self.start_scan)
-            self.spec_file.Update()
+        if not os.path.exists(self.file_path):
+            self.log.error('File path does not exist!')
+            return
 
-        if not os.path.exists(os.path.join(self.h5_path, self.h5_file_name)) or self.overwrite_h5:
-            # save the new or changed spec file content to the hdf5 file
-            # if it does not exist
-            self.spec_file.Save2HDF5(os.path.join(self.h5_path, self.h5_file_name))
+        for root, subdirectories, files in os.walk(self.file_path):
+            for sub_dir in sorted(subdirectories):
+                # check for scan number in given range
+                try:
+                    scan_number = int(sub_dir)
+                except ValueError:
+                    self.log.exception('{:s} is no scan folder - skipping'.format(sub_dir))
+                    continue
 
-    def addCustomCounters(self, spec_data, scan_num, base_counters):
-        """Add custom counters to the spec data array.
+                if (scan_number >= self.start_scan_number) and \
+                        ((scan_number <= self.stop_scan_number) or
+                            (self.stop_scan_number == -1)):
+                    last_scan_number = self.get_last_scan_number()
+                    # check if Scan needs to be re-created
+                    # if scan is not present, its the last one, or force overwrite
+                    if (scan_number not in self.scan_dict.keys()) or \
+                            (scan_number >= last_scan_number) or \
+                            self.force_overwrite:
+                        # create scan object
 
+                        h5_file = os.path.join(self.file_path,
+                                            self.file_name.format(scan_number),
+                                            self.file_name.format(scan_number) + '.h5')
+
+                        with h5py.File(h5_file, 'r') as h5:
+                            header = h5['R{0:04d}/header'.format(scan_number)]
+
+                            init_motor_pos = {}
+                            for key in header['motor_init_pos'].keys():
+                                init_motor_pos[key] = \
+                                    header['motor_init_pos/{:s}'.format(key)][()]
+
+                            # create scan object
+                            scan = Scan(int(scan_number),
+                                        cmd=header['scan_cmd'].asstr()[()],
+                                        date=header['time'].asstr()[()].split(' ')[0],
+                                        time=header['time'].asstr()[()].split(' ')[1],
+                                        int_time=float(header['scan_cmd'].asstr()[()].split(' ')[-1]),
+                                        header='',
+                                        init_mopo=init_motor_pos)
+                            self.scan_dict[scan_number] = scan
+                        # check if the data needs to be read as well
+                        if self.read_all_data:
+                            self.read_scan_data(self.scan_dict[scan_number])
+
+    def read_raw_scan_data(self, scan):
+        """read_raw_scan_data
+
+        Reads the data for a given scan object from Sardana NeXus file.
 
         Args:
-            specData (ndarray)     : Data array from the spec scan.
-            scanNum (int)          : Scan number of the spec scan.
-            baseCounters list(str) : List of the base spec and custom counters
-                                     from the cList and xCol.
-
-        Returns:
-            specData (ndarray): Updated data array from the spec scan.
+            scan (Scan): scan object.
 
         """
-        return spec_data
+        self.log.info('read_raw_scan_data for scan #{:d}'.format(scan.number))
+        # try to open the file
+        h5_file = os.path.join(self.file_path,
+                               self.file_name.format(scan.number),
+                               self.file_name.format(scan.number) + '.h5')
 
-
-# define some uesfull regular expressions
-SPEC_time_format = re.compile(r"\d\d:\d\d:\d\d")
-SPEC_multi_blank = re.compile(r"\s+")
-SPEC_multi_blank2 = re.compile(r"\s\s+")
-# denotes a numeric value
-SPEC_int_value = re.compile(r"[+-]?\d+")
-SPEC_num_value = re.compile(
-    r"([+-]?\d*\.*\d*[eE]*[+-]*\d+|[+-]?[Ii][Nn][Ff]|[Nn][Aa][Nn])")
-SPEC_dataline = re.compile(r"^[+-]*\d.*")
-
-SPEC_scan = re.compile(r"^#RUN")
-SPEC_cmd = re.compile(r"^#CMD")
-SPEC_initmoponames = re.compile(r"#MOT")
-SPEC_initmopopos = re.compile(r"#VAL")
-SPEC_datetime = re.compile(r"^#TIM")
-SPEC_exptime = re.compile(r"^#T")
-SPEC_nofcols = re.compile(r"^#N")
-SPEC_colnames = re.compile(r"^#COL")
-SPEC_MCAFormat = re.compile(r"^#@MCA")
-SPEC_MCAChannels = re.compile(r"^#@CHANN")
-SPEC_headerline = re.compile(r"^#")
-SPEC_scanbroken = re.compile(r"#C[a-zA-Z0-9: .]*Scan aborted")
-SPEC_scanresumed = re.compile(r"#C[a-zA-Z0-9: .]*Scan resumed")
-SPEC_commentline = re.compile(r"#ATT")
-SPEC_newheader = re.compile(r"^#E")
-SPEC_errorbm20 = re.compile(r"^MI:")
-scan_status_flags = ["OK", "NODATA", "ABORTED", "CORRUPTED"]
-
-
-class PalSpecFile(SPECFile):
-
-    def __init__(self, filename, path='', file_format='{0:07d}_meta.log',
-                 scan_in_list=[], start_scan=1):
-        """
-        SPECFile init routine
-
-        Parameters
-        ----------
-        filename :  str
-            filename of the spec file
-        path :      str, optional
-            path to the specfile
-        """
-
-        self.debug = False
-        self.path = path
-        self.filename = filename
-
-        # we keep that empty as it has to be updated by parse_folders()
-        self.full_filename = ''
-
-        # list holding scan objects
-        self.scan_list = []
-        self.fid = None
-        self.last_offset = 0
-        self.scan_in_list = scan_in_list
-        if len(self.scan_in_list):
-            self.curr_scan_nb = self.scan_in_list[0]
-        else:
-            self.curr_scan_nb = start_scan
-
-        self.file_format = file_format
-        # initially parse the file
-        self.init_motor_names_fh = []  # this list will hold the names of the
-        # motors saved in initial motor positions given in the file header
-        self.init_motor_names_sh = []  # this list will hold the names of the
-        # motors saved in initial motor positions given in the scan header
-        self.init_motor_names = []  # this list will hold the names of the
-        # motors saved in initial motor positions from either the file or
-        # scan header
-
-        self.parse_folders()
-
-    def Update(self):
-        """
-        reread the file and add newly added files. The parsing starts at the
-        data offset of the last scan gathered during the last parsing run.
-        """
-
-        # reparse the SPEC file
-        if config.VERBOSITY >= config.INFO_LOW:
-            print("XU.io.SPECFile.Update: reparsing file for new scans ...")
-        # mark last found scan as not saved to force reread
-        idx = len(self.scan_list)
-        if idx > 0:
-            lastscan = self.scan_list[idx - 1]
-            lastscan.ischanged = True
-        self.parse_folders()
-
-    def parse_folders(self):
-
-        data_path = os.path.abspath(self.path)
-
-        if len(self.scan_in_list):
-            for scan_nb in self.scan_in_list:
-                if scan_nb >= self.curr_scan_nb:
-                    self.curr_scan_nb = scan_nb
-
-                    if self.debug:
-                        print('Look for scan number {:d}'.format(scan_nb))
-
-                    data_file = os.path.join(
-                        data_path,
-                        self.file_format.format(scan_nb))
-
-                    if os.path.exists(data_file):
-                        self.full_filename = data_file
-                        if self.debug:
-                            print('Parsing Scan #{:d}'.format(scan_nb))
-                        self.Parse()
-
-                        # when parsing is done, we reset everything
-                        self.fid = None
-                        self.last_offset = 0
-                        # self.init_motor_names_fh = []  # this list will hold the names of the
-                        # # motors saved in initial motor positions given in the file header
-                        # self.init_motor_names_sh = []  # this list will hold the names of the
-                        # # motors saved in initial motor positions given in the scan header
-                        # self.init_motor_names = []  # this list will hold the names of the
-
-                        # we remeber the last scan number
-
-                    else:
-                        if self.debug:
-                            print('data file does not exists')
-                        break
-        else:
-            while True:
-                scan_nb = self.curr_scan_nb
-                if self.debug:
-                    print('Look for scan number {:d}'.format(scan_nb))
-
-                data_file = os.path.join(
-                    data_path,
-                    self.file_format.format(scan_nb))
-
-                if os.path.exists(data_file):
-                    self.full_filename = data_file
-                    if self.debug:
-                        print('Parsing Scan #{:d}'.format(scan_nb))
-                    self.Parse()
-
-                    # when parsing is done, we reset everything
-                    self.fid = None
-                    self.last_offset = 0
-                    # self.init_motor_names_fh = []  # this list will hold the names of the
-                    # # motors saved in initial motor positions given in the file header
-                    # self.init_motor_names_sh = []  # this list will hold the names of the
-                    # # motors saved in initial motor positions given in the scan header
-                    # self.init_motor_names = []  # this list will hold the names of the
-
-                    # we remeber the last scan number
-                    self.curr_scan_nb = self.curr_scan_nb + 1
-                else:
-                    if self.debug:
-                        print('data file does not exists')
-                    break
-
-    def Parse(self):
-        """
-        Parses the file from the starting at last_offset and adding found scans
-        to the scan list.
-        """
-        import numpy
-        with xu_open(self.full_filename) as self.fid:
-            # move to the last read position in the file
-            self.fid.seek(self.last_offset, 0)
-            scan_started = False
-            scan_has_mca = False
-            # list with the motors from whome the initial
-            # position is stored.
-            init_motor_values = []
-
-            if config.VERBOSITY >= config.DEBUG:
-                print('XU.io.SPECFile: start parsing')
-
-            for line in self.fid:
-                linelength = len(line)
-                line = line.decode('ascii', 'ignore')
-                if config.VERBOSITY >= config.DEBUG:
-                    print('parsing line: %s' % line)
-
-                # remove trailing and leading blanks from the read line
-                line = line.strip()
-
-                # fill the list with the initial motor names in the header
-                if SPEC_newheader.match(line):
-                    self.init_motor_names_fh = []
-
-                elif SPEC_initmoponames.match(line) and not scan_started:
-                    if config.VERBOSITY >= config.DEBUG:
-                        print("XU.io.SPECFile.Parse: found initial motor "
-                              "names in file header")
-                    line = SPEC_initmoponames.sub("", line)
-                    line = line.strip()
-                    self.init_motor_names_fh = self.init_motor_names_fh + \
-                        SPEC_multi_blank2.split(line)
-
-                # if the line marks the beginning of a new scan
-                elif SPEC_scan.match(line) and not scan_started:
-                    if config.VERBOSITY >= config.DEBUG:
-                        print("XU.io.SPECFile.Parse: found scan")
-                    line_list = SPEC_multi_blank.split(line)
-                    scannr = int(line_list[1])
-                    # scancmd = "".join(" " + x + " " for x in line_list[2:])
-                    scan_started = True
-                    scan_has_mca = False
-                    scan_header_offset = self.last_offset
-                    scan_status = "OK"
-                    # define some necessary variables which could be missing in
-                    # the scan header
-                    itime = numpy.nan
-                    time = ''
-                    if config.VERBOSITY >= config.INFO_ALL:
-                        print("XU.io.SPECFile.Parse: processing scan nr. %d "
-                              "..." % scannr)
-                    # set the init_motor_names to the ones found in
-                    # the file header
-                    self.init_motor_names_sh = []
-                    self.init_motor_names = self.init_motor_names_fh
-
-                    # if the line contains the date and time information
-
-                elif SPEC_cmd.match(line) and scan_started:
-                    line = SPEC_cmd.sub("", line)
-                    scancmd = line.strip()
-                elif SPEC_datetime.match(line) and scan_started:
-                    if config.VERBOSITY >= config.DEBUG:
-                        print("XU.io.SPECFile.Parse: found date and time")
-                    # fetch the time from the line data
-                    time = SPEC_time_format.findall(line)[0]
-                    line = SPEC_time_format.sub("", line)
-                    line = SPEC_datetime.sub("", line)
-                    date = SPEC_multi_blank.sub(" ", line).strip()
-
-                # if the line contains the integration time
-                elif SPEC_exptime.match(line) and scan_started:
-                    if config.VERBOSITY >= config.DEBUG:
-                        print("XU.io.SPECFile.Parse: found exposure time")
-                    itime = float(SPEC_num_value.findall(line)[0])
-                # read the initial motor names in the scan header if present
-                elif SPEC_initmoponames.match(line) and scan_started:
-                    if config.VERBOSITY >= config.DEBUG:
-                        print("XU.io.SPECFile.Parse: found initial motor "
-                              "names in scan header")
-                    line = SPEC_initmoponames.sub("", line)
-                    line = line.strip()
-                    self.init_motor_names_sh = self.init_motor_names_sh + \
-                        SPEC_multi_blank2.split(line)
-                    self.init_motor_names = self.init_motor_names_sh
-                # read the initial motor positions
-                elif SPEC_initmopopos.match(line) and scan_started:
-                    if config.VERBOSITY >= config.DEBUG:
-                        print("XU.io.SPECFile.Parse: found initial motor "
-                              "positions")
-                    line = SPEC_initmopopos.sub("", line)
-                    line = line.strip()
-                    line_list = SPEC_multi_blank.split(line)
-                    # sometimes initial motor position are simply empty and
-                    # this should not lead to an error
-                    try:
-                        for value in line_list:
-                            init_motor_values.append(float(value))
-                    except ValueError:
-                        pass
-
-                # if the line contains the column names
-                elif SPEC_colnames.match(line) and scan_started:
-                    if config.VERBOSITY >= config.DEBUG:
-                        print("XU.io.SPECFile.Parse: found column names")
-                    line = SPEC_colnames.sub("", line)
-                    line = line.strip()
-                    col_names = SPEC_multi_blank.split(line)
-                    nofcols = len(col_names)
-                    # this is a fix in the case that blanks are allowed in
-                    # motor and detector names (only a single balanks is
-                    # supported meanwhile)
-                    if len(col_names) > nofcols:
-                        col_names = SPEC_multi_blank2.split(line)
-
-                elif SPEC_MCAFormat.match(line) and scan_started:
-                    mca_col_number = int(SPEC_num_value.findall(
-                                         line)[0])
-                    scan_has_mca = True
-
-                elif SPEC_MCAChannels.match(line) and scan_started:
-                    line_list = SPEC_num_value.findall(line)
-                    mca_channels = int(line_list[0])
-                    mca_start = int(line_list[1])
-                    mca_stop = int(line_list[2])
-
-                elif (SPEC_scanbroken.findall(line) != [] and
-                      scan_started):
-                    # this is the case when a scan is broken and no data has
-                    # been written, but nevertheless a comment is in the file
-                    # that tells us that the scan was aborted
-                    scan_data_offset = self.last_offset
-                    s = SPECScan("scan_%i" % (scannr), scannr, scancmd,
-                                 date, time, itime, col_names,
-                                 scan_header_offset, scan_data_offset,
-                                 self.full_filename, self.init_motor_names,
-                                 init_motor_values, "NODATA")
-
-                    self.scan_list.append(s)
-
-                    # reset control flags
-                    scan_started = False
-                    scan_has_mca = False
-                    # reset initial motor positions flag
-                    init_motor_values = []
-
-                elif SPEC_dataline.match(line) and scan_started:
-                    # this is now the real end of the header block. at this
-                    # point we know that there is enough information about the
-                    # scan
-
-                    # save the data offset
-                    scan_data_offset = self.last_offset
-
-                    # create an SPECFile scan object and add it to the scan
-                    # list the name of the group consists of the prefix scan
-                    # and the number of the scan in the file - this shoule make
-                    # it easier to find scans in the HDF5 file.
-                    s = SPECScan("scan_%i" % (scannr), scannr, scancmd, date,
-                                 time, itime, col_names, scan_header_offset,
-                                 scan_data_offset, self.full_filename,
-                                 self.init_motor_names, init_motor_values,
-                                 scan_status)
-                    if scan_has_mca:
-                        s.SetMCAParams(mca_col_number, mca_channels, mca_start,
-                                       mca_stop)
-
-                    self.scan_list.append(s)
-
-                    # reset control flags
-                    scan_started = False
-                    scan_has_mca = False
-                    # reset initial motor positions flag
-                    init_motor_values = []
-
-                elif SPEC_scan.match(line) and scan_started:
-                    # this should only be the case when there are two
-                    # consecutive file headers in the data file without any
-                    # data or abort notice of the first scan; first store
-                    # current scan as aborted then start new scan parsing
-                    s = SPECScan("scan_%i" % (scannr), scannr, scancmd,
-                                 date, time, itime, col_names,
-                                 scan_header_offset, None,
-                                 self.full_filename, self.init_motor_names,
-                                 init_motor_values, "NODATA")
-                    self.scan_list.append(s)
-
-                    # reset control flags
-                    scan_started = False
-                    scan_has_mca = False
-                    # reset initial motor positions flag
-                    init_motor_values = []
-
-                    # start parsing of new scan
-                    if config.VERBOSITY >= config.DEBUG:
-                        print("XU.io.SPECFile.Parse: found scan "
-                              "(after aborted scan)")
-                    line_list = SPEC_multi_blank.split(line)
-                    scannr = int(line_list[1])
-                    # scancmd = "".join(" " + x + " " for x in line_list[2:])
-                    scan_started = True
-                    scan_has_mca = False
-                    scan_header_offset = self.last_offset
-                    scan_status = "OK"
-                    self.init_motor_names_sh = []
-                    self.init_motor_names = self.init_motor_names_fh
-
-                # else:
-                #     print('cannot read that shit: {:s}'.format(line))
-                # store the position of the file pointer
-                self.last_offset += linelength
-
-            # if reading of the file is finished store the data offset of the
-            # last scan as the last offset for the next parsing run of the file
-            self.last_offset = self.scan_list[-1].doffset
+        with h5py.File(h5_file, 'r') as h5:
+            entry = h5['R{0:04d}'.format(scan.number)]
+            # try:
+            #     nxs_file = nxs.nxload(path.join(self.file_path, self.file_name), mode='r')
+            # except nxs.NeXusError:
+            #     self.log.exception('NeXus file not present!')
+            #     return
+            # entry_name = 'entry{:d}'.format(scan.number)
+            # # try to enter entry
+            # try:
+            #     entry = nxs_file[entry_name]
+            # except nxs.NeXusError:
+            #     self.log.exception('Entry #{:d} not present in NeXus file!'.format(scan.number))
+            #     return
+            # iterate through data fields
+            data_list = []
+            dtype_list = []
+            for key in entry['scan_dat'].keys():
+                if '_raw' not in key:
+                    data_list.append(entry['scan_dat'][key])
+                    dtype_list.append((key,
+                                      entry['scan_dat'][key].dtype,
+                                      entry['scan_dat'][key].shape))
+            scan.data = fromarrays(data_list, dtype=dtype_list)
