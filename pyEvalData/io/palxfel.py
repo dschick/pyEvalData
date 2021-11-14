@@ -116,8 +116,8 @@ class PalH5(Source):
                         # create scan object
 
                         h5_file = os.path.join(self.file_path,
-                                            self.file_name.format(scan_number),
-                                            self.file_name.format(scan_number) + '.h5')
+                                               self.file_name.format(scan_number),
+                                               self.file_name.format(scan_number) + '.h5')
 
                         with h5py.File(h5_file, 'r') as h5:
                             header = h5['R{0:04d}/header'.format(scan_number)]
@@ -132,7 +132,8 @@ class PalH5(Source):
                                         cmd=header['scan_cmd'].asstr()[()],
                                         date=header['time'].asstr()[()].split(' ')[0],
                                         time=header['time'].asstr()[()].split(' ')[1],
-                                        int_time=float(header['scan_cmd'].asstr()[()].split(' ')[-1]),
+                                        int_time=float(
+                                            header['scan_cmd'].asstr()[()].split(' ')[-1]),
                                         header='',
                                         init_mopo=init_motor_pos)
                             self.scan_dict[scan_number] = scan
@@ -157,18 +158,6 @@ class PalH5(Source):
 
         with h5py.File(h5_file, 'r') as h5:
             entry = h5['R{0:04d}'.format(scan.number)]
-            # try:
-            #     nxs_file = nxs.nxload(path.join(self.file_path, self.file_name), mode='r')
-            # except nxs.NeXusError:
-            #     self.log.exception('NeXus file not present!')
-            #     return
-            # entry_name = 'entry{:d}'.format(scan.number)
-            # # try to enter entry
-            # try:
-            #     entry = nxs_file[entry_name]
-            # except nxs.NeXusError:
-            #     self.log.exception('Entry #{:d} not present in NeXus file!'.format(scan.number))
-            #     return
             # iterate through data fields
             data_list = []
             dtype_list = []
