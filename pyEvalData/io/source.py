@@ -229,6 +229,17 @@ class Source(object):
         except IndexError:
             return 0
 
+    def get_all_scan_numbers(self):
+        """get_all_scan_numbers
+
+        Return the all scan number from the `scan_dict`.
+
+        """
+        try:
+            return sorted(self.scan_dict.keys())
+        except IndexError:
+            return 0
+
     def get_scan(self, scan_number, read_data=True, dismiss_update=False):
         """get_scan
 
