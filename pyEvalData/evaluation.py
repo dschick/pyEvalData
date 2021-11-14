@@ -263,7 +263,14 @@ class Evaluation(object):
             else:
                 res = np.logical_and(res, idx)
 
-        return data[res]
+        data_list = []
+        dtype_list = []
+        for name in data.dtype.names:
+            data_list.append(data[name][res])
+            dtype_list.append((name,
+                               data[name][res].dtype,
+                               data[name][res].shape))
+        return np.core.records.fromarrays(data_list, dtype=dtype_list)
 
     def get_scan_data(self, scan_num):
         """

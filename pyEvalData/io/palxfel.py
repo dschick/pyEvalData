@@ -121,27 +121,31 @@ class PalH5(Source):
                                                self.file_name.format(scan_number),
                                                self.file_name.format(scan_number) + '.h5')
 
-                        with h5py.File(h5_file, 'r') as h5:
-                            header = h5['R{0:04d}/header'.format(scan_number)]
+                        try:
+                            with h5py.File(h5_file, 'r') as h5:
+                                header = h5['R{0:04d}/header'.format(scan_number)]
 
-                            init_motor_pos = {}
-                            for key in header['motor_init_pos'].keys():
-                                init_motor_pos[key] = \
-                                    header['motor_init_pos/{:s}'.format(key)][()]
+                                init_motor_pos = {}
+                                for key in header['motor_init_pos'].keys():
+                                    init_motor_pos[key] = \
+                                        header['motor_init_pos/{:s}'.format(key)][()]
 
-                            # create scan object
-                            scan = Scan(int(scan_number),
-                                        cmd=header['scan_cmd'].asstr()[()],
-                                        date=header['time'].asstr()[()].split(' ')[0],
-                                        time=header['time'].asstr()[()].split(' ')[1],
-                                        int_time=float(
-                                            header['scan_cmd'].asstr()[()].split(' ')[-1]),
-                                        header='',
-                                        init_mopo=init_motor_pos)
-                            self.scan_dict[scan_number] = scan
-                        # check if the data needs to be read as well
-                        if self.read_all_data:
-                            self.read_scan_data(self.scan_dict[scan_number])
+                                # create scan object
+                                scan = Scan(int(scan_number),
+                                            cmd=header['scan_cmd'].asstr()[()],
+                                            date=header['time'].asstr()[()].split(' ')[0],
+                                            time=header['time'].asstr()[()].split(' ')[1],
+                                            int_time=float(
+                                                header['scan_cmd'].asstr()[()].split(' ')[-1]),
+                                            header='',
+                                            init_mopo=init_motor_pos)
+                                self.scan_dict[scan_number] = scan
+                            # check if the data needs to be read as well
+                            if self.read_all_data:
+                                self.read_scan_data(self.scan_dict[scan_number])
+                        except OSError:
+                            self.log.warning('Could not open file {:s}'.format(h5_file))
+                            continue
 
     def read_raw_scan_data(self, scan):
         """read_raw_scan_data
