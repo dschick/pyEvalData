@@ -1141,7 +1141,8 @@ class Evaluation(object):
                     # do the fitting with or without weighting the data
                     if weights:
                         out = _mod.fit(y2plot, _pars, x=x2plot,
-                                       weights=1/yerr2plot, method=fit_method, nan_policy='propagate')
+                                       weights=1/yerr2plot, method=fit_method,
+                                       nan_policy='propagate')
                     else:
                         out = _mod.fit(y2plot, _pars, x=x2plot,
                                        method=fit_method, nan_policy='propagate')
