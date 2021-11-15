@@ -259,9 +259,15 @@ class Source(object):
 
         """
         self.log.debug('get_scan')
-
         if self.update_before_read and not dismiss_update:
-            self.update()
+            # we should only do the update for new or the last scan
+            last_scan_number = self.get_last_scan_number()
+            if (scan_number == last_scan_number) or (scan_number not in self.scan_dict.keys()):
+                self.update()
+            else:
+                self.log.debug('Skipping update for scan {:d} '
+                               'which are already present in '
+                               'scan_dict.'.format(scan_number))
 
         try:
             scan = self.scan_dict[scan_number]
@@ -289,7 +295,15 @@ class Source(object):
         self.log.debug('get_scan_list')
 
         if self.update_before_read:
-            self.update()
+            # we should only do the update for new or the last scan
+            last_scan_number = self.get_last_scan_number()
+            if (last_scan_number in scan_number_list) or \
+                    any(list(set(scan_number_list) - set(self.scan_dict.keys()))):
+                self.update()
+            else:
+                self.log.debug('Skipping update for scans {:s} '
+                               'which are already present in '
+                               'scan_dict.'.format(str(scan_number_list)))
 
         scans = []
         for scan_number in scan_number_list:
