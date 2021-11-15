@@ -286,6 +286,22 @@ class Evaluation(object):
             data = self.filter_data(data)
         return data
 
+    def get_scan_list_data(self, scan_list):
+        """
+
+        Args:
+            scan_num (TYPE): DESCRIPTION.
+
+        Returns:
+            TYPE: DESCRIPTION.
+
+        """
+        data_list, meta_list = self.source.get_scan_list_data(scan_list)
+        if self.apply_data_filter:
+            for i, data in enumerate(data_list):
+                data_list[i] = self.filter_data(data)
+        return data_list
+
     def avg_N_bin_scans(self, scan_list, xgrid=np.array([]), binning=True):
         """Averages data defined by the counter list, clist, onto an optional
         xgrid. If no xgrid is given the x-axis data of the first scan in the
@@ -322,14 +338,17 @@ class Evaluation(object):
 
         spec_cols = []
         concat_data = np.array([])
-        for i, scan_num in enumerate(scan_list):
+
+        data_list = self.get_scan_list_data(scan_list)
+
+        for i, (spec_data, scan_num) in enumerate(zip(data_list, scan_list)):
             # traverse the scan list and read data
-            try:
-                # try to read the motors and data of this scan
-                spec_data = self.get_scan_data(scan_num)
-            except Exception:
-                raise
-                print('Scan #' + scan_num + ' not found, skipping')
+            # try:
+            #     # try to read the motors and data of this scan
+            #     spec_data = self.get_scan_data(scan_num)
+            # except Exception:
+            #     raise
+            #     print('Scan #' + scan_num + ' not found, skipping')
 
             if i == 0 or len(spec_cols) == 0:  # we need to evaluate this only once
                 # these are the base spec counters which are present in the data
