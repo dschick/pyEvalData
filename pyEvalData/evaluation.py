@@ -454,7 +454,6 @@ class Evaluation(object):
                         unc_data_err[col] = unumpy.uarray(y, yerr)
 
                     for col_name, col_string in zip(clist, resolved_counters):
-
                         eval_string = self.col_string_to_eval_string(
                             col_string, array_name='unc_data_err')
                         temp = eval(eval_string)
@@ -1142,10 +1141,10 @@ class Evaluation(object):
                     # do the fitting with or without weighting the data
                     if weights:
                         out = _mod.fit(y2plot, _pars, x=x2plot,
-                                       weights=1/yerr2plot, method=fit_method)
+                                       weights=1/yerr2plot, method=fit_method, nan_policy='propagate')
                     else:
                         out = _mod.fit(y2plot, _pars, x=x2plot,
-                                       method=fit_method)
+                                       method=fit_method, nan_policy='propagate')
 
                     if fit_report > 0:
                         # for basic and full fit reporting
