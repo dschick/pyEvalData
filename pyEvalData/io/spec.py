@@ -113,12 +113,17 @@ class Spec(Source):
                     init_motor_pos = {}
                     for key, value in spec_scan.init_motor_pos.items():
                         init_motor_pos[key.replace('INIT_MOPO_', '')] = value
+                    # catching PR for itime in xu SpecScan missing
+                    try:
+                        int_time = float(spec_scan.itime)
+                    except AttributeError:
+                        int_time = 0.0
                     # create scan object
                     scan = Scan(int(spec_scan.nr),
                                 cmd=spec_scan.command,
                                 date=spec_scan.date,
                                 time=spec_scan.time,
-                                int_time=float(spec_scan.itime),
+                                int_time=int_time,
                                 header=spec_scan.header,
                                 init_mopo=init_motor_pos)
                     self.scan_dict[spec_scan.nr] = scan
