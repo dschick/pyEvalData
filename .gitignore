@@ -13,7 +13,7 @@ project/
 
 # docs build
 docs/build
-docs/build/**/*.nxs
+docs/source/**/*.nxs
 
 # ipython checkpoints
 docs/source/**/.ipynb_checkpoints
