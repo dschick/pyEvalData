@@ -23,7 +23,6 @@
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
 import numpy as np
-import numpy.lib.recfunctions as recfuncs
 import collections
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -34,7 +33,7 @@ from .helpers import bin_data
 
 class Evaluation(object):
     """Evaluation
-    
+
     Attributes:
         clist (List[str])       : List of counter names to evaluate.
         cdef (Dict{str:str})    : Dict of predefined counter names and
@@ -98,7 +97,7 @@ class Evaluation(object):
         try:
             # get the number of all opened figures
             fig_number = mpl._pylab_helpers.Gcf.get_active().num
-        except:
+        except Exception:
             # there are no figures open
             fig_number = 1
 
@@ -246,7 +245,6 @@ class Evaluation(object):
 
     def filter_data(self, data):
         """filter_data
-        
 
         Args:
             data (TYPE): DESCRIPTION.
@@ -264,11 +262,17 @@ class Evaluation(object):
             else:
                 res = np.logical_and(res, idx)
 
-        return data[res]
+        data_list = []
+        dtype_list = []
+        for name in data.dtype.names:
+            data_list.append(data[name][res])
+            dtype_list.append((name,
+                               data[name][res].dtype,
+                               data[name][res].shape))
+        return np.core.records.fromarrays(data_list, dtype=dtype_list)
 
     def get_scan_data(self, scan_num):
         """
-        
 
         Args:
             scan_num (TYPE): DESCRIPTION.
@@ -277,10 +281,26 @@ class Evaluation(object):
             TYPE: DESCRIPTION.
 
         """
-        data = self.source.get_scan_data(scan_num)
+        data, meta = self.source.get_scan_data(scan_num)
         if self.apply_data_filter:
             data = self.filter_data(data)
         return data
+
+    def get_scan_list_data(self, scan_list):
+        """
+
+        Args:
+            scan_num (TYPE): DESCRIPTION.
+
+        Returns:
+            TYPE: DESCRIPTION.
+
+        """
+        data_list, meta_list = self.source.get_scan_list_data(scan_list)
+        if self.apply_data_filter:
+            for i, data in enumerate(data_list):
+                data_list[i] = self.filter_data(data)
+        return data_list
 
     def avg_N_bin_scans(self, scan_list, xgrid=np.array([]), binning=True):
         """Averages data defined by the counter list, clist, onto an optional
@@ -318,14 +338,17 @@ class Evaluation(object):
 
         spec_cols = []
         concat_data = np.array([])
-        for i, scan_num in enumerate(scan_list):
+
+        data_list = self.get_scan_list_data(scan_list)
+
+        for i, (spec_data, scan_num) in enumerate(zip(data_list, scan_list)):
             # traverse the scan list and read data
-            try:
-                # try to read the motors and data of this scan
-                spec_data = self.get_scan_data(scan_num)
-            except:
-                raise
-                print('Scan #' + scan_num + ' not found, skipping')
+            # try:
+            #     # try to read the motors and data of this scan
+            #     spec_data = self.get_scan_data(scan_num)
+            # except Exception:
+            #     raise
+            #     print('Scan #' + scan_num + ' not found, skipping')
 
             if i == 0 or len(spec_cols) == 0:  # we need to evaluate this only once
                 # these are the base spec counters which are present in the data
@@ -371,7 +394,7 @@ class Evaluation(object):
                 if len(data) == 0:
                     data = np.array(eval(eval_string), dtype=[(col_name, float)])
                 elif col_name not in data.dtype.names:
-                    data = eval('recfuncs.append_fields(data,\''
+                    data = eval('np.lib.recfunctions.append_fields(data,\''
                                 + col_name + '\',data=(' + eval_string
                                 + '), dtypes=float, asrecarray=True, usemask=False)')
 
@@ -431,7 +454,6 @@ class Evaluation(object):
                         unc_data_err[col] = unumpy.uarray(y, yerr)
 
                     for col_name, col_string in zip(clist, resolved_counters):
-
                         eval_string = self.col_string_to_eval_string(
                             col_string, array_name='unc_data_err')
                         temp = eval(eval_string)
@@ -466,7 +488,7 @@ class Evaluation(object):
                     std_data[col_name] = 0
                     std_data[self.xcol] = 0
 
-        except:
+        except Exception:
             raise
             print('xcol and ycol must have the same length --> probably you try plotting a custom'
                   ' counter together with a spec counter')
@@ -601,7 +623,7 @@ class Evaluation(object):
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
     def plot_mesh_scan(self, scan_num, skip_plot=False, grid_on=False, ytext='', xtext='',
-                     levels=20, cbar=True):
+                       levels=20, cbar=True):
         """Plot a single mesh scan from the spec file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -628,7 +650,7 @@ class Evaluation(object):
         try:
             # try to read data of this scan
             spec_data = self.get_scan_data(scan_num)
-        except:
+        except Exception:
             print('Scan #' + int(scan_num) + ' not found, skipping')
 
         dt = spec_data.dtype
@@ -1119,10 +1141,11 @@ class Evaluation(object):
                     # do the fitting with or without weighting the data
                     if weights:
                         out = _mod.fit(y2plot, _pars, x=x2plot,
-                                       weights=1/yerr2plot, method=fit_method)
+                                       weights=1/yerr2plot, method=fit_method,
+                                       nan_policy='propagate')
                     else:
                         out = _mod.fit(y2plot, _pars, x=x2plot,
-                                       method=fit_method)
+                                       method=fit_method, nan_policy='propagate')
 
                     if fit_report > 0:
                         # for basic and full fit reporting

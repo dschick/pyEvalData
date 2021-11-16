@@ -1,3 +1,11 @@
-from .evaluation import Evaluation
+import logging
+import sys
+from . import config
 
-__all__ = ['Evaluation']
+logging.basicConfig(stream=sys.stdout,
+                    format=config.LOG_FORMAT)
+
+from .evaluation import Evaluation
+from . import io
+
+__all__ = ['Evaluation', 'io']
