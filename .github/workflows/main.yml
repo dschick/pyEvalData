@@ -22,8 +22,6 @@ jobs:
           python3 -m pip install --upgrade pip
           # Install build deps
           pip install setuptools pytest flake8 ipython
-          # If requirements.txt exists, install from it
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           # Install the package from setup.py
           pip install .
       - name: linting flake8
