@@ -22,4 +22,4 @@ def source(tmp_path_factory):
 def test_source(source):
     assert source.name == 'test_file_spec.spec'
     assert source.scan1.meta['number'] == 1
-    print(source.scan1.data['delay'][0])
+    assert source.scan1.data['delay'][0] == pytest.approx(-0.998557475)
