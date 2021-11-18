@@ -1,15 +1,32 @@
 on: [push, pull_request]
 
 jobs:
-  python-lint:
-    runs-on: ubuntu-latest
+  python-ci:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9"]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+
     name: CI workflow
     steps:
       - name: checkout source repo
         uses: actions/checkout@v2      
-      - name: Set up Python environment
-        uses: actions/setup-python@v1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
         with:
-          python-version: "3.8"
+          python-version: ${{ matrix.python-version }}
+      - name: "Installs dependencies"
+        run: |
+          # Upgrade pip
+          python3 -m pip install --upgrade pip
+          # Install build deps
+          pip install setuptools pytest flake8 ipython
+          # Install the package from setup.py
+          pip install .
       - name: linting flake8
-        uses:  py-actions/flake8@v1
+        run: |
+          flake8
+      - name: Test with pytest
+        run: |
+          pytest
