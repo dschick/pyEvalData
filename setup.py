@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pyEvalData',
-    version='1.2.0',
+    version='1.2.1',
     packages=find_packages(),
     url='https://github.com/dschick/pyEvalData',
     install_requires=['numpy',
