@@ -460,56 +460,53 @@ class Source(object):
         for scan_number, scan in self.scan_dict.items():
             self.clear_scan_data(scan)
 
-    def save_scan_to_nexus(self, scan, nxs_file):
+    def save_scan_to_nexus(self, scan, nxs_file=''):
         """save_scan_to_nexus
 
         Saves a scan to the nexus file.
 
         """
-        last_scan_number = self.get_last_scan_number()
+        if nxs_file == '':
+            nxs_file = self.get_nexus_file()
+
         entry_name = 'entry{:d}'.format(scan.number)
 
-        try:
-            _ = nxs_file[entry_name]
-            scan_in_nexus = True
-        except KeyError:
-            scan_in_nexus = False
-
-        if (not scan_in_nexus) or (scan.number >= last_scan_number) or self.force_overwrite:
-            # evaluate if we need to forget the data again
-            if scan.data is None:
-                clear_data = True
-            else:
-                clear_data = False
-            # read the raw data
-            self.read_raw_scan_data(scan)
-            self.log.info('save_scan_to_nexus for scan #{:d}'.format(scan.number))
-            with nxs_file.nxfile:
-                # if the entry already exists, it must be deleted in advance
-                if scan_in_nexus:
-                    del nxs_file[entry_name]
-                # (re-)create entry
-                entry = nxs_file[entry_name] = nxs.NXentry()
-                # iterate meta information
-                for key, value in scan.meta.items():
-                    if key == 'init_mopo':
-                        # create dedicated collection for initial motor positions
-                        entry['init_mopo'] = nxs.NXcollection()
-                        # iterate through initial motor positions
-                        for mopo_key, mopo_value in scan.meta['init_mopo'].items():
-                            entry.init_mopo[mopo_key] = nxs.NXfield(mopo_value)
-                    else:
-                        # add meta information as attribute to entry
-                        entry.attrs[key] = value
-                # create dedicated collection for data
-                entry['data'] = nxs.NXcollection()
-                # iterate data
-                for col in scan.data.dtype.names:
-                    entry.data[col] = nxs.NXfield(scan.data[col])
-                # clear data of the scan if it was not present before
-                # or read and forget
-                if clear_data or self.read_and_forget:
-                    scan.clear_data()
+        # evaluate if we need to forget the data again
+        if scan.data is None:
+            clear_data = True
+        else:
+            clear_data = False
+        # read the raw data
+        self.read_raw_scan_data(scan)
+        self.log.info('save_scan_to_nexus for scan #{:d}'.format(scan.number))
+        with nxs_file.nxfile:
+            # if the entry already exists, it must be deleted in advance
+            try:
+                del nxs_file[entry_name]
+            except nxs.NeXusError:
+                pass
+            # (re-)create entry
+            entry = nxs_file[entry_name] = nxs.NXentry()
+            # iterate meta information
+            for key, value in scan.meta.items():
+                if key == 'init_mopo':
+                    # create dedicated collection for initial motor positions
+                    entry['init_mopo'] = nxs.NXcollection()
+                    # iterate through initial motor positions
+                    for mopo_key, mopo_value in scan.meta['init_mopo'].items():
+                        entry.init_mopo[mopo_key] = nxs.NXfield(mopo_value)
+                else:
+                    # add meta information as attribute to entry
+                    entry.attrs[key] = value
+            # create dedicated collection for data
+            entry['data'] = nxs.NXcollection()
+            # iterate data
+            for col in scan.data.dtype.names:
+                entry.data[col] = nxs.NXfield(scan.data[col])
+            # clear data of the scan if it was not present before
+            # or read and forget
+            if clear_data or self.read_and_forget:
+                scan.clear_data()
 
     def save_all_scans_to_nexus(self):
         """save_all_scans_to_nexus
@@ -518,14 +515,40 @@ class Source(object):
 
         """
         self.log.info('save_all_scans_to_nexus')
+        nxs_file = self.get_nexus_file()
+        last_scan_in_nexus = sorted(int(num.strip('entry')) for num in nxs_file.keys())[-1]
+
+        for scan_number, scan in self.scan_dict.items():
+            entry_name = 'entry{:d}'.format(scan.number)
+            try:
+                _ = nxs_file[entry_name]
+                scan_in_nexus = True
+            except KeyError:
+                scan_in_nexus = False
+
+            if (not scan_in_nexus) or (scan.number >= last_scan_in_nexus) \
+                    or self.force_overwrite:
+                self.save_scan_to_nexus(scan, nxs_file)
+
+    def get_nexus_file(self, mode='rw'):
+        """get_nexus_file
+
+        Return the file handle to the NeXus file in a given ``mode```.
+
+        Args:
+            mode (str, optional): file mode. defaults to 'rw'.
+
+        Returns:
+            nxs_file (NXFile): file handle to NeXus file.
+
+        """
+        self.log.debug('get_nexus_file')
         try:
             nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='rw')
         except nxs.NeXusError:
             nxs.NXroot().save(path.join(self.nexus_file_path, self.nexus_file_name))
             nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='rw')
-
-        for scan_number, scan in self.scan_dict.items():
-            self.save_scan_to_nexus(scan, nxs_file)
+        return nxs_file
 
     @property
     def nexus_file_name(self):
