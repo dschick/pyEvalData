@@ -11,18 +11,19 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: "3.8"
-      - name: linting flake8
-        uses:  py-actions/flake8@v1
       - name: "Installs and upgrades pip, installs other dependencies and installs the package from setup.py"
         run: |
           # Upgrade pip
           python3 -m pip install --upgrade pip
           # Install build deps
-          python3 -m pip install setuptools pytest ipython
+          python3 -m pip install setuptools pytest flake8 ipython
           # If requirements.txt exists, install from it
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           # Install the package from setup.py
           python3 setup.py install
+      - name: linting flake8
+        run: |
+          python3 -m flake8
       - name: Test with pytest
         run: |
           python3 -m pytest
