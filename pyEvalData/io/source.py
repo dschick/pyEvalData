@@ -516,7 +516,10 @@ class Source(object):
         """
         self.log.info('save_all_scans_to_nexus')
         nxs_file = self.get_nexus_file()
-        last_scan_in_nexus = sorted(int(num.strip('entry')) for num in nxs_file.keys())[-1]
+        try:
+            last_scan_in_nexus = sorted(int(num.strip('entry')) for num in nxs_file.keys())[-1]
+        except IndexError:
+            last_scan_in_nexus = -1
 
         for scan_number, scan in self.scan_dict.items():
             entry_name = 'entry{:d}'.format(scan.number)
