@@ -376,7 +376,6 @@ class Evaluation(object):
                 if len(data) == 0:
                     data = np.array(eval(eval_string), dtype=[(col_name, float)])
                 elif col_name not in data.dtype.names:
-                    print(eval_string)
                     data = eval('np.lib.recfunctions.append_fields(data,\''
                                 + col_name + '\',data=(' + eval_string
                                 + '), dtypes=float, asrecarray=True, usemask=False)')
