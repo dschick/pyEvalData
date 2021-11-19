@@ -9,3 +9,5 @@ from .evaluation import Evaluation
 from . import io
 
 __all__ = ['Evaluation', 'io']
+
+__version__ = '1.3.3'
