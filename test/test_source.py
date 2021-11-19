@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from test.conftest import source_spec, source_pal  # noqa: F401; pylint: disable=unused-variable
-
 
 @pytest.mark.parametrize('mysource, sname, scan_num, scan_delay',
                          [
