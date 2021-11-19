@@ -27,7 +27,24 @@ from scipy.stats import binned_statistic
 
 
 def edges4grid(grid):
-    """Creates a vector of the corresponding edges for a grid vector. """
+    """edges4grid
+
+    Returns the edges for a given grid vector as well as the
+    corresponding width of these bins.
+
+    grid      x     x     x     x     x     x     x     x
+
+    edges  |     |     |     |     |     |     |     |     |
+
+    Attributes:
+        grid (ndarray[float]): array of grid points.
+
+    Returns:
+        (tuple):
+        - *edges (ndarray[float])* - array of edges.
+        - *binwidth (ndarray[float])* - array of bin widths.
+
+    """
     binwidth = np.diff(grid)
     edges = np.hstack([grid[0]-binwidth[0]/2, grid[0:-1] +
                        binwidth/2, grid[-1]+binwidth[-1]/2])
