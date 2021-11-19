@@ -128,35 +128,53 @@ class Source(object):
         else:
             self.log.error('{:s} has no attribute {:s}'.format(__name__, attr))
 
-    def update(self):
+    def update(self, scan_number_list=[]):
         """update
 
-        update the `scan_dict` either from the raw source file/folder
+        update the ``scan_dict`` either from the raw source file/folder
         or from the nexus file.
+        The optional ``scan_number_list`` runs the update only if required
+        for the included scan.
+
+        Attributes:
+            scan_number_list (list[int]): explicit list of scans
 
         """
-        self.log.info('Update source')
 
-        if self.use_nexus:
-            self.log.debug('Updating from nexus')
-            # do not combine cases for better flow control
-            if not self.nexus_file_exists:
-                self.log.debug('nexus file does not exist')
-                self.parse_raw()
-                self.save_all_scans_to_nexus()
-            elif self.update_before_read:
-                self.log.debug('Update before read')
-                self.parse_raw()
-                self.save_all_scans_to_nexus()
-            elif self.force_overwrite:
-                self.log.debug('Force overwrite')
-                self.parse_raw()
-                self.save_all_scans_to_nexus()
+        if ~isinstance(scan_number_list, list):
+            scan_number_list = list(scan_number_list)
+
+        last_scan_number = self.get_last_scan_number()
+        if (len(scan_number_list) == 0) \
+                or (last_scan_number in scan_number_list) \
+                or any(list(set(scan_number_list) - set(self.scan_dict.keys()))):
+
+            self.log.info('Update source')
+
+            if self.use_nexus:
+                self.log.debug('Updating from nexus')
+                # do not combine cases for better flow control
+                if not self.nexus_file_exists:
+                    self.log.debug('nexus file does not exist')
+                    self.parse_raw()
+                    self.save_all_scans_to_nexus()
+                elif self.update_before_read:
+                    self.log.debug('Update before read')
+                    self.parse_raw()
+                    self.save_all_scans_to_nexus()
+                elif self.force_overwrite:
+                    self.log.debug('Force overwrite')
+                    self.parse_raw()
+                    self.save_all_scans_to_nexus()
+                else:
+                    self.parse_nexus()
             else:
-                self.parse_nexus()
+                self.log.debug('Updating from raw source')
+                self.parse_raw()
         else:
-            self.log.debug('Updating from raw source')
-            self.parse_raw()
+            self.log.debug('Skipping update for scans {:s} '
+                           'which are already present in '
+                           'scan_dict.'.format(str(scan_number_list)))
 
     def parse_raw(self):
         """parse_raw
@@ -260,14 +278,7 @@ class Source(object):
         """
         self.log.debug('get_scan')
         if self.update_before_read and not dismiss_update:
-            # we should only do the update for new or the last scan
-            last_scan_number = self.get_last_scan_number()
-            if (scan_number == last_scan_number) or (scan_number not in self.scan_dict.keys()):
-                self.update()
-            else:
-                self.log.debug('Skipping update for scan {:d} '
-                               'which are already present in '
-                               'scan_dict.'.format(scan_number))
+            self.update(scan_number)
 
         try:
             scan = self.scan_dict[scan_number]
@@ -295,15 +306,7 @@ class Source(object):
         self.log.debug('get_scan_list')
 
         if self.update_before_read:
-            # we should only do the update for new or the last scan
-            last_scan_number = self.get_last_scan_number()
-            if (last_scan_number in scan_number_list) or \
-                    any(list(set(scan_number_list) - set(self.scan_dict.keys()))):
-                self.update()
-            else:
-                self.log.debug('Skipping update for scans {:s} '
-                               'which are already present in '
-                               'scan_dict.'.format(str(scan_number_list)))
+            self.update(scan_number_list)
 
         scans = []
         for scan_number in scan_number_list:

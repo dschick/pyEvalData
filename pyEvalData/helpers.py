@@ -37,14 +37,14 @@ def edges4grid(grid):
 
 def bin_data(y, x, X, statistic='mean'):
     """Bin data y(x) on new grid X using a statistic type. """
+
     # get only unmasked data
     idx = ~np.ma.getmask(x)
     idy = ~np.ma.getmask(y)
     y = y[idx & idy].flatten('F')
     x = x[idx & idy].flatten('F')
     idX = ~np.ma.getmask(X)
-    X = np.sort(X[idX].flatten('F'))
-
+    X = np.unique(np.sort(X[idX].flatten('F')))
     # set non-finite values to 0
     y[~np.isfinite(y)] = 0
     # create bins for the grid
