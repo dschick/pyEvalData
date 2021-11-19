@@ -40,7 +40,7 @@ def bin_data(y, x, X, statistic='mean'):
 
     y = y.flatten('F')
     x = x.flatten('F')
-    X = np.sort(X.flatten('F'))
+    X = np.unique(np.sort(X.flatten('F')))
 
     # set non-finite values to 0
     idx = ~np.isfinite(y)
