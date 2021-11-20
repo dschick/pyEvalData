@@ -34,6 +34,6 @@ def source_spec(tmp_path_factory):
 
 
 @pytest.fixture(scope='module')
-def evaluation(source):
-    data = ped.Evaluation(source)
+def evaluation(source_spec):
+    data = ped.Evaluation(source_spec)
     return data
