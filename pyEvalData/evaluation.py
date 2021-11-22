@@ -378,7 +378,7 @@ class Evaluation(object):
                 elif col_name not in data.dtype.names:
                     data = eval('np.lib.recfunctions.append_fields(data,\''
                                 + col_name + '\',data=(' + eval_string
-                                + '), dtypes=float, asrecarray=True, usemask=False)')
+                                + '), dtypes=float, asrecarray=True, usemask=True)')
 
             if i > 0:
                 # this is not the first scan in the list so append the data to
