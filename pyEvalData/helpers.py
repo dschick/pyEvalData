@@ -32,9 +32,17 @@ def edges4grid(grid):
     Returns the edges for a given grid vector as well as the
     corresponding width of these bins.
 
-    grid      x     x     x     x     x     x     x     x
+    The ``grid`` is NOT altered - on purpose!
+    So even if the ``grid`` is not *unique* there will be bins of width 0.
 
-    edges  |     |     |     |     |     |     |     |     |
+    Be also aware of the hanling of the first and last bin, as they will
+    contain values which will lay outside of the original ``grid``.
+
+    grid       x     x     x     x     x     x     x     x
+
+    edges   |     |     |     |     |     |     |     |     |
+
+    binwidth <---> <---> <---> <---> <---> <---> <---> <--->
 
     Attributes:
         grid (ndarray[float]): array of grid points.
@@ -45,15 +53,20 @@ def edges4grid(grid):
         - *binwidth (ndarray[float])* - array of bin widths.
 
     """
-    binwidth = np.diff(grid)
-    edges = np.hstack([grid[0]-binwidth[0]/2, grid[0:-1] +
-                       binwidth/2, grid[-1]+binwidth[-1]/2])
+    diff = np.diff(grid)
+    edges = np.hstack([grid[0]-diff[0]/2, grid[0:-1] +
+                       diff/2, grid[-1]+diff[-1]/2])
+    binwidth = np.diff(edges)
 
     return edges, binwidth
 
 
 def bin_data(y, x, X, statistic='mean'):
-    """Bin data y(x) on new grid X using a statistic type. """
+    """bin_data
+
+    Bin data y(x) on new grid X using a statistic type.
+
+    """
 
     # get only unmasked data
     idx = ~np.ma.getmask(x)
