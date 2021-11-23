@@ -178,7 +178,7 @@ class Scan(object):
         if isinstance(data, np.recarray):
             self._data = data
         elif data is None:
-            print('Scan #{:d} contains no data!'.format(self.number))
+            self.log.info('Scan #{:d} contains no data!'.format(self.number))
             self._data = None
         else:
             raise TypeError('data must be numpy recarray')

@@ -163,4 +163,7 @@ class SardanaNeXus(Source):
                 dtype_list.append((field,
                                    entry.measurement[field].dtype,
                                    entry.measurement[field].shape))
-        scan.data = fromarrays(data_list, dtype=dtype_list)
+        if len(data_list) > 0:
+            scan.data = fromarrays(data_list, dtype=dtype_list)
+        else:
+            scan.date = None
