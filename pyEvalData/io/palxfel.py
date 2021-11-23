@@ -177,4 +177,7 @@ class PalH5(Source):
                     dtype_list.append((key,
                                       entry['scan_dat'][key].dtype,
                                       entry['scan_dat'][key].shape))
-            scan.data = fromarrays(data_list, dtype=dtype_list)
+            if len(data_list) > 0:
+                scan.data = fromarrays(data_list, dtype=dtype_list)
+            else:
+                scan.data = None
