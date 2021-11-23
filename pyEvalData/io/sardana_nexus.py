@@ -91,12 +91,12 @@ class SardanaNeXus(Source):
 
         """
         self.log.info('parse_raw')
-
+        nxs_file_path = path.join(self.file_path, self.file_name)
         try:
-            nxs_file = nxs.nxload(path.join(self.file_path, self.file_name), mode='r')
+            nxs_file = nxs.nxload(nxs_file_path, mode='r')
         except nxs.NeXusError:
-            self.log.exception('Sardana NeXus file does not exist!')
-            return
+            raise nxs.NeXusError('Sardana NeXus file \'{:s}\' does not exist!'.format(
+                nxs_file_path))
 
         with nxs_file.nxfile:
             for entry in nxs_file:
@@ -140,11 +140,12 @@ class SardanaNeXus(Source):
         """
         self.log.info('read_raw_scan_data for scan #{:d}'.format(scan.number))
         # try to open the file
+        nxs_file_path = path.join(self.file_path, self.file_name)
         try:
-            nxs_file = nxs.nxload(path.join(self.file_path, self.file_name), mode='r')
+            nxs_file = nxs.nxload(nxs_file_path, mode='r')
         except nxs.NeXusError:
-            self.log.exception('NeXus file not present!')
-            return
+            raise nxs.NeXusError('Sardana NeXus file \'{:s}\' does not exist!'.format(
+                nxs_file_path))
         entry_name = 'entry{:d}'.format(scan.number)
         # try to enter entry
         try:

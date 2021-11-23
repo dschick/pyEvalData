@@ -195,11 +195,11 @@ class Source(object):
 
         """
         self.log.info('parse_nexus')
+        nxs_file_path = path.join(self.nexus_file_path, self.nexus_file_name)
         try:
-            nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='r')
+            nxs_file = nxs.nxload(nxs_file_path, mode='r')
         except nxs.NeXusError:
-            self.log.exception('NeXus file does not exist!')
-            return
+            raise nxs.NeXusError('NeXus file \'{:s}\' does not exist!'.format(nxs_file_path))
 
         with nxs_file.nxfile:
             for entry in nxs_file:
@@ -415,11 +415,12 @@ class Source(object):
         """
         self.log.debug('read_nexus_scan_data for scan #{:d}'.format(scan.number))
         # try to open the file
+        nxs_file_path = path.join(self.nexus_file_path, self.nexus_file_name)
         try:
-            nxs_file = nxs.nxload(path.join(self.nexus_file_path, self.nexus_file_name), mode='r')
+            nxs_file = nxs.nxload(nxs_file_path, mode='r')
         except nxs.NeXusError:
-            self.log.exception('NeXus file not present!')
-            return
+            raise nxs.NeXusError('NeXus file \'{:s}\' does not exist!'.format(nxs_file_path))
+
         entry_name = 'entry{:d}'.format(scan.number)
         # try to enter entry
         try:
