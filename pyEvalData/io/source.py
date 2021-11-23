@@ -122,14 +122,11 @@ class Source(object):
             try:
                 scan_number = int(index)
             except ValueError:
-                self.log.exception('Scan number must be convertable to an integer!')
+                raise ValueError('Scan number must be convertable to an integer!')
 
             return self.get_scan(scan_number)
-        elif attr in ['size', 'shape']:
-            # ignore typical workspace calls for shape or size
-            pass
         else:
-            self.log.error('{:s} has no attribute {:s}'.format(__name__, attr))
+            raise AttributeError('\'{:s}\' has no attribute \'{:s}\''.format(__name__, attr))
 
     def __len__(self):
         """Returns length of ``scan_dict``"""
