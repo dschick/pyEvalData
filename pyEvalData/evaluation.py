@@ -30,6 +30,10 @@ import re
 from uncertainties import unumpy
 from .helpers import bin_data
 
+__all__ = ['Evaluation']
+
+__docformat__ = 'restructuredtext'
+
 
 class Evaluation(object):
     """Evaluation

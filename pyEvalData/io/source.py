@@ -31,6 +31,9 @@ import os.path as path
 from numpy.core.records import fromarrays
 import nexusformat.nexus as nxs
 
+__all__ = ['Source']
+
+__docformat__ = 'restructuredtext'
 
 class Source(object):
     """Source

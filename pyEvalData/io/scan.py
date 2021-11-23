@@ -35,7 +35,7 @@ import numpy as np
 class Scan(object):
     """Scan
 
-    Class for scan which hold the relevant (meta) data.
+    Representation of a scan which holds the relevant data and meta information.
 
     Args:
         number (uint): number of the scan.

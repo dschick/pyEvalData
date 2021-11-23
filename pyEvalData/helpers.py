@@ -25,6 +25,10 @@
 import numpy as np
 from scipy.stats import binned_statistic
 
+__all__ = ['edges4grid', 'bin_data']
+
+__docformat__ = 'restructuredtext'
+
 
 def edges4grid(grid):
     """edges4grid
