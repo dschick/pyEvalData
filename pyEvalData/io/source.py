@@ -125,8 +125,15 @@ class Source(object):
                 self.log.exception('Scan number must be convertable to an integer!')
 
             return self.get_scan(scan_number)
+        elif attr in ['size', 'shape']:
+            # ignore typical workspace calls for shape or size
+            pass
         else:
             self.log.error('{:s} has no attribute {:s}'.format(__name__, attr))
+
+    def __len__(self):
+        """Returns length of ``scan_dict``"""
+        return self.scan_dict.__len__()
 
     def update(self, scan_number_list=[]):
         """update
