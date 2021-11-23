@@ -340,7 +340,10 @@ class Source(object):
         self.log.debug('get_scan_data')
 
         scan = self.get_scan(scan_number)
-        data = scan.data.copy()
+        if scan.data is not None:
+            data = scan.data.copy()
+        else:
+            data = None
         meta = scan.meta.copy()
         if self.read_and_forget:
             scan.clear_data()
@@ -433,7 +436,10 @@ class Source(object):
         for field in entry.data:
             data_list.append(entry.data[field])
             dtype_list.append((field, entry.data[field].dtype, entry.data[field].shape))
-        scan.data = fromarrays(data_list, dtype=dtype_list)
+        if len(data_list) > 0:
+            scan.data = fromarrays(data_list, dtype=dtype_list)
+        else:
+            scan.data = None
 
     def clear_scan_data(self, scan):
         """clear_scan_data
@@ -488,6 +494,7 @@ class Source(object):
             clear_data = False
         # read the raw data
         self.read_raw_scan_data(scan)
+
         self.log.info('save_scan_to_nexus for scan #{:d}'.format(scan.number))
         with nxs_file.nxfile:
             # if the entry already exists, it must be deleted in advance
@@ -510,13 +517,15 @@ class Source(object):
                     entry.attrs[key] = value
             # create dedicated collection for data
             entry['data'] = nxs.NXcollection()
-            # iterate data
-            for col in scan.data.dtype.names:
-                entry.data[col] = nxs.NXfield(scan.data[col])
-            # clear data of the scan if it was not present before
-            # or read and forget
-            if clear_data or self.read_and_forget:
-                scan.clear_data()
+            # check if there is any data present at all
+            if scan.data is not None:
+                # iterate data
+                for col in scan.data.dtype.names:
+                    entry.data[col] = nxs.NXfield(scan.data[col])
+                # clear data of the scan if it was not present before
+                # or read and forget
+                if clear_data or self.read_and_forget:
+                    scan.clear_data()
 
     def save_all_scans_to_nexus(self):
         """save_all_scans_to_nexus
