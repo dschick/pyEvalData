@@ -27,5 +27,5 @@ setup(
         'pyEvalData': ['*.conf']
     },
     python_requires='>=3.5',
-    keywords='data evaluation SPEC h5 NeXus',
+    keywords='data evaluation analysis SPEC h5 NeXus',
 )
