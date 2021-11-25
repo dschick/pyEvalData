@@ -20,7 +20,7 @@ ev.clist = ['ct1', 'ct2']
 ev.plot_scans([1, 2, 3])
 ```
 
-The full documentation can be found at https://pyevaldata.readthedocs.io
+The full documentation can be found at [pyevaldata.readthedocs.io](https://pyevaldata.readthedocs.io)
 
 ## Features
 
