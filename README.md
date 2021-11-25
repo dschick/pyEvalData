@@ -1,9 +1,16 @@
 # pyEvalData
 
 This is a Python module to read and evaluate experimental data.
-It can handle raw data from different sources such as [spec](https://certif.com/content/spec/), [hdf5](https://www.hdfgroup.org/solutions/hdf5/), [NeXus](https://www.nexusformat.org/) files which are common data formats at synchrotrons, FELs, as well as in a growing number of laboratories.
-The evaluation provides common functionalities such as binning, error calculation, and advanced data manipulation via algebraic expressions as well as pre- and post-data-filters.
-Furthermore, advanced wrapper functions allow for plotting and fitting sequences of one or multiple scans in dependence of an external parameter.
+It can handle raw data from different sources such as
+[spec](https://certif.com/content/spec/),
+[hdf5](https://www.hdfgroup.org/solutions/hdf5/),
+[NeXus](https://www.nexusformat.org/) files which are common data formats at
+synchrotrons, FELs, as well as in a growing number of laboratories.
+The evaluation provides common functionalities such as binning,
+error calculation, and advanced data manipulation via algebraic expressions as
+well as pre- and post-data-filters.
+Furthermore, advanced wrapper functions allow for plotting and fitting
+sequences of one or multiple scans in dependence of an external parameter.
 
 A minimal code example would look like this:
 
@@ -20,7 +27,8 @@ ev.clist = ['ct1', 'ct2', 'ct1/ct2']
 ev.plot_scans([1, 2, 3])
 ```
 
-The full documentation can be found at [pyevaldata.readthedocs.io](https://pyevaldata.readthedocs.io)
+The full documentation can be found at
+[pyevaldata.readthedocs.io](https://pyevaldata.readthedocs.io)
 
 ## Features
 
@@ -40,7 +48,8 @@ The full documentation can be found at [pyevaldata.readthedocs.io](https://pyeva
 
 ## Installation
 
-You can either install directly from [pypi.org](https://www.pypi.org/project/pyEvalData) using the command
+You can either install directly from
+[pypi.org](https://www.pypi.org/project/pyEvalData) using the command
 
     pip install pyEvalData
 
@@ -62,17 +71,19 @@ Optionally, you can also let pip install directly from the repository:
 
     pip install git+https://github.com/dschick/pyEvalData.git
 
-You can have the following optional installation to enable parallel
-computations, unit tests, as well as building the documentation:
+You can have the following optional installation to enable unit tests, as well
+as building the documentation:
 
     pip install pyEvalData[testing]
     pip install pyEvalData[documentation]
     
 ## Contribute & Support
 
-If you are having issues please let us know via the [issue tracker](https://github.com/dschick/pyEvalData/issues).
+If you are having issues please let us know via the
+[issue tracker](https://github.com/dschick/pyEvalData/issues).
 
-You can contribute to the project via pull-requests following the [GitHub flow concept](https://docs.github.com/en/get-started/quickstart/github-flow).
+You can contribute to the project via pull-requests following the
+[GitHub flow concept](https://docs.github.com/en/get-started/quickstart/github-flow).
 
 ## License
 
