@@ -1,8 +1,8 @@
 # pyEvalData
 
 This is a Python module to read and evaluate experimental data.
-It can handle raw data from different sources such as SPEC, h5, NeXus files which are common data formats at synchrotrons, FELs, as well as in a growing number of laboratories.
-The evaluation provides common functionalities such as binning, error calculation, and advanced data manipulation via algebraic statements as well as pre- and post-data-filters.
+It can handle raw data from different sources such as [spec](https://certif.com/content/spec/), [hdf5](https://www.hdfgroup.org/solutions/hdf5/), [NeXus](https://www.nexusformat.org/) files which are common data formats at synchrotrons, FELs, as well as in a growing number of laboratories.
+The evaluation provides common functionalities such as binning, error calculation, and advanced data manipulation via algebraic expressions as well as pre- and post-data-filters.
 Furthermore, advanced wrapper functions allow for plotting and fitting sequences of one or multiple scans in dependence of an external parameter.
 
 A minimal code example would look like this:
@@ -15,7 +15,7 @@ spec = ped.io.Spec(file_name='data.spec')
 ev = ped.Evaluation(spec)
 # define the x- and y-data
 ev.xcol = 'motor1'
-ev.clist = ['ct1', 'ct2']
+ev.clist = ['ct1', 'ct2', 'ct1/ct2']
 # create a plot for scans 1-3
 ev.plot_scans([1, 2, 3])
 ```
@@ -24,8 +24,19 @@ The full documentation can be found at [pyevaldata.readthedocs.io](https://pyeva
 
 ## Features
 
-- Be awesome
-- Make things faster
+- reading of several pre-defined raw data formats
+  * [spec](https://certif.com/content/spec/)
+  * [hdf5](https://www.hdfgroup.org/solutions/hdf5/)
+  * [NeXus](https://www.nexusformat.org/)
+  * user-defined text files
+  * camera images (Dectris Pilatus, Princeton MTE, Greateyes, ...)
+  * composite sources
+- easy implementation of new raw data formats using an `interface class`
+- common methods for plotting and fitting of experimental data, including:
+  * data binning
+  * error calculation
+  * data manipulation via algebraic expressions
+  * common data pre- and post-filters
 
 ## Installation
 
@@ -61,7 +72,7 @@ computations, unit tests, as well as building the documentation:
 
 If you are having issues please let us know via the [issue tracker](https://github.com/dschick/pyEvalData/issues).
 
-You can contribute to the project via pull-requests following the [GitHub flow concept](https://docs.github.com/en/get-started/quickstart/github-flow)
+You can contribute to the project via pull-requests following the [GitHub flow concept](https://docs.github.com/en/get-started/quickstart/github-flow).
 
 ## License
 
