@@ -48,7 +48,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinx_design',
-    
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -59,6 +58,8 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 source_suffix = ['.rst', '.md']
+
+jupyter_execute_notebooks = "auto"
 
 suppress_warnings = ['myst.mathjax']
 
