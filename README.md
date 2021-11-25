@@ -1,4 +1,4 @@
-# pyEvalData
+# Welcome to pyEvalData
 
 This is a Python module to read and evaluate experimental data.
 It can handle raw data from different sources such as
@@ -27,8 +27,7 @@ ev.clist = ['ct1', 'ct2', 'ct1/ct2']
 ev.plot_scans([1, 2, 3])
 ```
 
-The full documentation can be found at
-[pyevaldata.readthedocs.io](https://pyevaldata.readthedocs.io)
+Please follow the [user guide](https://pyevaldata.readthedocs.io/en/latest/user_guide.html) and [examples](https://pyevaldata.readthedocs.io/en/latest/examples.html) for your first steps with `pyEvalData`.
 
 ## Features
 
