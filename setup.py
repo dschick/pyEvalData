@@ -20,12 +20,12 @@ setup(
     license='MIT',
     author='Daniel Schick',
     author_email='schick.daniel@gmail.com',
-    description='Python Modul to evaluate experimental data',
+    description='Python module to evaluate experimental data',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     package_data={
         'pyEvalData': ['*.conf']
     },
     python_requires='>=3.5',
-    keywords='data evaluation',
+    keywords='data evaluation SPEC h5 NeXus',
 )
