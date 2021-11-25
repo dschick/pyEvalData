@@ -30,6 +30,10 @@ import h5py
 from .source import Source
 from .scan import Scan
 
+__all__ = ['PalH5']
+
+__docformat__ = 'restructuredtext'
+
 
 class PalH5(Source):
     """PalH5

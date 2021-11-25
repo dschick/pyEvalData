@@ -30,29 +30,37 @@ import re
 from uncertainties import unumpy
 from .helpers import bin_data
 
+__all__ = ['Evaluation']
+
+__docformat__ = 'restructuredtext'
+
 
 class Evaluation(object):
     """Evaluation
 
+    Main class for evaluating data.
+    The raw data is accessed via a ``Source`` object.
+    The evaluation allows to bin data, calculate errors and propagate them.
+    There is also an interface to ``lmfit`` for easy batch-fitting.
+
+    Args:
+        source (Source): raw data source.
+
     Attributes:
-        clist (List[str])       : List of counter names to evaluate.
-        cdef (Dict{str:str})    : Dict of predefined counter names and
-                                  definitions.
-        xcol (str)              : spec counter or motor to plot as x-axis.
-        t0 (float)              : approx. time zero for delay scans to
-                                  determine the unpumped region of the data
-                                  for normalization.
-        custom_counters (List[str]): List of custom counters - default is []
-        math_keys (List[str])    : List of keywords which are not replaced in
-                                  counter names
-        statistic_type  (str)    : 'gauss' for normal averaging,
-                                  'poisson' for counting statistics
-        propagate_errors  (bool) : whether to propagate errors or not
+        clist (list[str]): list of counter names to evaluate.
+        cdef (dict{str:str}): dict of predefined counter names and
+            definitions.
+        xcol (str): counter or motor for x-axis.
+        t0 (float): approx. time zero for delay scans to determine the
+            unpumped region of the data for normalization.
+        custom_counters (list[str]): list of custom counters - default is []
+        math_keys (list[str]): list of keywords which are evaluated as numpy functions
+        statistic_type (str): 'gauss' for normal averaging, 'poisson' for counting statistics
+        propagate_errors (bool): propagate errors for dpendent counters.
 
     """
 
     def __init__(self, source):
-        # properties
         self.source = source
         self.clist = []
         self.cdef = {}
@@ -68,12 +76,14 @@ class Evaluation(object):
         self.data_filters = ['evaluatable statement']
 
     def get_clist(self):
-        """Return the list of counters to evaluate as list even if they are
-        provided as Dict by the user.
-        This method is only for backward compatibility to older versions.
+        """get_clist
+
+        Returns a list of counters as defined by the user.
+        If the counters where defined in a ``dict`` it will be converted
+        to a ``list`` for backwards compatibility.
 
         Returns:
-            clist (List[str]): List of counter names to evaluate.
+            clist (list[str]): list of counter names to evaluate.
 
         """
 
@@ -85,86 +95,62 @@ class Evaluation(object):
 
         return clist
 
-    def get_last_fig_number(self):
-        """Return the last figure number of all opened figures for plotting
-        data in the same figure during for-loops.
+    def traverse_counters(self, clist, source_cols=''):
+        """traverse_counters
 
-        Returns:
-            fig_number (int): Last figure number of all opened figures.
-
-        """
-
-        try:
-            # get the number of all opened figures
-            fig_number = mpl._pylab_helpers.Gcf.get_active().num
-        except Exception:
-            # there are no figures open
-            fig_number = 1
-
-        return fig_number
-
-    def get_next_fig_number(self):
-        """Return the number of the next figure for plotting data in the
-        same figure during for-loops.
-
-        Returns:
-            next_fig_number (int): Next figure number of all opened figures.
-
-        """
-
-        return self.get_last_fig_number() + 1
-
-    def traverse_counters(self, clist, spec_cols=''):
-        """Traverse all counters and replace all predefined counter definitions.
-        Returns also the included spec base counters for error propagation.
+        Traverse all counters and replace all predefined counter definitions.
+        Returns also a list of the included source counters for error propagation.
 
         Args:
-            clist    (list) : Initial counter list.
-            spec_cols (list) : Counters in spec file.
+            clist (list[str]): Initial counter list.
+            source_cols (list[str], optional): counters in the raw source data.
 
         Returns:
-            resolved_counters (list): Resolved counters.
-            base_counters (list)    : Base counters.
+            (tuple):
+            - *resolved_counters (list[str])* - resolved counters.
+            - *source_counters (list[str])* - all source counters in the resolved counters.
 
         """
-
         resolved_counters = []
-        base_counters = []
+        source_counters = []
 
-        for col_name in clist:
-            col_string, res_base_counters = self.resolve_counter_name(col_name, spec_cols)
+        for counter_name in clist:
+            # resolve each counter in the clist
+            counter_string, res_source_counters = \
+                self.resolve_counter_name(counter_name, source_cols)
 
-            resolved_counters.append(col_string)
-            base_counters.extend(res_base_counters)
+            resolved_counters.append(counter_string)
+            source_counters.extend(res_source_counters)
 
-        # remove duplicates using list(set())
-        return resolved_counters, list(set(base_counters))
+        return resolved_counters, list(set(source_counters))
 
-    def resolve_counter_name(self, col_name, spec_cols=''):
-        """Replace all predefined counter definitions in a counter name.
+    def resolve_counter_name(self, col_name, source_cols=''):
+        """resolve_counter_name
+
+        Replace all predefined counter definitions in a given counter name.
         The function works recursively.
 
         Args:
-            col_name (str) : Initial counter string.
+            col_name (str): initial counter string.
+            source_cols (list[str], optional): columns in the source data.
 
-        Returns:l
-            col_string (str): Resolved counter string.
+        Returns:
+            (tuple):
+            - *col_string (str)* - resolved counter string.
+            - *source_counters (list[str])* - source counters in the col_string
 
         """
-
         recall = False  # boolean to stop recursive calls
-
-        base_counters = []
-
+        source_counters = []
         col_string = col_name
 
         for find_cdef in self.cdef.keys():
             # check for all predefined counters
             search_pattern = r'\b' + find_cdef + r'\b'
             if re.search(search_pattern, col_string) is not None:
-                if self.cdef[find_cdef] in spec_cols:
-                    # this counter definition is a base spec counter
-                    base_counters.append(self.cdef[find_cdef])
+                if self.cdef[find_cdef] in source_cols:
+                    # this counter definition is a base source counter
+                    source_counters.append(self.cdef[find_cdef])
                 # found a predefined counter
                 # recursive call if predefined counter must be resolved again
                 recall = True
@@ -174,16 +160,16 @@ class Evaluation(object):
 
         if recall:
             # do the recursive call
-            col_string, rec_base_counters = self.resolve_counter_name(col_string, spec_cols)
-            base_counters.extend(rec_base_counters)
+            col_string, rec_source_counters = self.resolve_counter_name(col_string, source_cols)
+            source_counters.extend(rec_source_counters)
 
-        for find_cdef in spec_cols:
-            # check for all base spec counters
+        for find_cdef in source_cols:
+            # check for all base source counters
             search_pattern = r'\b' + find_cdef + r'\b'
             if re.search(search_pattern, col_string) is not None:
-                base_counters.append(find_cdef)
+                source_counters.append(find_cdef)
 
-        return col_string, base_counters
+        return col_string, source_counters
 
     def col_string_to_eval_string(self, col_string, array_name='spec_data'):
         """Use regular expressions in order to generate an evaluateable string
@@ -227,14 +213,14 @@ class Evaluation(object):
                 (col_string, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, col_string)
         return col_string
 
-    def add_custom_counters(self, spec_data, scan_num, base_counters):
+    def add_custom_counters(self, spec_data, scan_num, source_counters):
         """Add custom counters to the spec data array.
         This is a stub for child classes.
 
         Args:
             spec_data (ndarray) : Data array from the spec scan.
             scan_num (int)  : Scan number of the spec scan.
-            base_counters list(str) : List of the base spec and custom counters
+            source_counters list(str) : List of the source counters and custom counters
                                      from the clist and xcol.
 
         Returns:
@@ -336,7 +322,7 @@ class Evaluation(object):
         if self.xcol not in clist:
             clist.append(self.xcol)
 
-        spec_cols = []
+        source_cols = []
         concat_data = np.array([])
 
         data_list = self.get_scan_list_data(scan_list)
@@ -350,23 +336,23 @@ class Evaluation(object):
             #     raise
             #     print('Scan #' + scan_num + ' not found, skipping')
 
-            if i == 0 or len(spec_cols) == 0:  # we need to evaluate this only once
+            if i == 0 or len(source_cols) == 0:  # we need to evaluate this only once
                 # these are the base spec counters which are present in the data
                 # file plus custom counters
-                spec_cols = list(
+                source_cols = list(
                     set(list(spec_data.dtype.names) + self.custom_counters))
 
                 # resolve the clist and retrieve the resolves counters and the
                 # necessary base spec counters for error propagation
-                resolved_counters, base_counters = self.traverse_counters(
-                    clist, spec_cols)
+                resolved_counters, source_counters = self.traverse_counters(
+                    clist, source_cols)
 
                 # counter names and resolved strings for further calculations
                 if self.statistic_type == 'poisson' or self.propagate_errors:
                     # for error propagation we just need the base spec counters
                     # and the xcol
-                    col_names = base_counters[:]
-                    col_strings = base_counters[:]
+                    col_names = source_counters[:]
+                    col_strings = source_counters[:]
                     # add the xcol to both lists
                     col_names.append(self.xcol)
                     col_strings.append(resolved_counters[clist.index(self.xcol)])
@@ -381,7 +367,7 @@ class Evaluation(object):
                     dtypes.append((col_name, '<f8'))
 
             # add custom counters if defined
-            spec_data = self.add_custom_counters(spec_data, scan_num, base_counters)
+            spec_data = self.add_custom_counters(spec_data, scan_num, source_counters)
 
             data = np.array([])
             # read data into data array
@@ -441,7 +427,7 @@ class Evaluation(object):
                     unc_data_err = {}
                     unc_data_std = {}
 
-                    for col in base_counters:
+                    for col in source_counters:
                         # for all cols in the clist bin the data to the xgrid an calculate
                         # the averages, stds and errors
                         y, avg_data[self.xcol], yerr, err_data[self.xcol], ystd, \
@@ -1301,3 +1287,35 @@ class Evaluation(object):
         plt.figure(main_fig_num)  # set as active figure
 
         return res, parameters, sequence_data
+
+# move to the end for plotting
+
+    def get_last_fig_number(self):
+        """get_last_fig_number
+
+        Return the last figure number of all opened figures for plotting
+        data in the same figure during for-loops.
+
+        Returns:
+            fig_number (int): last figure number of all opened figures.
+
+        """
+        try:
+            # get the number of all opened figures
+            fig_number = mpl._pylab_helpers.Gcf.get_active().num
+        except Exception:
+            # there are no figures open
+            fig_number = 1
+
+        return fig_number
+
+    def get_next_fig_number(self):
+        """get_next_fig_number
+
+        Return the number of the next available figure.
+
+        Returns:
+            next_fig_number (int): next figure number of all opened figures.
+
+        """
+        return self.get_last_fig_number() + 1

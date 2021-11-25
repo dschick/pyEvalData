@@ -35,7 +35,7 @@ import numpy as np
 class Scan(object):
     """Scan
 
-    Class for scan which hold the relevant (meta) data.
+    Representation of a scan which holds the relevant data and meta information.
 
     Args:
         number (uint): number of the scan.
@@ -53,7 +53,7 @@ class Scan(object):
         log (logging.logger): logger instance from logging.
         number (uint): number of the scan.
         meta (dict): meta data dictionary.
-        data (ndarray[float]): all data recarray
+        data (ndarray[float]): data recarray.
 
     """
 
@@ -104,7 +104,7 @@ class Scan(object):
         try:
             return self.meta['init_mopo'][attr]
         except KeyError:
-            raise AttributeError('Scan has no attribute {:s}'.format(attr))
+            raise AttributeError('\'{:s}\' has no attribute \'{:s}\''.format(__name__, attr))
 
     def index_data(self):
         """index_data
@@ -140,7 +140,7 @@ class Scan(object):
     def get_oned_data(self):
         """get_oned_data
 
-        Returns only scalar data from the data recarray.
+        Returns only 1d data from the data recarray.
 
         Returns:
             data (ndarray[float]): 1d data.
@@ -154,7 +154,7 @@ class Scan(object):
     def get_twod_data(self):
         """get_twod_data
 
-        Returns only scalar data from the data recarray.
+        Returns only 2d data from the data recarray.
 
         Returns:
             data (ndarray[float]): 2d data.
@@ -166,6 +166,11 @@ class Scan(object):
             return self.data[self.twod_data_names]
 
     def clear_data(self):
+        """clear_data
+
+        Clears the data to save memory.
+
+        """
         self._data = None
         self.log.debug('Cleared data for scan #{:d}'.format(self.number))
 
@@ -181,4 +186,4 @@ class Scan(object):
             self.log.info('Scan #{:d} contains no data!'.format(self.number))
             self._data = None
         else:
-            raise TypeError('data must be numpy recarray')
+            raise TypeError('Data must be a numpy.recarray!')

@@ -28,6 +28,10 @@ import xrayutilities as xu
 from .source import Source
 from .scan import Scan
 
+__all__ = ['Spec']
+
+__docformat__ = 'restructuredtext'
+
 
 class Spec(Source):
     """Spec

@@ -30,6 +30,10 @@ import os.path as path
 from .source import Source
 from .scan import Scan
 
+__all__ = ['SardanaNeXus']
+
+__docformat__ = 'restructuredtext'
+
 
 class SardanaNeXus(Source):
     """SardanaNeXus

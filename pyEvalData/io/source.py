@@ -31,6 +31,10 @@ import os.path as path
 from numpy.core.records import fromarrays
 import nexusformat.nexus as nxs
 
+__all__ = ['Source']
+
+__docformat__ = 'restructuredtext'
+
 
 class Source(object):
     """Source
@@ -68,7 +72,7 @@ class Source(object):
           This number is included.
         file_name (str): file name including extension,
           can include regex pattern.
-        file_path (str): file path.
+        file_path (str, optional): file path - defaults to ``./``.
         nexus_file_name (str): name for generated nexus file.
         nexus_file_name_postfix (str): postfix for nexus file name.
         nexus_file_path (str): path for generated nexus file.
@@ -82,7 +86,7 @@ class Source(object):
           re-generated of nexus file.
 
     """
-    def __init__(self, file_name, file_path, **kwargs):
+    def __init__(self, file_name, file_path='./', **kwargs):
         self.log = logging.getLogger(__name__)
         self.log.setLevel(config.LOG_LEVEL)
         self.name = file_name
