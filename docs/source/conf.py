@@ -43,9 +43,12 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
-    'nbsphinx',
+    'myst_nb',
     'autodocsumm',
-    'myst_parser',
+    'sphinx.ext.viewcode',
+    'sphinx_copybutton',
+    'sphinx_design',
+    
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -79,6 +82,8 @@ pygments_style = 'sphinx'
 
 
 # -- Options for HTML output -------------------------------------------------
+
+html_title = 'pyEvalData<br/>' + version
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
@@ -171,8 +176,8 @@ texinfo_documents = [
 todo_include_todos = True
 # -- Extension configuration -------------------------------------------------
 # increase timeout of nbsphinx from 30 to 3000s
-nbsphinx_execute = 'never'
-nbsphinx_timeout = 3000
+# nbsphinx_execute = 'never'
+# nbsphinx_timeout = 3000
 
 # Autodoc setting
 autodoc_default_options = {

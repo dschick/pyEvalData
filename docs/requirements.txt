@@ -1,8 +1,9 @@
 sphinx==4.0.2
 ipykernel
-nbsphinx
 ipywidgets
 IProgress
 autodocsumm
-myst_parser
 sphinx-book-theme
+sphinx_design
+sphinx_copybutton
+myst_nb
