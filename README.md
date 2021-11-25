@@ -7,16 +7,18 @@ Furthermore, advanced wrapper functions allow for plotting and fitting sequences
 
 A minimal code example would look like this:
 
-    import pyEvalData as ped
-    # define your data source
-    spec = ped.io.Spec(file_name='data.spec')
-    # initialize the evaluation
-    ev = ped.Evaluation(spec)
-    # define the x- and y-data
-    ev.xcol = 'motor1'
-    ev.clist = ['ct1', 'ct2']
-    # create a plot for scans 1-3
-    ev.plot_scans([1, 2, 3])
+```python
+import pyEvalData as ped
+# define your data source
+spec = ped.io.Spec(file_name='data.spec')
+# initialize the evaluation
+ev = ped.Evaluation(spec)
+# define the x- and y-data
+ev.xcol = 'motor1'
+ev.clist = ['ct1', 'ct2']
+# create a plot for scans 1-3
+ev.plot_scans([1, 2, 3])
+```
 
 The full documentation can be found at https://pyevaldata.readthedocs.io
 
