@@ -41,25 +41,26 @@ class PalH5(Source):
     Source implementation for PalH5 folder/files.
 
     Args:
+        name (str): name of the source
         file_name (str): file name including extension,
           can include regex pattern.
-        file_path (str): file path.
+        file_path (str, optional): file path - defaults to ``./``.
 
     Keyword Args:
         start_scan_number (uint): start of scan numbers to parse.
         stop_scan_number (uint): stop of scan numbers to parse.
           This number is included.
-        h5_file_name (str): name for generated h5 file.
-        h5_file_name_postfix (str): postfix for h5 file name.
-        h5_file_path (str): path for generated h5 file.
+        nexus_file_name (str): name for generated nexus file.
+        nexus_file_name_postfix (str): postfix for nexus file name.
+        nexus_file_path (str): path for generated nexus file.
         read_all_data (bool): read all data on parsing.
           If false, data will be read only on demand.
         read_and_forget (bool): clear data after read to save memory.
         update_before_read (bool): always update from source
           before reading scan data.
-        use_h5 (bool): use h5 file to join/compress raw data.
+        use_nexus (bool): use nexus file to join/compress raw data.
         force_overwrite (bool): forced re-read of raw source and
-          re-generated of h5 file.
+          re-generated of nexus file.
 
     Attributes:
         log (logging.logger): logger instance from logging.
@@ -71,18 +72,18 @@ class PalH5(Source):
           This number is included.
         file_name (str): file name including extension,
           can include regex pattern.
-        file_path (str): file path.
-        h5_file_name (str): name for generated h5 file.
-        h5_file_name_postfix (str): postfix for h5 file name.
-        h5_file_path (str): path for generated h5 file.
-        h5_file_exists(bool): if h5 file exists.
+        file_path (str, optional): file path - defaults to ``./``.
+        nexus_file_name (str): name for generated nexus file.
+        nexus_file_name_postfix (str): postfix for nexus file name.
+        nexus_file_path (str): path for generated nexus file.
+        nexus_file_exists(bool): if nexus file exists.
         read_all_data (bool): read all data on parsing.
         read_and_forget (bool): clear data after read to save memory.
         update_before_read (bool): always update from source
           before reading scan data.
-        use_h5 (bool): use h5 file to join/compress raw data.
+        use_nexus (bool): use nexus file to join/compress raw data.
         force_overwrite (bool): forced re-read of raw source and
-          re-generated of h5 file.
+          re-generated of nexus file.
 
     """
     def __init__(self, name, file_name, file_path, **kwargs):
