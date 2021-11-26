@@ -149,8 +149,8 @@ class Source(object):
 
         """
 
-        if ~isinstance(scan_number_list, list):
-            scan_number_list = list(scan_number_list)
+        if not isinstance(scan_number_list, list):
+            scan_number_list = [int(scan_number_list)]
 
         last_scan_number = self.get_last_scan_number()
         if (len(scan_number_list) == 0) \
