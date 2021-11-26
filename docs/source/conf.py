@@ -60,6 +60,7 @@ templates_path = ['_templates']
 source_suffix = ['.rst', '.md']
 
 jupyter_execute_notebooks = "auto"
+execution_excludepatterns = ['*.ipynb']
 
 suppress_warnings = ['myst.mathjax']
 
@@ -84,7 +85,7 @@ pygments_style = 'sphinx'
 
 # -- Options for HTML output -------------------------------------------------
 
-html_title = 'pyEvalData<br/>' + version
+html_title = 'pyEvalData ' + version
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.

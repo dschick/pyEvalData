@@ -1,16 +1,16 @@
 # Welcome to pyEvalData
 
-This is a Python module to read and evaluate experimental data.
-It can handle raw data from different sources such as
+This is a Python module to read and evaluate experimental data. It can handle
+raw data from different sources such as
 [spec](https://certif.com/content/spec/),
 [hdf5](https://www.hdfgroup.org/solutions/hdf5/),
 [NeXus](https://www.nexusformat.org/) files which are common data formats at
-synchrotrons, FELs, as well as in a growing number of laboratories.
-The evaluation provides common functionalities such as binning,
-error calculation, and advanced data manipulation via algebraic expressions as
-well as pre- and post-data-filters.
-Furthermore, advanced wrapper functions allow for plotting and fitting
-sequences of one or multiple scans in dependence of an external parameter.
+synchrotrons, FELs, as well as in a growing number of laboratories. The
+evaluation provides common functionalities such as binning, error calculation,
+and advanced data manipulation via algebraic expressions as well as pre- and
+post-data-filters. Furthermore, advanced wrapper functions allow for plotting
+and fitting sequences of one or multiple scans in dependence of an external
+parameter.
 
 A minimal code example would look like this:
 
@@ -27,7 +27,9 @@ ev.clist = ['ct1', 'ct2', 'ct1/ct2']
 ev.plot_scans([1, 2, 3])
 ```
 
-Please follow the [user guide](https://pyevaldata.readthedocs.io/en/latest/user_guide.html) and [examples](https://pyevaldata.readthedocs.io/en/latest/examples.html) for your first steps with `pyEvalData`.
+Please follow the [user guide](https://pyevaldata.readthedocs.io/en/latest/user_guide.html)
+and [examples](https://pyevaldata.readthedocs.io/en/latest/examples.html) for
+your first steps with `pyEvalData`.
 
 ## Features
 
@@ -38,7 +40,7 @@ Please follow the [user guide](https://pyevaldata.readthedocs.io/en/latest/user_
   * user-defined text files
   * camera images (Dectris Pilatus, Princeton MTE, Greateyes, ...)
   * composite sources
-- easy implementation of new raw data formats using an `interface class`
+- easy implementation of new raw-data formats using an `interface class`
 - common methods for plotting and fitting of experimental data, including:
   * data binning
   * error calculation
@@ -70,7 +72,7 @@ Optionally, you can also let pip install directly from the repository:
 
     $ pip install git+https://github.com/dschick/pyEvalData.git
 
-You can have the following optional installation to enable unit tests, as well
+You can have the following optional installations to enable unit tests, as well
 as building the documentation:
 
     $ pip install pyEvalData[testing]
