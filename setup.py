@@ -5,7 +5,7 @@ setup(
     version='1.4.2',
     packages=find_packages(),
     url='https://github.com/dschick/pyEvalData',
-    install_requires=['numpy',
+    install_requires=['numpy>=1.15',
                       'matplotlib',
                       'lmfit',
                       'scipy',
