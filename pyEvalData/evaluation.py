@@ -436,8 +436,13 @@ class Evaluation(object):
                                                                     xgrid_reduced,
                                                                     statistic=bin_stat)
                         # add spec base counters to uncData arrays
-                        unc_data_std[col] = unumpy.uarray(y, ystd)
-                        unc_data_err[col] = unumpy.uarray(y, yerr)
+                        # the uncertainty package cannot handle masked arrays
+                        # e.g. for divisions in the clist
+                        # --> convert all base counter results to np.array()
+                        unc_data_std[col] = unumpy.uarray(np.array(y),
+                                                          np.array(ystd))
+                        unc_data_err[col] = unumpy.uarray(np.array(y),
+                                                          np.array(yerr))
 
                     for col_name, col_string in zip(clist, resolved_counters):
                         eval_string = self.col_string_to_eval_string(
