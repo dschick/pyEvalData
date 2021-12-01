@@ -22,6 +22,9 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 # OR OTHER DEALINGS IN THE SOFTWARE.
 
+from . import config
+import logging
+
 import numpy as np
 import collections
 import matplotlib.pyplot as plt
@@ -47,6 +50,7 @@ class Evaluation(object):
         source (Source): raw data source.
 
     Attributes:
+        log (logging.logger): logger instance from logging.
         clist (list[str]): list of counter names to evaluate.
         cdef (dict{str:str}): dict of predefined counter names and
             definitions.
@@ -61,6 +65,8 @@ class Evaluation(object):
     """
 
     def __init__(self, source):
+        self.log = logging.getLogger(__name__)
+        self.log.setLevel(config.LOG_LEVEL)
         self.source = source
         self.clist = []
         self.cdef = {}
