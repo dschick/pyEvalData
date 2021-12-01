@@ -10,4 +10,4 @@ from . import io
 
 __all__ = ['Evaluation', 'io']
 
-__version__ = '1.4.1'
+__version__ = '1.4.2'
