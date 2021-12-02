@@ -7,7 +7,8 @@ logging.basicConfig(stream=sys.stdout,
 
 from .evaluation import Evaluation
 from . import io
+from . import helpers
 
-__all__ = ['Evaluation', 'io']
+__all__ = ['Evaluation', 'io', 'helpers']
 
 __version__ = '1.4.2'
