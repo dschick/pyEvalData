@@ -1,5 +1,7 @@
 # Welcome to pyEvalData
 
+[![docs](https://readthedocs.org/projects/pyEvalData/badge/?version=latest&style=plastic)](https://pyevaldata.readthedocs.io/en/latest/)
+
 This is a Python module to read and evaluate experimental data. It can handle
 raw data from different sources such as
 [spec](https://certif.com/content/spec/),
