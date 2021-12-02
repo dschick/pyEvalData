@@ -1,8 +1,8 @@
 # Welcome to pyEvalData
 
 [![Documentation Status](https://readthedocs.org/projects/pyevaldata/badge/?version=latest)](https://pyevaldata.readthedocs.io/en/latest/?badge=latest)
-![CI](https://github.com/dschick/pyEvalData/actions/workflows/main.yml/badge.svg)
-![CI](https://github.com/dschick/pyEvalData/actions/workflows/upload-to-pypi.yml/badge.svg)
+![flake8 & pytest](https://github.com/dschick/pyEvalData/actions/workflows/main.yml/badge.svg)
+![upload to pypi](https://github.com/dschick/pyEvalData/actions/workflows/upload-to-pypi.yml/badge.svg)
 
 This is a Python module to read and evaluate experimental data. It can handle
 raw data from different sources such as
