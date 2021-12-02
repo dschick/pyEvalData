@@ -44,7 +44,7 @@ class Source(object):
     Args:
         file_name (str): file name including extension,
           can include regex pattern.
-        file_path (str): file path.
+        file_path (str, optional): file path - defaults to ``./``.
 
     Keyword Args:
         start_scan_number (uint): start of scan numbers to parse.

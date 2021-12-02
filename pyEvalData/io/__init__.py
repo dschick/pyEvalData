@@ -4,4 +4,4 @@ from .spec import Spec
 from .sardana_nexus import SardanaNeXus
 from .palxfel import PalH5
 
-__all__ = ['Source', 'Scan', 'Spec', 'SardanaNeXus', 'PalH5']
+__all__ = ['Scan', 'Source', 'Spec', 'SardanaNeXus', 'PalH5']

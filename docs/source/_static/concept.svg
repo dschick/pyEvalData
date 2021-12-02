@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="143.78983mm"
+   height="146.14044mm"
+   viewBox="0 0 143.78983 146.14044"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   sodipodi:docname="concept.svg"
+   inkscape:export-filename="C:\Users\loc_schick\General\git\pyEvalData\docs\source\_static\concept.png"
+   inkscape:export-xdpi="89.913185"
+   inkscape:export-ydpi="89.913185"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#999999"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.3416246"
+     inkscape:cx="247.83386"
+     inkscape:cy="331.31474"
+     inkscape:window-width="1920"
+     inkscape:window-height="1147"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lstart"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lstart"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(0.8,0,0,0.8,10,0)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path50066" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lend"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path50069" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-32.934128,-19.668327)">
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#666666;stroke-width:0.5;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect846"
+       width="31.159361"
+       height="31.750999"
+       x="33.184128"
+       y="19.918327"
+       ry="5"
+       rx="5" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="36.733929"
+       y="26.820715"
+       id="text3490"><tspan
+         sodipodi:role="line"
+         id="tspan3488"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Medium';stroke-width:0.264583"
+         x="36.733929"
+         y="26.820715">raw data</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="36.733929"
+         y="32.194508"
+         id="tspan3492">- spec</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="36.733929"
+         y="37.568302"
+         id="tspan3494">- h5</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="36.733929"
+         y="42.942093"
+         id="tspan3496">- NeXus</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="36.733929"
+         y="48.315887"
+         id="tspan3498">- ...</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#666666;stroke-width:0.5;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect846-9"
+       width="31.159361"
+       height="31.750999"
+       x="75.531876"
+       y="19.918327"
+       ry="5"
+       rx="5" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="77.898407"
+       y="27.017923"
+       id="text3490-3"><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Medium';stroke-width:0.264583"
+         x="77.898407"
+         y="27.017923"
+         id="tspan3498-0">pyEvalData</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Medium';stroke-width:0.264583"
+         x="77.898407"
+         y="32.391716"
+         id="tspan33910">NeXus file</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="77.898407"
+         y="37.765511"
+         id="tspan51646">optional</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#666666;stroke-width:0.5;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect846-9-0"
+       width="63.896412"
+       height="34.511955"
+       x="37.272911"
+       y="69.122513"
+       ry="5"
+       rx="5" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="40.822708"
+       y="76.024895"
+       id="text3490-3-0"><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Medium';stroke-width:0.264583"
+         x="40.822708"
+         y="76.024895"
+         id="tspan3498-0-3">Source</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="40.822708"
+         y="81.398689"
+         id="tspan31034">- parse raw data</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="40.822708"
+         y="86.772484"
+         id="tspan32378">- save to/read from</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="40.822708"
+         y="92.146271"
+         id="tspan40370">  pyEvalData NeXus file</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="40.822708"
+         y="97.520065"
+         id="tspan40368">- hold scan_dict</tspan></text>
+    <path
+       style="display:inline;fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="m 48.832916,51.669327 0.07532,17.301789"
+       id="path50064"
+       inkscape:connector-type="polyline"
+       inkscape:connector-curvature="0"
+       inkscape:connection-start="#rect846" />
+    <path
+       style="display:inline;fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.793749, 0.793749;stroke-dashoffset:0;stroke-opacity:1;marker-start:url(#Arrow1Lstart);marker-end:url(#Arrow1Lend)"
+       d="m 91.111555,51.669327 -2e-6,17.453186"
+       id="path50334"
+       inkscape:connector-type="polyline"
+       inkscape:connector-curvature="0"
+       inkscape:connection-start="#rect846-9" />
+    <g
+       id="g148597"
+       inkscape:tile-cx="134.88572"
+       inkscape:tile-cy="91.270017"
+       inkscape:tile-w="29.884458"
+       inkscape:tile-h="21.404388"
+       inkscape:tile-x0="119.94349"
+       inkscape:tile-y0="80.567823">
+      <rect
+         style="fill:#ffffff;fill-opacity:1;stroke:#666666;stroke-width:0.5;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect846-1"
+         width="29.384459"
+         height="20.904388"
+         x="120.19349"
+         y="80.817825"
+         ry="2.5"
+         rx="2.5" />
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+         x="123.74329"
+         y="87.720207"
+         id="text3490-1"><tspan
+           sodipodi:role="line"
+           id="tspan3488-9"
+           style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Medium';stroke-width:0.264583"
+           x="123.74329"
+           y="87.720207">Scan</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+           x="123.74329"
+           y="93.094002"
+           id="tspan3492-2">- meta info</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+           x="123.74329"
+           y="98.467796"
+           id="tspan3498-5">- data</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:italic;font-size:4.23333px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif Italic';stroke-width:0.264583"
+       x="123.74329"
+       y="77.76104"
+       id="text73586"><tspan
+         sodipodi:role="line"
+         id="tspan73584"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Italic';stroke-width:0.264583"
+         x="123.74329"
+         y="77.76104">scan_dict</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#666666;stroke-width:0.5;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect846-9-0-0"
+       width="63.896408"
+       height="42.400398"
+       x="37.470119"
+       y="123.15836"
+       ry="5"
+       rx="5" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="41.019917"
+       y="130.06075"
+       id="text3490-3-0-5"><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Medium';stroke-width:0.264583"
+         x="41.019917"
+         y="130.06075"
+         id="tspan3498-0-3-2">Evaluation</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="41.019917"
+         y="135.43454"
+         id="tspan40368-8">- access to all scan data</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="41.019917"
+         y="140.80833"
+         id="tspan85676">- pre- and post-filters</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="41.019917"
+         y="146.18213"
+         id="tspan161114">- binning</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="41.019917"
+         y="151.55592"
+         id="tspan85678">- error calculation</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="41.019917"
+         y="156.92972"
+         id="tspan85680">- plotting</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:4.23333px;font-family:'Fira Sans';-inkscape-font-specification:'Fira Sans Light';stroke-width:0.264583"
+         x="41.019917"
+         y="162.3035"
+         id="tspan85682">- fitting</tspan></text>
+    <path
+       style="display:inline;fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="m 69.373285,103.63447 0.172168,19.52389"
+       id="path83991"
+       inkscape:connector-type="polyline"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 69.221117,86.37849 v 0"
+       id="path89934"
+       inkscape:connector-type="orthogonal"
+       inkscape:connector-curvature="0"
+       inkscape:connection-start="#rect846-9-0"
+       inkscape:connection-end="#rect846-9-0" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       id="use148709"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(2.9884458,2.1404388)"
+       id="use148711"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(5.9768916,4.2808776)"
+       id="use148713"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(8.9653374,6.4213164)"
+       id="use148715"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(11.953783,8.5617552)"
+       id="use148717"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(14.942229,10.702194)"
+       id="use148719"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(17.930675,12.842633)"
+       id="use148721"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(20.91912,14.983072)"
+       id="use148723"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(23.907566,17.12351)"
+       id="use148725"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       inkscape:tiled-clone-of="#g148597"
+       xlink:href="#g148597"
+       transform="translate(26.896012,19.263949)"
+       id="use148727"
+       width="100%"
+       height="100%" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart);marker-end:url(#Arrow1Lend)"
+       d="m 101.16932,86.378487 18.93227,-2e-6"
+       id="path149043"
+       inkscape:connector-type="polyline"
+       inkscape:connector-curvature="0"
+       inkscape:connection-start="#rect846-9-0" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 69.221117,86.37849 v 0"
+       id="path149386"
+       inkscape:connector-type="polyline"
+       inkscape:connector-curvature="0"
+       inkscape:connection-start="#rect846-9-0"
+       inkscape:connection-end="#rect846-9-0" />
+  </g>
+</svg>

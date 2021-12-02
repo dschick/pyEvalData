@@ -13,10 +13,12 @@ project/
 
 # docs build
 docs/build
-docs/source/**/*.nxs
+
+# ignore NeXus files
+**.nxs
 
 # ipython checkpoints
-docs/source/**/.ipynb_checkpoints
+**/.ipynb_checkpoints
 
 # dask worker space
 docs/source/**/dask-worker-space
