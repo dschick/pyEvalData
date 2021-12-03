@@ -16,7 +16,9 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9"]
         os: [ubuntu-latest, macOS-latest, windows-latest]
-
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
     name: CI workflow
     steps:
       - name: checkout source repo
@@ -43,7 +45,7 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: OS=${{ matrix.os }},PYTHON=${{ matrix.python-version }}
+          env_vars: OS, PYTHON
           fail_ci_if_error: true
           file: ./coverage.xml
           flags: unittests
