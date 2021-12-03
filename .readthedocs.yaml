@@ -25,4 +25,6 @@ python:
   install:
   - requirements: docs/requirements.txt
   - method: pip
+    path: git+https://github.com/EmCeBeh/ultrafastFitFunctions.git
+  - method: pip
     path: .
