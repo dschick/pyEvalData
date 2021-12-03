@@ -16,7 +16,9 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9"]
         os: [ubuntu-latest, macOS-latest, windows-latest]
-
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
     name: CI workflow
     steps:
       - name: checkout source repo
@@ -30,7 +32,7 @@ jobs:
           # Upgrade pip
           python3 -m pip install --upgrade pip
           # Install build deps
-          pip install setuptools pytest flake8 ipython
+          pip install setuptools pytest pytest-cov flake8 ipython
           # Install the package from setup.py
           pip install .
       - name: linting flake8
@@ -38,15 +40,14 @@ jobs:
           flake8
       - name: Generate coverage report
         run: |
-          pip install pytest
-          pip install pytest-cov
-          pytest --cov=./ --cov-report=xml
+          pytest --cov=./pyEvalData --cov-report=xml test/
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: ${{ matrix.os }},${{ matrix.python-version }}
+          env_vars: OS, PYTHON
           fail_ci_if_error: true
-          flags: pytest
+          file: ./coverage.xml
+          flags: unittests
           name: codecov-umbrella
-          verbose: true
+          verbose: false
