@@ -30,5 +30,5 @@ docs/source/**/dask-worker-space
 .hypothesis
 
 # codecov
-coverage.xml
-.coverage
+# coverage.xml
+# .coverage
