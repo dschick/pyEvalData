@@ -742,8 +742,9 @@ class Evaluation(object):
         The plotted data are returned.
 
         Args:
-            scan_sequence (ndarray[List[int]
-                          , int/str])   : Sequence of scan lists and parameters.
+            scan_sequence (List[
+                List/Tuple[List[int],
+                int/str]])              : Sequence of scan lists and parameters.
             ylims (Optional[ndarray])   : ylim for the plot.
             xlims (Optional[ndarray])   : xlim for the plot.
             fig_size (Optional[ndarray]) : Figure size of the figure.
@@ -770,7 +771,7 @@ class Evaluation(object):
 
         Returns:
             sequence_data (OrderedDict) : Dictionary of the averaged scan data.
-            parameters (ndarray)       : Parameters of the sequence.
+            parameters (List[str, float]) : Parameters of the sequence.
             names (List[str])          : List of names of each data set.
             label_texts (List[str])     : List of labels for each data set.
 
@@ -870,8 +871,9 @@ class Evaluation(object):
         """Exports spec data for each scan list in the sequence as individual file.
 
         Args:
-            scan_sequence (ndarray[List[int]
-                          , int/str])   : Sequence of scan lists and parameters.
+            scan_sequence (List[
+                List/Tuple[List[int],
+                int/str]])              : Sequence of scan lists and parameters.
             path (str)                  : Path of the file to export to.
             fileName (str)              : Name of the file to export to.
             yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
@@ -942,8 +944,9 @@ class Evaluation(object):
         """Fit, plot, and return the data of a scan sequence.
 
         Args:
-            scan_sequence (ndarray[List[int]
-                          , int/str])   : Sequence of scan lists and parameters.
+            scan_sequence (List[
+                List/Tuple[List[int],
+                int/str]])              : Sequence of scan lists and parameters.
             mod (Model[lmfit])          : lmfit model for fitting the data.
             pars (Parameters[lmfit])    : lmfit parameters for fitting the data.
             ylims (Optional[ndarray])   : ylim for the plot.
