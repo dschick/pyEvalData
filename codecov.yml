@@ -13,8 +13,8 @@ coverage:
 # --------------
 # which folders/files to ignore
 ignore:
-  - */test/.*
-  - setup.py
+  - "*/test/.*""
+  - "setup.py"
 
 # Pull request comments:
 # ----------------------
