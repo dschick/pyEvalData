@@ -159,7 +159,7 @@ class Evaluation(object):
     def col_string_to_eval_string(self, col_string, array_name='source_data'):
         """Use regular expressions in order to generate an evaluateable string
         from the counter string in order to append the new counter to the
-        spec data.
+        source data.
 
         Args:
             col_string (str) : Definition of the counter.
@@ -167,7 +167,7 @@ class Evaluation(object):
 
         Returns:
             eval_string (str): Evaluateable string to add the new counter
-                              to the spec data.
+                              to the source data.
 
         """
 
@@ -199,17 +199,17 @@ class Evaluation(object):
         return col_string
 
     def add_custom_counters(self, source_data, scan_num, source_counters):
-        """Add custom counters to the spec data array.
+        """Add custom counters to the source data array.
         This is a stub for child classes.
 
         Args:
-            source_data (ndarray) : Data array from the spec scan.
-            scan_num (int)  : Scan number of the spec scan.
+            source_data (ndarray) : Data array from the source scan.
+            scan_num (int)  : Scan number of the source scan.
             source_counters list(str) : List of the source counters and custom counters
                                      from the clist and xcol.
 
         Returns:
-            source_data (ndarray): Updated data array from the spec scan.
+            source_data (ndarray): Updated data array from the source scan.
 
         """
         return source_data
@@ -292,7 +292,7 @@ class Evaluation(object):
 
         """
 
-        # generate the name of the data set from the spec file name and scan_list
+        # generate the name of the data set from the source file name and scan_list
         name = self.source.name + " #{0:04d}".format(scan_list[0])
 
         # get the counters which should be evaluated
@@ -313,18 +313,18 @@ class Evaluation(object):
 
         for i, (source_data, scan_num) in enumerate(zip(data_list, scan_list)):
             if i == 0 or len(source_cols) == 0:  # we need to evaluate this only once
-                # these are the base spec counters which are present in the data
+                # these are the base source counters which are present in the data
                 # file plus custom counters
                 source_cols = list(
                     set(list(source_data.dtype.names) + self.custom_counters))
 
                 # resolve the clist and retrieve the resolves counters and the
-                # necessary base spec counters for error propagation
+                # necessary base source counters for error propagation
                 resolved_counters, source_counters = self.traverse_counters(source_cols)
 
                 # counter names and resolved strings for further calculations
                 if self.statistic_type == 'poisson' or self.propagate_errors:
-                    # for error propagation we just need the base spec counters
+                    # for error propagation we just need the base source counters
                     # and the xcol
                     col_names = source_counters[:]
                     col_strings = source_counters[:]
@@ -377,8 +377,8 @@ class Evaluation(object):
         try:
             # bin the concatenated data to the xgrid
             # if a custom counter was calculated it might have a different length
-            # than the spec counters which will result in an error while binning data
-            # from a default spec counter and a custom counter.
+            # than the source counters which will result in an error while binning data
+            # from a default source counter and a custom counter.
             if binning:
                 xgrid_reduced, _, _, _, _, _, _, _, _ = bin_data(
                     concat_data[self.xcol], concat_data[self.xcol], xgrid)
@@ -410,7 +410,7 @@ class Evaluation(object):
                                                                     concat_data[self.xcol],
                                                                     xgrid_reduced,
                                                                     statistic=bin_stat)
-                        # add spec base counters to uncData arrays
+                        # add source base counters to uncData arrays
                         # the uncertainty package cannot handle masked arrays
                         # e.g. for divisions in the clist
                         # --> convert all base counter results to np.array()
@@ -457,7 +457,7 @@ class Evaluation(object):
         except Exception:
             raise
             print('xcol and ycol must have the same length --> probably you try plotting a custom'
-                  ' counter together with a spec counter')
+                  ' counter together with a source counter')
 
         return avg_data, std_data, err_data, name
 
@@ -465,7 +465,7 @@ class Evaluation(object):
                    yerr='std', xerr='std', norm2one=False, binning=True,
                    label_text='', title_text='', skip_plot=False, grid_on=True,
                    ytext='', xtext='', fmt='-o'):
-        """Plot a list of scans from the spec file.
+        """Plot a list of scans from the source file.
         Various plot parameters are provided.
         The plotted data are returned.
 
@@ -589,12 +589,12 @@ class Evaluation(object):
 
     def plot_mesh_scan(self, scan_num, skip_plot=False, grid_on=False, ytext='', xtext='',
                        levels=20, cbar=True):
-        """Plot a single mesh scan from the spec file.
+        """Plot a single mesh scan from the source file.
         Various plot parameters are provided.
         The plotted data are returned.
 
         Args:
-            scan_num (int)               : Scan number of the spec scan.
+            scan_num (int)               : Scan number of the source scan.
             skip_plot (Optional[bool])   : Skip plotting, just return data
                                           default is False.
             grid_on (Optional[bool])     : Add grid to plot - default is False.
@@ -611,7 +611,7 @@ class Evaluation(object):
         from matplotlib.mlab import griddata
         from matplotlib import gridspec
 
-        # read data from spec file
+        # read data from source file
         try:
             # try to read data of this scan
             source_data = self.get_scan_data(scan_num)
@@ -703,7 +703,7 @@ class Evaluation(object):
                            binning=True, sequence_type='', label_text='',
                            title_text='', skip_plot=False, grid_on=True, ytext='',
                            xtext='', fmt='-o'):
-        """Plot a list of scans from the spec file.
+        """Plot a list of scans from the source file.
         Various plot parameters are provided.
         The plotted data are returned.
 
@@ -834,7 +834,7 @@ class Evaluation(object):
 
     def export_scan_sequence(self, scan_sequence, path, fileName, yerr='std',
                              xerr='std', xgrid=[], norm2one=False, binning=True):
-        """Exports spec data for each scan list in the sequence as individual file.
+        """Exports source data for each scan list in the sequence as individual file.
 
         Args:
             scan_sequence (List[
