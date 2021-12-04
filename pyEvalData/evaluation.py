@@ -81,14 +81,13 @@ class Evaluation(object):
         self.apply_data_filter = False
         self.data_filters = ['evaluatable statement']
 
-    def traverse_counters(self, clist, source_cols=''):
+    def traverse_counters(self, source_cols=''):
         """traverse_counters
 
         Traverse all counters and replace all predefined counter definitions.
         Returns also a list of the included source counters for error propagation.
 
         Args:
-            clist (list[str]): Initial counter list.
             source_cols (list[str], optional): counters in the raw source data.
 
         Returns:
@@ -100,7 +99,7 @@ class Evaluation(object):
         resolved_counters = []
         source_counters = []
 
-        for counter_name in clist:
+        for counter_name in self.clist:
             # resolve each counter in the clist
             counter_string, res_source_counters = \
                 self.resolve_counter_name(counter_name, source_cols)
@@ -329,8 +328,7 @@ class Evaluation(object):
 
                 # resolve the clist and retrieve the resolves counters and the
                 # necessary base spec counters for error propagation
-                resolved_counters, source_counters = self.traverse_counters(
-                    self.clist, source_cols)
+                resolved_counters, source_counters = self.traverse_counters(source_cols)
 
                 # counter names and resolved strings for further calculations
                 if self.statistic_type == 'poisson' or self.propagate_errors:
