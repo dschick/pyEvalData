@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # The MIT License (MIT)
-# Copyright (c) 2015-2020 Daniel Schick
+# Copyright (c) 2015-2021 Daniel Schick
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -58,9 +58,13 @@ class Evaluation(object):
         t0 (float): approx. time zero for delay scans to determine the
             unpumped region of the data for normalization.
         custom_counters (list[str]): list of custom counters - default is []
-        math_keys (list[str]): list of keywords which are evaluated as numpy functions
-        statistic_type (str): 'gauss' for normal averaging, 'poisson' for counting statistics
-        propagate_errors (bool): propagate errors for dpendent counters.
+        math_keys (list[str]): list of keywords which are evaluated as numpy
+            functions.
+        ignore_keys (list[str]): list of keywords which should not be
+            evaluated.
+        statistic_type (str): 'gauss' for normal averaging, 'poisson' for
+            counting statistics.
+        propagate_errors (bool): propagate errors for dependent counters.
 
     """
 
@@ -76,6 +80,7 @@ class Evaluation(object):
         self.math_keys = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs',
                           'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
                           'pi', 'exp', 'log', 'log10', 'sqrt']
+        self.ignore_keys = []
         self.statistic_type = 'gauss'
         self.propagate_errors = True
         self.apply_data_filter = False
@@ -85,7 +90,7 @@ class Evaluation(object):
         """get_clist
 
         Returns a list of counters as defined by the user.
-        If the counters where defined in a ``dict`` it will be converted
+        If the counters were defined in a ``dict`` it will be converted
         to a ``list`` for backwards compatibility.
 
         Returns:
