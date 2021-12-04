@@ -461,48 +461,17 @@ class Evaluation(object):
 
         return avg_data, std_data, err_data, name
 
-    def 
-
-    def plot_scans(self, scan_list, ylims=[], xlims=[], fig_size=[], xgrid=[],
-                   yerr='std', xerr='std', norm2one=False, binning=True,
-                   label_text='', title_text='', skip_plot=False, grid_on=True,
-                   ytext='', xtext='', fmt='-o'):
-        """Plot a list of scans from the source file.
-        Various plot parameters are provided.
-        The plotted data are returned.
+    def eval_scans(self, scan_list, xgrid=[], yerr='std', xerr='std', norm2one=False, binning=True):
+        """eval_scans [summary]
 
         Args:
-            scan_list (List[int])        : List of scan numbers.
-            ylims (Optional[ndarray])   : ylim for the plot.
-            xlims (Optional[ndarray])   : xlim for the plot.
-            fig_size (Optional[ndarray]) : Figure size of the figure.
-            xgrid (Optional[ndarray])   : Grid to bin the data to -
-                                          default in empty so use the
-                                          x-axis of the first scan.
-            yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
-                                          default is 'std'.
-            xerr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
-                                          default is 'std'.
-            norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
-                                          default is False.
-            label_text (Optional[str])   : Label of the plot - default is none.
-            title_text (Optional[str])   : Title of the figure - default is none.
-            skip_plot (Optional[bool])   : Skip plotting, just return data
-                                          default is False.
-            grid_on (Optional[bool])     : Add grid to plot - default is True.
-            ytext (Optional[str])       : y-Label of the plot - defaults is none.
-            xtext (Optional[str])       : x-Label of the plot - defaults is none.
-            fmt (Optional[str])         : format string of the plot - defaults is -o.
-
-        Returns:
-            y2plot (OrderedDict)    : y-data which was plotted.
-            x2plot (ndarray)        : x-data which was plotted.
-            yerr2plot (OrderedDict) : y-error which was plotted.
-            xerr2plot (ndarray)     : x-error which was plotted.
-            name (str)              : Name of the data set.
-
+            scan_list ([type]): [description]
+            xgrid (list, optional): [description]. Defaults to [].
+            yerr (str, optional): [description]. Defaults to 'std'.
+            xerr (str, optional): [description]. Defaults to 'std'.
+            norm2one (bool, optional): [description]. Defaults to False.
+            binning (bool, optional): [description]. Defaults to True.
         """
-
         # initialize the y-data as ordered dict in order to allow for multiple
         # counters at the same time
         y2plot = collections.OrderedDict()
@@ -546,18 +515,59 @@ class Evaluation(object):
                 y2plot[col] = y2plot[col]/np.mean(before_zero)
                 yerr2plot[col] = yerr2plot[col]/np.mean(before_zero)
 
-            if len(label_text) == 0:
-                # if no label_text is given use the counter name
-                lt = col
-            else:
-                if len(self.clist) > 1:
-                    # for multiple counters add the counter name to the label
-                    lt = label_text + ' | ' + col
-                else:
-                    # for a single counter just use the label_text
-                    lt = label_text
+        return y2plot, x2plot, yerr2plot, xerr2plot, name
 
-            if not skip_plot:
+    def plot_scans(self, scan_list, xgrid=[], yerr='std', xerr='std', norm2one=False, binning=True,
+                   label_text='', fmt='-o', skip_plot=False):
+        """plot_scans
+
+        Plot a list of scans from the source file.
+        Various plot parameters are provided.
+        The plotted data are returned.
+
+        Args:
+            scan_list (List[int]): List of scan numbers.
+            xgrid (Optional[ndarray]): Grid to bin the data to -
+                default in empty so use the x-axis of the first scan.
+            yerr (Optional[ndarray]): Type of the errors in y: [err, std, none]
+                default is 'std'.
+            xerr (Optional[ndarray]): Type of the errors in x: [err, std, none]
+                default is 'std'.
+            norm2one (Optional[bool]): Norm transient data to 1 for t < t0
+                default is False.
+            label_text (Optional[str]): Label of the plot - default is none.
+            fmt (Optional[str]): format string of the plot - defaults is -o.
+            skip_plot (Optional[bool]): Skip plotting, just return data default
+                is False.
+
+        Returns:
+            y2plot (OrderedDict): y-data which was plotted.
+            x2plot (ndarray): x-data which was plotted.
+            yerr2plot (OrderedDict): y-error which was plotted.
+            xerr2plot (ndarray): x-error which was plotted.
+            name (str): Name of the data set.
+
+        """
+
+        y2plot, x2plot, yerr2plot, xerr2plot, name = \
+            self.eval_scans(scan_list, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one,
+                            binning=binning)
+
+        if not skip_plot:
+            # plot all keys in the clist
+            for col in self.clist:
+                # traverse the counter list
+                if len(label_text) == 0:
+                    # if no label_text is given use the counter name
+                    lt = col
+                else:
+                    if len(self.clist) > 1:
+                        # for multiple counters add the counter name to the label
+                        lt = label_text + ' | ' + col
+                    else:
+                        # for a single counter just use the label_text
+                        lt = label_text
+
                 # plot the errorbar for each counter
                 if (xerr == 'none') & (yerr == 'none'):
                     plt.plot(x2plot, y2plot[col], fmt, label=lt)
@@ -566,26 +576,10 @@ class Evaluation(object):
                         x2plot, y2plot[col], fmt=fmt, label=lt,
                         xerr=xerr2plot, yerr=yerr2plot[col])
 
-        if not skip_plot:
             # add a legend, labels, title and set the limits and grid
             plt.legend(frameon=True, loc=0, numpoints=1)
             plt.xlabel(self.xcol)
-            if xlims:
-                plt.xlim(xlims)
-            if ylims:
-                plt.ylim(ylims)
-            if len(title_text) > 0:
-                plt.title(title_text)
-            else:
-                plt.title(name)
-            if len(xtext) > 0:
-                plt.xlabel(xtext)
-
-            if len(ytext) > 0:
-                plt.ylabel(ytext)
-
-            if grid_on:
-                plt.grid(True)
+            plt.title(name)
 
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
