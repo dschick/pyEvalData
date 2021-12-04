@@ -81,26 +81,6 @@ class Evaluation(object):
         self.apply_data_filter = False
         self.data_filters = ['evaluatable statement']
 
-    def get_clist(self):
-        """get_clist
-
-        Returns a list of counters as defined by the user.
-        If the counters where defined in a ``dict`` it will be converted
-        to a ``list`` for backwards compatibility.
-
-        Returns:
-            clist (list[str]): list of counter names to evaluate.
-
-        """
-
-        if isinstance(self.clist, dict):
-            # the clist property is a dict, so retrun its keys as list
-            clist = list(self.clist.keys())
-        else:
-            clist = list(self.clist)
-
-        return clist
-
     def traverse_counters(self, clist, source_cols=''):
         """traverse_counters
 
@@ -317,16 +297,15 @@ class Evaluation(object):
         name = self.source.name + " #{0:04d}".format(scan_list[0])
 
         # get the counters which should be evaluated
-        clist = self.get_clist()
-        if not clist:
+        if not self.clist:
             raise Exception('No clist is defined. Do not know what to plot!')
             return
         # process also the xcol as counter in order to allow for newly defined xcols
         if not self.xcol:
             raise Exception('No xcol is defined. Do not know what to plot!')
             return
-        if self.xcol not in clist:
-            clist.append(self.xcol)
+        if self.xcol not in self.clist:
+            self.clist.append(self.xcol)
 
         source_cols = []
         concat_data = np.array([])
@@ -351,7 +330,7 @@ class Evaluation(object):
                 # resolve the clist and retrieve the resolves counters and the
                 # necessary base spec counters for error propagation
                 resolved_counters, source_counters = self.traverse_counters(
-                    clist, source_cols)
+                    self.clist, source_cols)
 
                 # counter names and resolved strings for further calculations
                 if self.statistic_type == 'poisson' or self.propagate_errors:
@@ -361,15 +340,15 @@ class Evaluation(object):
                     col_strings = source_counters[:]
                     # add the xcol to both lists
                     col_names.append(self.xcol)
-                    col_strings.append(resolved_counters[clist.index(self.xcol)])
+                    col_strings.append(resolved_counters[self.clist.index(self.xcol)])
                 else:
                     # we need to average the resolved counters
-                    col_names = clist[:]
+                    col_names = self.clist[:]
                     col_strings = resolved_counters[:]
 
                 # create the dtype of the return array
                 dtypes = []
-                for col_name in clist:
+                for col_name in self.clist:
                     dtypes.append((col_name, '<f8'))
 
             # add custom counters if defined
@@ -402,8 +381,8 @@ class Evaluation(object):
                     xgrid = concat_data[self.xcol]
 
         # remove xcol from clist and resolved counters for further treatment
-        del resolved_counters[clist.index(self.xcol)]
-        clist.remove(self.xcol)
+        del resolved_counters[self.clist.index(self.xcol)]
+        self.clist.remove(self.xcol)
 
         try:
             # bin the concatenated data to the xgrid
@@ -450,7 +429,7 @@ class Evaluation(object):
                         unc_data_err[col] = unumpy.uarray(np.array(y),
                                                           np.array(yerr))
 
-                    for col_name, col_string in zip(clist, resolved_counters):
+                    for col_name, col_string in zip(self.clist, resolved_counters):
                         eval_string = self.col_string_to_eval_string(
                             col_string, array_name='unc_data_err')
                         temp = eval(eval_string)
@@ -464,7 +443,7 @@ class Evaluation(object):
                         std_data[col_name] = unumpy.std_devs(temp)
                 else:
                     # no error propagation but averaging of individual scans
-                    for col in clist:
+                    for col in self.clist:
                         # for all cols in the clist bin the data to the xgrid an calculate
                         # the averages, stds and errors
                         avg_data[col], avg_data[self.xcol], err_data[col], \
@@ -474,7 +453,7 @@ class Evaluation(object):
                                          xgrid_reduced,
                                          statistic=bin_stat)
             else:
-                for col_name, col_string in zip(clist, resolved_counters):
+                for col_name, col_string in zip(self.clist, resolved_counters):
                     eval_string = self.col_string_to_eval_string(
                         col_string, array_name='spec_data')
                     temp = eval(eval_string)
@@ -561,8 +540,7 @@ class Evaluation(object):
         xerr2plot = xerr_data[self.xcol]
 
         # plot all keys in the clist
-        clist = self.get_clist()
-        for col in clist:
+        for col in self.clist:
             # traverse the counter list
 
             # save the counter data and errors in the ordered dictionary
@@ -580,7 +558,7 @@ class Evaluation(object):
                 # if no label_text is given use the counter name
                 lt = col
             else:
-                if len(clist) > 1:
+                if len(self.clist) > 1:
                     # for multiple counters add the counter name to the label
                     lt = label_text + ' | ' + col
                 else:
@@ -662,12 +640,10 @@ class Evaluation(object):
         xx = np.sort(np.unique(X))
         yy = np.sort(np.unique(Y))
 
-        clist = self.get_clist()
-
-        if len(clist) > 1:
+        if len(self.clist) > 1:
             print('WARNING: Only the first counter of the clist is plotted.')
 
-        Z = spec_data[clist[0]]
+        Z = spec_data[self.clist[0]]
 
         zz = griddata(X, Y, Z, xx, yy, interp='linear')
 
@@ -1005,7 +981,7 @@ class Evaluation(object):
         # initialization of returns
         res = {}  # initialize the results dict
 
-        for i, counter in enumerate(self.get_clist()):
+        for i, counter in enumerate(self.clist):
             # traverse all counters in the counter list to initialize the returns
 
             # results for this counter is again a Dict
@@ -1063,7 +1039,7 @@ class Evaluation(object):
                 skip_plot=True)
 
         # this is the number of different counters
-        num_sub_plots = len(self.get_clist())
+        num_sub_plots = len(self.clist)
 
         # fitting and plotting the data
         l_plot = 1  # counter for single plots
@@ -1333,3 +1309,23 @@ class Evaluation(object):
 
         """
         return self.get_last_fig_number() + 1
+
+    @property
+    def clist(self):
+        return self._clist
+
+    @clist.setter
+    def clist(self, clist):
+        """clist
+
+        In order to keep backwards compatibility and to catch some wrong user
+        inputs, the given ``clist`` is converted to a ``list`` when a ``dict``
+        or number is given.
+
+        """
+        if isinstance(clist, dict):
+            # the clist property is a dict, so retrun its keys as list
+            clist = list(clist.keys())
+        else:
+            clist = list(clist)
+        self._clist = clist
