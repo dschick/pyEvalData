@@ -156,7 +156,7 @@ class Evaluation(object):
 
         return col_string, source_counters
 
-    def col_string_to_eval_string(self, col_string, array_name='spec_data'):
+    def col_string_to_eval_string(self, col_string, array_name='source_data'):
         """Use regular expressions in order to generate an evaluateable string
         from the counter string in order to append the new counter to the
         spec data.
@@ -198,21 +198,21 @@ class Evaluation(object):
                 (col_string, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, col_string)
         return col_string
 
-    def add_custom_counters(self, spec_data, scan_num, source_counters):
+    def add_custom_counters(self, source_data, scan_num, source_counters):
         """Add custom counters to the spec data array.
         This is a stub for child classes.
 
         Args:
-            spec_data (ndarray) : Data array from the spec scan.
+            source_data (ndarray) : Data array from the spec scan.
             scan_num (int)  : Scan number of the spec scan.
             source_counters list(str) : List of the source counters and custom counters
                                      from the clist and xcol.
 
         Returns:
-            spec_data (ndarray): Updated data array from the spec scan.
+            source_data (ndarray): Updated data array from the spec scan.
 
         """
-        return spec_data
+        return source_data
 
     def filter_data(self, data):
         """filter_data
@@ -311,20 +311,12 @@ class Evaluation(object):
 
         data_list = self.get_scan_list_data(scan_list)
 
-        for i, (spec_data, scan_num) in enumerate(zip(data_list, scan_list)):
-            # traverse the scan list and read data
-            # try:
-            #     # try to read the motors and data of this scan
-            #     spec_data = self.get_scan_data(scan_num)
-            # except Exception:
-            #     raise
-            #     print('Scan #' + scan_num + ' not found, skipping')
-
+        for i, (source_data, scan_num) in enumerate(zip(data_list, scan_list)):
             if i == 0 or len(source_cols) == 0:  # we need to evaluate this only once
                 # these are the base spec counters which are present in the data
                 # file plus custom counters
                 source_cols = list(
-                    set(list(spec_data.dtype.names) + self.custom_counters))
+                    set(list(source_data.dtype.names) + self.custom_counters))
 
                 # resolve the clist and retrieve the resolves counters and the
                 # necessary base spec counters for error propagation
@@ -350,7 +342,7 @@ class Evaluation(object):
                     dtypes.append((col_name, '<f8'))
 
             # add custom counters if defined
-            spec_data = self.add_custom_counters(spec_data, scan_num, source_counters)
+            source_data = self.add_custom_counters(source_data, scan_num, source_counters)
 
             data = np.array([])
             # read data into data array
@@ -358,7 +350,7 @@ class Evaluation(object):
                 # traverse the counters in the clist and append to data if not
                 # already present
                 eval_string = self.col_string_to_eval_string(
-                    col_string, array_name='spec_data')
+                    col_string, array_name='source_data')
 
                 if len(data) == 0:
                     data = np.array(eval(eval_string), dtype=[(col_name, float)])
@@ -453,7 +445,7 @@ class Evaluation(object):
             else:
                 for col_name, col_string in zip(self.clist, resolved_counters):
                     eval_string = self.col_string_to_eval_string(
-                        col_string, array_name='spec_data')
+                        col_string, array_name='source_data')
                     temp = eval(eval_string)
                     avg_data[col_name] = temp
                     avg_data[self.xcol] = concat_data[self.xcol]
@@ -622,18 +614,18 @@ class Evaluation(object):
         # read data from spec file
         try:
             # try to read data of this scan
-            spec_data = self.get_scan_data(scan_num)
+            source_data = self.get_scan_data(scan_num)
         except Exception:
             print('Scan #' + int(scan_num) + ' not found, skipping')
 
-        dt = spec_data.dtype
+        dt = source_data.dtype
         dt = dt.descr
 
         xmotor = dt[0][0]
         ymotor = dt[1][0]
 
-        X = spec_data[xmotor]
-        Y = spec_data[ymotor]
+        X = source_data[xmotor]
+        Y = source_data[ymotor]
 
         xx = np.sort(np.unique(X))
         yy = np.sort(np.unique(Y))
@@ -641,7 +633,7 @@ class Evaluation(object):
         if len(self.clist) > 1:
             print('WARNING: Only the first counter of the clist is plotted.')
 
-        Z = spec_data[self.clist[0]]
+        Z = source_data[self.clist[0]]
 
         zz = griddata(X, Y, Z, xx, yy, interp='linear')
 
