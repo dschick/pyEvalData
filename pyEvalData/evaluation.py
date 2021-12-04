@@ -194,7 +194,7 @@ class Evaluation(object):
 
         # add 'np.' prefix to numpy functions/math keys
         for mk in math_keys:
-            if mk != '0x0001FFFF':
+            if mk not in self.ignore_keys:
                 (col_string, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, col_string)
         return col_string
 
@@ -460,6 +460,8 @@ class Evaluation(object):
                   ' counter together with a source counter')
 
         return avg_data, std_data, err_data, name
+
+    def 
 
     def plot_scans(self, scan_list, ylims=[], xlims=[], fig_size=[], xgrid=[],
                    yerr='std', xerr='std', norm2one=False, binning=True,
