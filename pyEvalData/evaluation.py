@@ -790,21 +790,14 @@ class Evaluation(object):
             # get the plot data for the scan list
             y2plot, x2plot, yerr2plot, xerr2plot, name = self.plot_scans(
                 scan_list,
-                ylims=ylims,
-                xlims=xlims,
-                fig_size=fig_size,
                 xgrid=xgrid,
                 yerr=yerr,
                 xerr=xerr,
                 norm2one=norm2one,
                 binning=binning,
                 label_text=lt,
-                title_text=title_text,
+                fmt=fmt,
                 skip_plot=skip_plot,
-                grid_on=grid_on,
-                ytext=ytext,
-                xtext=xtext,
-                fmt=fmt
             )
 
             if self.xcol not in sequence_data.keys():
@@ -1000,9 +993,6 @@ class Evaluation(object):
             # get only the parameters
             _, parameters, names, label_texts = self.plot_scan_sequence(
                 scan_sequence,
-                ylims=ylims,
-                xlims=xlims,
-                fig_size=fig_size,
                 xgrid=xgrid,
                 yerr=yerr,
                 xerr=xerr,
@@ -1010,15 +1000,11 @@ class Evaluation(object):
                 binning=True,
                 sequence_type=sequence_type,
                 label_text=label_text,
-                title_text=title_text,
                 skip_plot=True)
         else:
             # get the sequence data and parameters
             sequence_data, parameters, names, label_texts = self.plot_scan_sequence(
                 scan_sequence,
-                ylims=ylims,
-                xlims=xlims,
-                fig_size=fig_size,
                 xgrid=xgrid,
                 yerr=yerr,
                 xerr=xerr,
@@ -1026,7 +1012,6 @@ class Evaluation(object):
                 binning=True,
                 sequence_type=sequence_type,
                 label_text=label_text,
-                title_text=title_text,
                 skip_plot=True)
 
         # this is the number of different counters
