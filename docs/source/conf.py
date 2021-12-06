@@ -60,7 +60,7 @@ templates_path = ['_templates']
 source_suffix = ['.rst', '.md']
 
 jupyter_execute_notebooks = "auto"
-execution_excludepatterns = ['*.ipynb']
+# execution_excludepatterns = ['*.ipynb']
 
 suppress_warnings = ['myst.mathjax']
 

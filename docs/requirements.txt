@@ -7,3 +7,4 @@ sphinx-book-theme
 sphinx_design
 sphinx_copybutton
 myst_nb
+ultrafastFitFunctions
