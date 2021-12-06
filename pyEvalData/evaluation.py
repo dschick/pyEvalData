@@ -492,14 +492,14 @@ class Evaluation(object):
         elif xerr == 'err':
             xerr_data = err_data
         else:
-            xerr_data = np.zeros_like(std_data)
+            xerr_data = None
 
         if yerr == 'std':
             yerr_data = std_data
         elif yerr == 'err':
             yerr_data = err_data
         else:
-            yerr_data = np.zeros_like(std_data)
+            yerr_data = None
 
         # set x-data and errors
         x2plot = avg_data[self.xcol]
@@ -515,15 +515,100 @@ class Evaluation(object):
 
             if norm2one:
                 # normalize the y-data to 1 for t < t0
-                # just makes sense for delay scans
+                # e.g. for delay scans
                 before_zero = y2plot[col][x2plot <= self.t0]
                 y2plot[col] = y2plot[col]/np.mean(before_zero)
                 yerr2plot[col] = yerr2plot[col]/np.mean(before_zero)
 
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
-    def plot_scans(self, scan_list, xgrid=[], yerr='std', xerr='std', norm2one=False, binning=True,
-                   label_text='', fmt='-o', skip_plot=False):
+    def eval_scan_sequence(self, scan_sequence, xgrid=[], yerr='std', xerr='std', norm2one=False,
+                           binning=True):
+        """eval_scan_sequence
+
+        Evaluate a sequence of scans for a given set of external parameters.
+
+        Args:
+            scan_sequence (List[
+                List/Tuple[List[int],
+                int/str]])              : Sequence of scan lists and parameters.
+            xgrid (Optional[ndarray])   : Grid to bin the data to -
+                                          default in empty so use the
+                                          x-axis of the first scan.
+            yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
+                                          default is 'std'.
+            xerr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
+                                          default is 'std'.
+            norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
+                                          default is False.
+        Returns:
+            sequence_data (OrderedDict) : Dictionary of the averaged scan data.
+            parameters (List[str, float]) : Parameters of the sequence.
+            names (List[str])          : List of names of each data set.
+
+        """
+
+        # initialize the return data
+        sequence_data = collections.OrderedDict()
+        names = []
+        parameters = []
+
+        for i, (scan_list, parameter) in enumerate(scan_sequence):
+            # traverse the scan sequence
+
+            parameters.append(parameter)
+            # get the data for the current scan list
+            y2plot, x2plot, yerr2plot, xerr2plot, name = self.eval_scans(
+                scan_list, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one,
+                binning=binning,
+            )
+            # create a list of all counters from the scan and append the xcol
+            sequence_counters = list(y2plot.keys()).append(self.xcol)
+            for counter in sequence_counters:
+                # traverse all counters in the data set
+                if counter not in sequence_data.keys():
+                    # if the counter is not in the return data dict - add the key
+                    sequence_data[counter] = []
+                    sequence_data[counter + 'Err'] = []
+
+                # add the counter data to the return data dict
+                sequence_data[counter].append(y2plot[counter])
+                sequence_data[counter + 'Err'].append(yerr2plot[counter])
+
+            names.append(name)
+
+        return sequence_data, parameters, names
+
+    def _plot_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, label_text='', fmt='-o'):
+        # plot all keys in the clist
+        for col in self.clist:
+            # iterate the counter list
+            if len(label_text) == 0:
+                # if no label_text is given use the counter name
+                lt = col
+            else:
+                if len(self.clist) > 1:
+                    # for multiple counters add the counter name to the label
+                    lt = label_text + ' | ' + col
+                else:
+                    # for a single counter just use the label_text
+                    lt = label_text
+
+            # plot the errorbar for each counter
+            if (xerr2plot is None) & (yerr2plot is None):
+                plt.plot(x2plot, y2plot[col], fmt, label=lt)
+            else:
+                plt.errorbar(
+                    x2plot, y2plot[col], fmt=fmt, label=lt,
+                    xerr=xerr2plot, yerr=yerr2plot[col])
+
+        # add a legend, labels, title and set the limits and grid
+        plt.legend(frameon=True, loc=0, numpoints=1)
+        plt.xlabel(self.xcol)
+        plt.title(name)
+
+    def plot_scans(self, scan_list, xgrid=np.array([]), yerr='std', xerr='std', norm2one=False,
+                   binning=True, label_text='', fmt='-o'):
         """plot_scans
 
         Plot a list of scans from the source file.
@@ -542,8 +627,6 @@ class Evaluation(object):
                 default is False.
             label_text (Optional[str]): Label of the plot - default is none.
             fmt (Optional[str]): format string of the plot - defaults is -o.
-            skip_plot (Optional[bool]): Skip plotting, just return data default
-                is False.
 
         Returns:
             y2plot (OrderedDict): y-data which was plotted.
@@ -558,152 +641,13 @@ class Evaluation(object):
             self.eval_scans(scan_list, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one,
                             binning=binning)
 
-        if not skip_plot:
-            # plot all keys in the clist
-            for col in self.clist:
-                # traverse the counter list
-                if len(label_text) == 0:
-                    # if no label_text is given use the counter name
-                    lt = col
-                else:
-                    if len(self.clist) > 1:
-                        # for multiple counters add the counter name to the label
-                        lt = label_text + ' | ' + col
-                    else:
-                        # for a single counter just use the label_text
-                        lt = label_text
-
-                # plot the errorbar for each counter
-                if (xerr == 'none') & (yerr == 'none'):
-                    plt.plot(x2plot, y2plot[col], fmt, label=lt)
-                else:
-                    plt.errorbar(
-                        x2plot, y2plot[col], fmt=fmt, label=lt,
-                        xerr=xerr2plot, yerr=yerr2plot[col])
-
-            # add a legend, labels, title and set the limits and grid
-            plt.legend(frameon=True, loc=0, numpoints=1)
-            plt.xlabel(self.xcol)
-            plt.title(name)
+        self._plot_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, label_text=label_text, fmt=fmt)
 
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
-    def plot_mesh_scan(self, scan_num, skip_plot=False, grid_on=False, ytext='', xtext='',
-                       levels=20, cbar=True):
-        """Plot a single mesh scan from the source file.
-        Various plot parameters are provided.
-        The plotted data are returned.
-
-        Args:
-            scan_num (int)               : Scan number of the source scan.
-            skip_plot (Optional[bool])   : Skip plotting, just return data
-                                          default is False.
-            grid_on (Optional[bool])     : Add grid to plot - default is False.
-            ytext (Optional[str])       : y-Label of the plot - defaults is none.
-            xtext (Optional[str])       : x-Label of the plot - defaults is none.
-            levels (Optional[int])      : levels of contour plot - defaults is 20.
-            cbar (Optional[bool])       : Add colorbar to plot - default is True.
-
-        Returns:
-            xx, yy, zz              : x,y,z data which was plotted
-
-        """
-
-        from matplotlib.mlab import griddata
-        from matplotlib import gridspec
-
-        # read data from source file
-        try:
-            # try to read data of this scan
-            source_data = self.get_scan_data(scan_num)
-        except Exception:
-            print('Scan #' + int(scan_num) + ' not found, skipping')
-
-        dt = source_data.dtype
-        dt = dt.descr
-
-        xmotor = dt[0][0]
-        ymotor = dt[1][0]
-
-        X = source_data[xmotor]
-        Y = source_data[ymotor]
-
-        xx = np.sort(np.unique(X))
-        yy = np.sort(np.unique(Y))
-
-        if len(self.clist) > 1:
-            print('WARNING: Only the first counter of the clist is plotted.')
-
-        Z = source_data[self.clist[0]]
-
-        zz = griddata(X, Y, Z, xx, yy, interp='linear')
-
-        if not skip_plot:
-
-            if cbar:
-                gs = gridspec.GridSpec(4, 2,
-                                       width_ratios=[3, 1],
-                                       height_ratios=[0.2, 0.1, 1, 3]
-                                       )
-                k = 4
-            else:
-                gs = gridspec.GridSpec(2, 2,
-                                       width_ratios=[3, 1],
-                                       height_ratios=[1, 3]
-                                       )
-                k = 0
-
-            ax1 = plt.subplot(gs[0+k])
-
-            plt.plot(xx, np.mean(zz, 0), label='mean')
-
-            plt.plot(xx, zz[np.argmax(np.mean(zz, 1)), :], label='peak')
-
-            plt.xlim([min(xx), max(xx)])
-            plt.legend(loc=0)
-            ax1.xaxis.tick_top()
-            if grid_on:
-                plt.grid(True)
-
-            plt.subplot(gs[2+k])
-
-            plt.contourf(xx, yy, zz, levels, cmap='viridis')
-
-            plt.xlabel(xmotor)
-            plt.ylabel(ymotor)
-
-            if len(xtext) > 0:
-                plt.xlabel(xtext)
-
-            if len(ytext) > 0:
-                plt.ylabel(ytext)
-
-            if grid_on:
-                plt.grid(True)
-
-            if cbar:
-                cb = plt.colorbar(cax=plt.subplot(
-                    gs[0]), orientation='horizontal')
-                cb.ax.xaxis.set_ticks_position('top')
-                cb.ax.xaxis.set_label_position('top')
-
-            ax4 = plt.subplot(gs[3+k])
-
-            plt.plot(np.mean(zz, 1), yy)
-            plt.plot(zz[:, np.argmax(np.mean(zz, 0))], yy)
-            plt.ylim([np.min(yy), np.max(yy)])
-
-            ax4.yaxis.tick_right()
-            if grid_on:
-                plt.grid(True)
-
-        return xx, yy, zz
-
-    def plot_scan_sequence(self, scan_sequence, ylims=[], xlims=[], fig_size=[],
-                           xgrid=[], yerr='std', xerr='std', norm2one=False,
-                           binning=True, sequence_type='', label_text='',
-                           title_text='', skip_plot=False, grid_on=True, ytext='',
-                           xtext='', fmt='-o'):
+    def plot_scan_sequence(self, scan_sequence, xgrid=np.array([]), yerr='std', xerr='std',
+                           norm2one=False, binning=True, sequence_type='', label_texts=[],
+                           fmt='-o'):
         """Plot a list of scans from the source file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -712,9 +656,6 @@ class Evaluation(object):
             scan_sequence (List[
                 List/Tuple[List[int],
                 int/str]])              : Sequence of scan lists and parameters.
-            ylims (Optional[ndarray])   : ylim for the plot.
-            xlims (Optional[ndarray])   : xlim for the plot.
-            fig_size (Optional[ndarray]) : Figure size of the figure.
             xgrid (Optional[ndarray])   : Grid to bin the data to -
                                           default in empty so use the
                                           x-axis of the first scan.
@@ -727,13 +668,7 @@ class Evaluation(object):
             sequence_type (Optional[str]): Type of the sequence: [fluence, delay,
                                           energy, theta, position, voltage, none,
                                           text] - default is enumeration.
-            label_text (Optional[str])   : Label of the plot - default is none.
-            title_text (Optional[str])   : Title of the figure - default is none.
-            skip_plot (Optional[bool])   : Skip plotting, just return data
-                                          default is False.
-            grid_on (Optional[bool])     : Add grid to plot - default is True.
-            ytext (Optional[str])       : y-Label of the plot - defaults is none.
-            xtext (Optional[str])       : x-Label of the plot - defaults is none.
+            label_texts (Optional[str])   : lift of labels of the plot - default is none.
             fmt (Optional[str])         : format string of the plot - defaults is -o.
 
         Returns:
@@ -744,19 +679,16 @@ class Evaluation(object):
 
         """
 
-        # initialize the return data
-        sequence_data = collections.OrderedDict()
-        names = []
-        label_texts = []
-        parameters = []
+        sequence_data, parameters, names = self.eval_scan_sequence(
+            scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one, binning=binning)
 
+        ret_label_texts = []
         for i, (scan_list, parameter) in enumerate(scan_sequence):
-            # traverse the scan sequence
+            # iterate the scan sequence
 
-            parameters.append(parameter)
             # format the parameter as label text of this plot if no label text
             # is given
-            if len(label_text) == 0:
+            if len(label_texts) == 0:
                 if sequence_type == 'fluence':
                     lt = str.format('{:.2f}  mJ/cm²', parameter)
                 elif sequence_type == 'delay':
@@ -785,95 +717,19 @@ class Evaluation(object):
                     # no sequence type is given --> enumerate
                     lt = str.format('#{}', i+1)
             else:
-                lt = label_text[i]
+                lt = label_texts[i]
 
-            # get the plot data for the scan list
-            y2plot, x2plot, yerr2plot, xerr2plot, name = self.plot_scans(
-                scan_list,
-                xgrid=xgrid,
-                yerr=yerr,
-                xerr=xerr,
-                norm2one=norm2one,
-                binning=binning,
-                label_text=lt,
-                fmt=fmt,
-                skip_plot=skip_plot,
-            )
+            ret_label_texts.append(lt)
+            # extract clist und xcol from sequence_data
+            self._plot_scans(sequence_data['y2plot'],
+                             sequence_data['x2plot'],
+                             sequence_data['yerr2plot'],
+                             sequence_data['xerr2plot'],
+                             names[i],
+                             label_text=ret_label_texts[i],
+                             fmt=fmt)
 
-            if self.xcol not in sequence_data.keys():
-                # if the xcol is not in the return data dict - add the key
-                sequence_data[self.xcol] = []
-                sequence_data[self.xcol + 'Err'] = []
-
-            # add the x-axis data to the return data dict
-            sequence_data[self.xcol].append(x2plot)
-            sequence_data[self.xcol + 'Err'].append(xerr2plot)
-
-            for counter in y2plot:
-                # traverse all counters in the data set
-                if counter not in sequence_data.keys():
-                    # if the counter is not in the return data dict - add the key
-                    sequence_data[counter] = []
-                    sequence_data[counter + 'Err'] = []
-
-                # add the counter data to the return data dict
-                sequence_data[counter].append(y2plot[counter])
-                sequence_data[counter + 'Err'].append(yerr2plot[counter])
-
-            # append names and labels to their lists
-            names.append(name)
-            label_texts.append(lt)
-
-        return sequence_data, parameters, names, label_texts
-
-    def export_scan_sequence(self, scan_sequence, path, fileName, yerr='std',
-                             xerr='std', xgrid=[], norm2one=False, binning=True):
-        """Exports source data for each scan list in the sequence as individual file.
-
-        Args:
-            scan_sequence (List[
-                List/Tuple[List[int],
-                int/str]])              : Sequence of scan lists and parameters.
-            path (str)                  : Path of the file to export to.
-            fileName (str)              : Name of the file to export to.
-            yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
-                                          default is 'std'.
-            xerr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
-                                          default is 'std'.
-            xgrid (Optional[ndarray])   : Grid to bin the data to -
-                                          default in empty so use the
-                                          x-axis of the first scan.
-            norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
-                                          default is False.
-
-        """
-        # get scan_sequence data without plotting
-        sequence_data, parameters, names, label_texts = self.plot_scan_sequence(
-            scan_sequence,
-            xgrid=xgrid,
-            yerr=yerr,
-            xerr=xerr,
-            norm2one=norm2one,
-            binning=binning,
-            skip_plot=True)
-
-        for i, label_text in enumerate(label_texts):
-            # travserse the sequence
-
-            header = ''
-            saveData = []
-            for counter in sequence_data:
-                # travserse all counters in the data
-
-                # build the file header
-                header = header + counter + '\t '
-                # build the data matrix
-                saveData.append(sequence_data[counter][i])
-
-            # save data with header to text file
-            np.savetxt('{:s}/{:s}_{:s}.dat'.format(path, fileName,
-                                                   "".join(x for x in label_text if x.isalnum())),
-                       np.r_[saveData].T, delimiter='\t', header=header)
+        return sequence_data, parameters, names, ret_label_texts
 
     def fit_scans(self, scans, mod, pars, ylims=[], xlims=[], fig_size=[], xgrid=[],
                   yerr='std', xerr='std', norm2one=False, binning=True,
@@ -1285,6 +1141,166 @@ class Evaluation(object):
 
         """
         return self.get_last_fig_number() + 1
+
+    # def plot_mesh_scan(self, scan_num, skip_plot=False, grid_on=False, ytext='', xtext='',
+    #                    levels=20, cbar=True):
+    #     """Plot a single mesh scan from the source file.
+    #     Various plot parameters are provided.
+    #     The plotted data are returned.
+
+    #     Args:
+    #         scan_num (int)               : Scan number of the source scan.
+    #         skip_plot (Optional[bool])   : Skip plotting, just return data
+    #                                       default is False.
+    #         grid_on (Optional[bool])     : Add grid to plot - default is False.
+    #         ytext (Optional[str])       : y-Label of the plot - defaults is none.
+    #         xtext (Optional[str])       : x-Label of the plot - defaults is none.
+    #         levels (Optional[int])      : levels of contour plot - defaults is 20.
+    #         cbar (Optional[bool])       : Add colorbar to plot - default is True.
+
+    #     Returns:
+    #         xx, yy, zz              : x,y,z data which was plotted
+
+    #     """
+
+    #     from matplotlib.mlab import griddata
+    #     from matplotlib import gridspec
+
+    #     # read data from source file
+    #     try:
+    #         # try to read data of this scan
+    #         source_data = self.get_scan_data(scan_num)
+    #     except Exception:
+    #         print('Scan #' + int(scan_num) + ' not found, skipping')
+
+    #     dt = source_data.dtype
+    #     dt = dt.descr
+
+    #     xmotor = dt[0][0]
+    #     ymotor = dt[1][0]
+
+    #     X = source_data[xmotor]
+    #     Y = source_data[ymotor]
+
+    #     xx = np.sort(np.unique(X))
+    #     yy = np.sort(np.unique(Y))
+
+    #     if len(self.clist) > 1:
+    #         print('WARNING: Only the first counter of the clist is plotted.')
+
+    #     Z = source_data[self.clist[0]]
+
+    #     zz = griddata(X, Y, Z, xx, yy, interp='linear')
+
+    #     if not skip_plot:
+
+    #         if cbar:
+    #             gs = gridspec.GridSpec(4, 2,
+    #                                    width_ratios=[3, 1],
+    #                                    height_ratios=[0.2, 0.1, 1, 3]
+    #                                    )
+    #             k = 4
+    #         else:
+    #             gs = gridspec.GridSpec(2, 2,
+    #                                    width_ratios=[3, 1],
+    #                                    height_ratios=[1, 3]
+    #                                    )
+    #             k = 0
+
+    #         ax1 = plt.subplot(gs[0+k])
+
+    #         plt.plot(xx, np.mean(zz, 0), label='mean')
+
+    #         plt.plot(xx, zz[np.argmax(np.mean(zz, 1)), :], label='peak')
+
+    #         plt.xlim([min(xx), max(xx)])
+    #         plt.legend(loc=0)
+    #         ax1.xaxis.tick_top()
+    #         if grid_on:
+    #             plt.grid(True)
+
+    #         plt.subplot(gs[2+k])
+
+    #         plt.contourf(xx, yy, zz, levels, cmap='viridis')
+
+    #         plt.xlabel(xmotor)
+    #         plt.ylabel(ymotor)
+
+    #         if len(xtext) > 0:
+    #             plt.xlabel(xtext)
+
+    #         if len(ytext) > 0:
+    #             plt.ylabel(ytext)
+
+    #         if grid_on:
+    #             plt.grid(True)
+
+    #         if cbar:
+    #             cb = plt.colorbar(cax=plt.subplot(
+    #                 gs[0]), orientation='horizontal')
+    #             cb.ax.xaxis.set_ticks_position('top')
+    #             cb.ax.xaxis.set_label_position('top')
+
+    #         ax4 = plt.subplot(gs[3+k])
+
+    #         plt.plot(np.mean(zz, 1), yy)
+    #         plt.plot(zz[:, np.argmax(np.mean(zz, 0))], yy)
+    #         plt.ylim([np.min(yy), np.max(yy)])
+
+    #         ax4.yaxis.tick_right()
+    #         if grid_on:
+    #             plt.grid(True)
+
+    #     return xx, yy, zz
+
+    # def export_scan_sequence(self, scan_sequence, path, fileName, yerr='std',
+    #                          xerr='std', xgrid=[], norm2one=False, binning=True):
+    #     """Exports source data for each scan list in the sequence as individual file.
+
+    #     Args:
+    #         scan_sequence (List[
+    #             List/Tuple[List[int],
+    #             int/str]])              : Sequence of scan lists and parameters.
+    #         path (str)                  : Path of the file to export to.
+    #         fileName (str)              : Name of the file to export to.
+    #         yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
+    #                                       default is 'std'.
+    #         xerr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
+    #                                       default is 'std'.
+    #         xgrid (Optional[ndarray])   : Grid to bin the data to -
+    #                                       default in empty so use the
+    #                                       x-axis of the first scan.
+    #         norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
+    #                                       default is False.
+
+    #     """
+    #     # get scan_sequence data without plotting
+    #     sequence_data, parameters, names, label_texts = self.plot_scan_sequence(
+    #         scan_sequence,
+    #         xgrid=xgrid,
+    #         yerr=yerr,
+    #         xerr=xerr,
+    #         norm2one=norm2one,
+    #         binning=binning,
+    #         skip_plot=True)
+
+    #     for i, label_text in enumerate(label_texts):
+    #         # travserse the sequence
+
+    #         header = ''
+    #         saveData = []
+    #         for counter in sequence_data:
+    #             # travserse all counters in the data
+
+    #             # build the file header
+    #             header = header + counter + '\t '
+    #             # build the data matrix
+    #             saveData.append(sequence_data[counter][i])
+
+    #         # save data with header to text file
+    #         np.savetxt('{:s}/{:s}_{:s}.dat'.format(path, fileName,
+    #                                                "".join(x for x in label_text if x.isalnum())),
+    #                    np.r_[saveData].T, delimiter='\t', header=header)
 
     @property
     def clist(self):
