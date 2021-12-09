@@ -12,7 +12,9 @@ setup(
                       'uncertainties',
                       'xrayutilities',
                       'h5py>=3.0',
-                      'nexusformat'],
+                      'nexusformat',
+                      'tabulate',
+                      ],
     extras_require={
         'testing': ['flake8', 'pytest'],
         'documentation': ['sphinx', 'nbsphinx', 'sphinxcontrib-napoleon'],

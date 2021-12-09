@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import re
 from uncertainties import unumpy
+from tabulate import tabulate
 from .helpers import bin_data
 
 __all__ = ['Evaluation']
@@ -586,6 +587,7 @@ class Evaluation(object):
 
     def _plot_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, label_text='', fmt='-o',
                     **kwargs):
+        plots = []
         # plot all keys in the clist
         for counter in self.clist:
             # iterate the counter list
@@ -606,13 +608,14 @@ class Evaluation(object):
             else:
                 plot = plt.errorbar(x2plot, y2plot[counter], fmt=fmt, label=lt, xerr=xerr2plot,
                                     yerr=yerr2plot[counter], **kwargs)
+            plots.append(plot)
 
         # add a legend, labels, title and set the limits and grid
         plt.legend(frameon=True, loc=0, numpoints=1)
         plt.xlabel(self.xcol)
         plt.title(name)
 
-        return plot
+        return plots
 
     def plot_scans(self, scan_list, xgrid=np.array([]), yerr='std', xerr='std', norm2one=False,
                    binning=True, label_text='', fmt='-o', **kwargs):
@@ -714,7 +717,11 @@ class Evaluation(object):
     def _fit_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, mod, pars, select, weights,
                    fit_method='leastsq', nan_policy='propagate'):
         res = {}  # initialize the results dict
-        report = {}
+        report = []
+        param_names = mod.param_names.copy()
+        param_names.insert(0, 'counter')
+        report_1 = [param_names]
+        report_2 = {}
 
         for counter in y2plot:
             res[counter] = {}
@@ -728,32 +735,29 @@ class Evaluation(object):
                 sel = eval(select)
 
             # execute the select statement
-            y2plot = y2plot[counter][sel]
-            x2plot = x2plot[sel]
-            yerr2plot = yerr2plot[counter][sel]
-            xerr2plot = xerr2plot[sel]
+            _y2plot = y2plot[counter][sel]
+            _x2plot = x2plot[sel]
+            _yerr2plot = yerr2plot[counter][sel]
+            _xerr2plot = xerr2plot[sel]
 
             # remove nans
-            y2plot = y2plot[~np.isnan(y2plot)]
-            x2plot = x2plot[~np.isnan(y2plot)]
-            yerr2plot = yerr2plot[~np.isnan(y2plot)]
-            xerr2plot = xerr2plot[~np.isnan(y2plot)]
+            _y2plot = _y2plot[~np.isnan(_y2plot)]
+            _x2plot = _x2plot[~np.isnan(_y2plot)]
+            _yerr2plot = _yerr2plot[~np.isnan(_y2plot)]
+            _xerr2plot = _xerr2plot[~np.isnan(_y2plot)]
 
             # do the fitting with or without weighting the data
             if weights:
-                out = mod.fit(y2plot, pars, x=x2plot, weights=1/yerr2plot, method=fit_method,
+                out = mod.fit(_y2plot, pars, x=_x2plot, weights=1/_yerr2plot, method=fit_method,
                               nan_policy=nan_policy)
             else:
-                out = mod.fit(y2plot, pars, x=x2plot, method=fit_method, nan_policy=nan_policy)
+                out = mod.fit(_y2plot, pars, x=_x2plot, method=fit_method, nan_policy=nan_policy)
 
-            report_1 = counter + ':' + '\n' + '_'*40 + '\n'
-            for key in out.best_values:
-                report_1 += '{:>12}:  {:>10.4e}\n'.format(key, out.best_values[key])
+            best_values = list(out.best_values.values())
+            best_values.insert(0, counter)
+            report_1.append(best_values)
 
-            report_2 = out.fit_report()
-
-            report[counter] = [report_1, report_2]
-
+            report_2[counter] = out.fit_report()
             # add the fit results to the returns
             for pname, par in pars.items():
                 res[counter][pname] = out.best_values[pname]
@@ -761,16 +765,18 @@ class Evaluation(object):
 
             res[counter]['chisqr'] = out.chisqr
             res[counter]['redchi'] = out.redchi
-            res[counter]['CoM'] = sum(y2plot*x2plot)/sum(y2plot)
-            res[counter]['int'] = sum(y2plot)
+            res[counter]['CoM'] = sum(_y2plot*_x2plot)/sum(_y2plot)
+            res[counter]['int'] = sum(_y2plot)
             res[counter]['fit'] = out
+
+        report = [report_1, report_2]
 
         return res, report
 
     def _plot_fit_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, res, offset_t0=False,
                         label_text='', fmt='o'):
-        plot = self._plot_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, label_text=label_text,
-                                fmt=fmt, alpha=0.25)
+        plots = self._plot_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, label_text=label_text,
+                                 fmt=fmt, alpha=0.25)
 
         # set the x-offset for delay scans - offset parameter in
         # the fit must be called 't0'
@@ -783,12 +789,12 @@ class Evaluation(object):
         else:
             offsetX = 0
 
-        for counter in y2plot:
+        for i, counter in enumerate(y2plot):
             # plot the fit and the data as errorbars
             x2plotFit = np.linspace(
                 np.min(x2plot), np.max(x2plot), 10000)
             plt.plot(x2plotFit-offsetX, res[counter]['fit'].eval(x=x2plotFit), '-', lw=2, alpha=1,
-                     color=plot[0].get_color())
+                     color=plots[i][0].get_color())
 
     def fit_scans(self, scan_list, mod, pars, xgrid=[], yerr='std', xerr='std', norm2one=False,
                   binning=True, label_text='', select='', fit_report=0, weights=False,
@@ -811,11 +817,12 @@ class Evaluation(object):
                              fmt='o')
 
         # print the fit report
-        for counter in y2plot:
-            if fit_report > 0:
-                print(report[counter][0])
-            if fit_report > 1:
-                print(report[counter][1])
+        if fit_report > 0:
+            print(tabulate(report[0][1:], headers=report[0][0], tablefmt="fancy_grid"))
+        if fit_report > 1:
+            for counter in y2plot:
+                print('='*10 + counter + '='*10)
+                print(report[1][counter])
 
     def fit_scan_sequence(self, scan_sequence, mod, pars, ylims=[], xlims=[], fig_size=[],
                           xgrid=[], yerr='std', xerr='std', norm2one=False,
