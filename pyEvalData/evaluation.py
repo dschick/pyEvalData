@@ -586,11 +586,16 @@ class Evaluation(object):
         return sequence_data, parameters, names
 
     def _plot_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, label_text='', fmt='-o',
-                    **kwargs):
+                    plot_separate=False, **kwargs):
         plots = []
         # plot all keys in the clist
-        for counter in self.clist:
+        for i, counter in enumerate(self.clist):
             # iterate the counter list
+
+            if plot_separate:
+                # use subplot for separate plotting
+                plt.subplot(1, len(self.clist), i+1)
+
             if len(label_text) == 0:
                 # if no label_text is given use the counter name
                 lt = counter
@@ -618,7 +623,7 @@ class Evaluation(object):
         return plots
 
     def plot_scans(self, scan_list, xgrid=np.array([]), yerr='std', xerr='std', norm2one=False,
-                   binning=True, label_text='', fmt='-o', **kwargs):
+                   binning=True, label_text='', fmt='-o', plot_separate=False, **kwargs):
         """plot_scans
 
         Plot a list of scans from the source file.
@@ -652,12 +657,13 @@ class Evaluation(object):
                             binning=binning)
 
         _ = self._plot_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, label_text=label_text,
-                             fmt=fmt, **kwargs)
+                             fmt=fmt, plot_separate=plot_separate, **kwargs)
 
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
     def plot_scan_sequence(self, scan_sequence, xgrid=np.array([]), yerr='std', xerr='std',
-                           norm2one=False, binning=True, label_format='', fmt='-o', **kwargs):
+                           norm2one=False, binning=True, label_format='', fmt='-o',
+                           plot_separate=False, **kwargs):
         """Plot a list of scans from the source file.
         Various plot parameters are provided.
         The plotted data are returned.
@@ -709,6 +715,7 @@ class Evaluation(object):
                                  names[i],
                                  label_text=lt,
                                  fmt=fmt,
+                                 plot_separate=plot_separate,
                                  **kwargs)
 
         return sequence_data, parameters, names, label_texts
@@ -717,9 +724,7 @@ class Evaluation(object):
                    fit_method='leastsq', nan_policy='propagate'):
         res = {}  # initialize the results dict
         report = []
-        param_names = mod.param_names.copy()
-        param_names.insert(0, 'counter')
-        report_1 = [param_names]
+        report_1 = []
         report_2 = {}
 
         for counter in y2plot:
@@ -773,9 +778,9 @@ class Evaluation(object):
         return res, report
 
     def _plot_fit_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, res, offset_t0=False,
-                        label_text='', fmt='o'):
+                        label_text='', fmt='o', plot_separate=False):
         plots = self._plot_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, label_text=label_text,
-                                 fmt=fmt, alpha=0.25)
+                                 fmt=fmt, alpha=0.25, plot_separate=plot_separate)
 
         # set the x-offset for delay scans - offset parameter in
         # the fit must be called 't0'
@@ -789,11 +794,24 @@ class Evaluation(object):
             offsetX = 0
 
         for i, counter in enumerate(y2plot):
+            if plot_separate:
+                # use subplot for separate plotting
+                plt.subplot(1, len(self.clist), i+1)
             # plot the fit and the data as errorbars
             x2plotFit = np.linspace(
                 np.min(x2plot), np.max(x2plot), 10000)
             plt.plot(x2plotFit-offsetX, res[counter]['fit'].eval(x=x2plotFit), '-', lw=2, alpha=1,
                      color=plots[i][0].get_color())
+
+            # figure formatting
+            if True: # len(parameters)*len(self.clist) > 6:
+                # move the legend outside the plot for more than
+                # 5 sequence parameters
+                plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
+                        loc=3, numpoints=1, ncol=3, mode="expand",
+                        borderaxespad=0.)
+        else:
+            plt.legend(frameon=True, loc=0, numpoints=1)
 
     def fit_scans(self, scan_list, mod, pars, xgrid=[], yerr='std', xerr='std', norm2one=False,
                   binning=True, label_text='', select='', fit_report=0, weights=False,
@@ -817,7 +835,8 @@ class Evaluation(object):
 
         # print the fit report
         if fit_report > 0:
-            print(tabulate(report[0][1:], headers=report[0][0], tablefmt="fancy_grid"))
+            print(tabulate(report[0], headers=['counter', *mod.param_names],
+                           tablefmt="fancy_grid"))
         if fit_report > 1:
             for counter in y2plot:
                 head_len = int(len(counter)/2)
@@ -826,23 +845,41 @@ class Evaluation(object):
                 else:
                     fix = 0
 
-                print("\n" + "="*(39-head_len-fix) + " {:} ".format(counter) + "="*(39-head_len))
+                print('\n' + '='*(39-head_len-fix) + ' {:} '.format(counter) + '='*(39-head_len))
                 print(report[1][counter])
 
     def fit_scan_sequence(self, scan_sequence, mod, pars, xgrid=[], yerr='std', xerr='std',
                           norm2one=False, binning=True, label_format='', select='', fit_report=0,
                           weights=False, fit_method='leastsq', nan_policy='propagate',
-                          offset_t0=False, fmt='o'):
+                          last_res_as_par=False, offset_t0=False, plot_separate=False, fmt='o'):
         # load data
         sequence_data, parameters, names = self.eval_scan_sequence(
             scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one, binning=binning)
 
         res = {}
+        report_1 = []
+        report_2 = []
+        label_texts = []
         for counter in self.clist:
             res[counter] = {}
 
         for i, ((scan_list, parameter), name) in enumerate(zip(scan_sequence, names)):
-            # iterate the scan sequence
+            # get the fit models and fit parameters if they are lists/tupels
+            if isinstance(mod, (list, tuple)):
+                _mod = mod[i]
+            else:
+                _mod = mod
+
+            if last_res_as_par and i > 0:
+                # use last results as start values for pars
+                _pars = pars
+                for pname, par in pars.items():
+                    _pars[pname].value = res[counter][pname][i-1]
+            else:
+                if isinstance(pars, (list, tuple)):
+                    _pars = pars[i]
+                else:
+                    _pars = pars
 
             lt = '#{:d}'.format(i+1)
             if len(label_format) > 0:
@@ -851,25 +888,52 @@ class Evaluation(object):
                 except ValueError:
                     self.log.warning('Could not apply \'label_format\' to parameter!')
 
+            label_texts.append(lt)
             # extract clist und xcol from sequence_data
             y2plot = {c: sequence_data[c][i] for c in self.clist}
             yerr2plot = {c: sequence_data[c + 'Err'][i] for c in self.clist}
             x2plot = sequence_data[self.xcol][i]
             xerr2plot = sequence_data[self.xcol + 'Err'][i]
             # fit the model and parameters to the data
-            _res, report = self._fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, mod, pars, select,
-                                           weights, fit_method=fit_method, nan_policy='propagate')
+            _res, _report = self._fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, _mod, _pars,
+                                            select, weights, fit_method=fit_method,
+                                            nan_policy='propagate')
 
             # plot the data and fit
             self._plot_fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, _res, label_text=lt,
-                                 offset_t0=offset_t0, fmt=fmt)
+                                 offset_t0=offset_t0, fmt=fmt, plot_separate=plot_separate)
 
+            # store the results
             for counter in self.clist:
                 for key in _res[counter].keys():
                     try:
                         res[counter][key].append(_res[counter][key])
                     except KeyError:
                         res[counter][key] = [_res[counter][key]]
+
+            # store the the report
+            report_1.append(['>> ' + lt + ' <<'])
+            for rep in _report[0]:
+                report_1.append(rep)
+            report_2.append(_report[1])
+
+        # print the basic fit report
+        if fit_report > 0:
+            print(tabulate(report_1, headers=['counter', *mod.param_names],
+                           tablefmt="fancy_grid"))
+        # print the advanced fit report
+        if fit_report > 1:
+            for i, lt in enumerate(label_texts):
+                lt_len = int(len(str(lt))/2)
+                fix = 1 if np.mod(len(lt), 2) != 0 else 0
+                print('\n' + '_'*(39-lt_len-fix) + ' {:} '.format(lt) + '_'*(39-lt_len))
+                for counter in self.clist:
+                    head_len = int(len(counter)/2)
+                    fix = 1 if np.mod(len(counter), 2) != 0 else 0
+
+                    print('\n' + '='*(39-head_len-fix) + ' {:} '.format(counter)
+                          + '='*(39-head_len))
+                    print(report_2[i][counter])
 
         return res, parameters, sequence_data
 
@@ -938,62 +1002,7 @@ class Evaluation(object):
     #     # get the last open figure number
     #     main_fig_num = self.get_last_fig_number()
 
-    #     if not fig_size:
-    #         # use default figure size if none is given
-    #         fig_size = mpl.rcParams['figure.figsize']
-
-    #     # initialization of returns
-    #     res = {}  # initialize the results dict
-
-    #     for i, counter in enumerate(self.clist):
-    #         # traverse all counters in the counter list to initialize the returns
-
-    #         # results for this counter is again a Dict
-    #         res[counter] = {}
-
-    #         if isinstance(pars, (list, tuple)):
-    #             # the fit paramters might individual for each counter
-    #             _pars = pars[i]
-    #         else:
-    #             _pars = pars
-
-    #         for pname, par in _pars.items():
-    #             # add a dict key for each fit parameter in the result dict
-    #             res[counter][pname] = []
-    #             res[counter][pname + 'Err'] = []
-
-    #         # add some more results
-    #         res[counter]['chisqr'] = []
-    #         res[counter]['redchi'] = []
-    #         res[counter]['CoM'] = []
-    #         res[counter]['int'] = []
-    #         res[counter]['fit'] = []
-
-    #     if len(sequence_data) > 0:
-    #         # get only the parameters
-    #         _, parameters, names, label_texts = self.plot_scan_sequence(
-    #             scan_sequence,
-    #             xgrid=xgrid,
-    #             yerr=yerr,
-    #             xerr=xerr,
-    #             norm2one=norm2one,
-    #             binning=True,
-    #             sequence_type=sequence_type,
-    #             label_texts=label_texts,
-    #             skip_plot=True)
-    #     else:
-    #         # get the sequence data and parameters
-    #         sequence_data, parameters, names, label_texts = self.plot_scan_sequence(
-    #             scan_sequence,
-    #             xgrid=xgrid,
-    #             yerr=yerr,
-    #             xerr=xerr,
-    #             norm2one=norm2one,
-    #             binning=True,
-    #             sequence_type=sequence_type,
-    #             label_texts=label_texts,
-    #             skip_plot=True)
-
+    
     #     # this is the number of different counters
     #     num_sub_plots = len(self.clist)
 
@@ -1001,17 +1010,6 @@ class Evaluation(object):
     #     l_plot = 1  # counter for single plots
 
     #     for i, parameter in enumerate(parameters):
-    #         # traverse all parameters of the sequence
-    #         lt = label_texts[i]
-    #         name = names[i]
-
-    #         x2plot = sequence_data[self.xcol][i]
-    #         xerr2plot = sequence_data[self.xcol + 'Err'][i]
-
-    #         if fit_report > 0:
-    #             # plot for basics and full fit reporting
-    #             print('')
-    #             print('='*10 + ' Parameter: ' + lt + ' ' + '='*15)
 
     #         j = 0  # counter for counters ;)
     #         k = 1  # counter for subplots
@@ -1020,79 +1018,6 @@ class Evaluation(object):
 
     #             # plot only y counters - next is the coresp. error
     #             if j >= 2 and j % 2 == 0:
-
-    #                 # add the counter name to the label for not seperate plots
-    #                 if sequence_type == 'none':
-    #                     _lt = counter
-    #                 else:
-    #                     if plot_separate or num_sub_plots == 1:
-    #                         _lt = lt
-    #                     else:
-    #                         _lt = lt + ' | ' + counter
-
-    #                 # get the fit models and fit parameters if they are lists/tupels
-    #                 if isinstance(mod, (list, tuple)):
-    #                     _mod = mod[k-1]
-    #                 else:
-    #                     _mod = mod
-
-    #                 if last_res_as_par and i > 0:
-    #                     # use last results as start values for pars
-    #                     _pars = pars
-    #                     for pname, par in pars.items():
-    #                         _pars[pname].value = res[counter][pname][i-1]
-    #                 else:
-    #                     if isinstance(pars, (list, tuple)):
-    #                         _pars = pars[k-1]
-    #                     else:
-    #                         _pars = pars
-
-    #                 # get the actual y-data and -errors for plotting and fitting
-    #                 y2plot = sequence_data[counter][i]
-    #                 yerr2plot = sequence_data[counter + 'Err'][i]
-
-    #                 # evaluate the select statement
-    #                 if select == '':
-    #                     # select all
-    #                     sel = np.ones_like(y2plot, dtype=bool)
-    #                 else:
-    #                     sel = eval(select)
-
-    #                 # execute the select statement
-    #                 y2plot = y2plot[sel]
-    #                 x2plot = x2plot[sel]
-    #                 yerr2plot = yerr2plot[sel]
-    #                 xerr2plot = xerr2plot[sel]
-
-    #                 # remove nans
-    #                 y2plot = y2plot[~np.isnan(y2plot)]
-    #                 x2plot = x2plot[~np.isnan(y2plot)]
-    #                 yerr2plot = yerr2plot[~np.isnan(y2plot)]
-    #                 xerr2plot = xerr2plot[~np.isnan(y2plot)]
-
-    #                 # do the fitting with or without weighting the data
-    #                 if weights:
-    #                     out = _mod.fit(y2plot, _pars, x=x2plot,
-    #                                    weights=1/yerr2plot, method=fit_method,
-    #                                    nan_policy='propagate')
-    #                 else:
-    #                     out = _mod.fit(y2plot, _pars, x=x2plot,
-    #                                    method=fit_method, nan_policy='propagate')
-
-    #                 if fit_report > 0:
-    #                     # for basic and full fit reporting
-    #                     print('')
-    #                     print('-'*10 + ' ' + counter + ': ' + '-'*15)
-    #                     for key in out.best_values:
-    #                         print('{:>12}:  {:>10.4e} '.format(
-    #                             key, out.best_values[key]))
-
-    #                 # set the x-offset for delay scans - offset parameter in
-    #                 # the fit must be called 't0'
-    #                 if offset_t0:
-    #                     offsetX = out.best_values['t0']
-    #                 else:
-    #                     offsetX = 0
 
     #                 plt.figure(main_fig_num)  # select the main figure
 
@@ -1117,31 +1042,7 @@ class Evaluation(object):
     #                 else:
     #                     plt.legend(frameon=True, loc=0, numpoints=1)
 
-    #                 # set the axis limits, title, labels and gird
-    #                 if xlims:
-    #                     plt.xlim(xlims)
-    #                 if ylims:
-    #                     plt.ylim(ylims)
-    #                 if len(title_text) > 0:
-    #                     if isinstance(title_text, (list, tuple)):
-    #                         plt.title(title_text[k-1])
-    #                     else:
-    #                         plt.title(title_text)
-    #                 else:
-    #                     plt.title(name)
-
-    #                 if len(xtext) > 0:
-    #                     plt.xlabel(xtext)
-
-    #                 if len(ytext) > 0:
-    #                     if isinstance(ytext, (list, tuple)):
-    #                         plt.ylabel(ytext[k-1])
-    #                     else:
-    #                         plt.ylabel(ytext)
-
-    #                 if grid_on:
-    #                     plt.grid(True)
-
+    #           
     #                 # show the single fits and residuals
     #                 if show_single:
     #                     plt.figure(main_fig_num+l_plot, figsize=fig_size)
@@ -1186,45 +1087,10 @@ class Evaluation(object):
     #                                  color=plot[0].get_color())
     #                     plt.legend(frameon=True, loc=0, numpoints=1)
 
-    #                     if xlims:
-    #                         plt.xlim(xlims)
-    #                     if ylims:
-    #                         plt.ylim(ylims)
-
-    #                     if len(xtext) > 0:
-    #                         plt.xlabel(xtext)
-
-    #                     if len(ytext) > 0:
-    #                         if isinstance(ytext, (list, tuple)):
-    #                             plt.ylabel(ytext[k-1])
-    #                         else:
-    #                             plt.ylabel(ytext)
-
-    #                     if grid_on:
-    #                         plt.grid(True)
+    #                     
 
     #                     l_plot += 1
-    #                 if fit_report > 1:
-    #                     # for full fit reporting
-    #                     print('_'*40)
-    #                     print(out.fit_report())
-
-    #                 # add the fit results to the returns
-    #                 for pname, par in _pars.items():
-    #                     res[counter][pname] = np.append(
-    #                         res[counter][pname], out.best_values[pname])
-    #                     res[counter][pname + 'Err'] = np.append(
-    #                         res[counter][pname + 'Err'], out.params[pname].stderr)
-
-    #                 res[counter]['chisqr'] = np.append(
-    #                     res[counter]['chisqr'], out.chisqr)
-    #                 res[counter]['redchi'] = np.append(
-    #                     res[counter]['redchi'], out.redchi)
-    #                 res[counter]['CoM'] = np.append(
-    #                     res[counter]['CoM'], sum(y2plot*x2plot)/sum(y2plot))
-    #                 res[counter]['int'] = np.append(
-    #                     res[counter]['int'], sum(y2plot))
-    #                 res[counter]['fit'] = np.append(res[counter]['fit'], out)
+    #                 
 
     #                 k += 1
 
