@@ -904,9 +904,9 @@ class Evaluation(object):
             for counter in self.clist:
                 for key in _res[counter].keys():
                     try:
-                        res[counter][key].append(_res[counter][key])
+                        res[counter][key] = np.append(res[counter][key], _res[counter][key])
                     except KeyError:
-                        res[counter][key] = [_res[counter][key]]
+                        res[counter][key] = np.array([_res[counter][key]])
 
             # store the the report
             report_1.append(['>> ' + lt + ' <<'])
