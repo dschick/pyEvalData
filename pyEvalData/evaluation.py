@@ -487,9 +487,6 @@ class Evaluation(object):
         avg_data, std_data, err_data, name = self.avg_N_bin_scans(
             scan_list, xgrid=xgrid, binning=binning)
 
-        
-
-
         # set x-data and errors
         x2plot = avg_data[self.xcol]
         # set the error data
@@ -518,7 +515,8 @@ class Evaluation(object):
                 # e.g. for delay scans
                 before_zero = y2plot[col][x2plot <= self.t0]
                 y2plot[col] = y2plot[col]/np.mean(before_zero)
-                yerr2plot[col] = yerr2plot[col]/np.mean(before_zero)
+                if yerr2plot[col] is not None:
+                    yerr2plot[col] = yerr2plot[col]/np.mean(before_zero)
 
         return y2plot, x2plot, yerr2plot, xerr2plot, name
 
