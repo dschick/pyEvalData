@@ -487,24 +487,18 @@ class Evaluation(object):
         avg_data, std_data, err_data, name = self.avg_N_bin_scans(
             scan_list, xgrid=xgrid, binning=binning)
 
-        # set the error data
-        if xerr == 'std':
-            xerr_data = std_data
-        elif xerr == 'err':
-            xerr_data = err_data
-        else:
-            xerr_data = None
+        
 
-        if yerr == 'std':
-            yerr_data = std_data
-        elif yerr == 'err':
-            yerr_data = err_data
-        else:
-            yerr_data = None
 
         # set x-data and errors
         x2plot = avg_data[self.xcol]
-        xerr2plot = xerr_data[self.xcol]
+        # set the error data
+        if xerr == 'std':
+            xerr2plot = std_data[self.xcol]
+        elif xerr == 'err':
+            xerr2plot = err_data[self.xcol]
+        else:
+            xerr2plot = None
 
         # plot all keys in the clist
         for col in self.clist:
@@ -512,7 +506,12 @@ class Evaluation(object):
 
             # save the counter data and errors in the ordered dictionary
             y2plot[col] = avg_data[col]
-            yerr2plot[col] = yerr_data[col]
+            if yerr == 'std':
+                yerr2plot[col] = std_data[col]
+            elif yerr == 'err':
+                yerr2plot[col] = err_data[col]
+            else:
+                yerr2plot[col] = None
 
             if norm2one:
                 # normalize the y-data to 1 for t < t0
