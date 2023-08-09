@@ -80,7 +80,7 @@ class Evaluation(object):
         self.custom_counters = []
         self.math_keys = ['mean', 'sum', 'diff', 'max', 'min', 'round', 'abs',
                           'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
-                          'pi', 'exp', 'log', 'log10', 'sqrt']
+                          'pi', 'exp', 'log', 'log10', 'sqrt', 'sign']
         self.ignore_keys = []
         self.statistic_type = 'gauss'
         self.propagate_errors = True

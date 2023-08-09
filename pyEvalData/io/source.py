@@ -547,7 +547,7 @@ class Source(object):
             try:
                 _ = nxs_file[entry_name]
                 scan_in_nexus = True
-            except KeyError:
+            except (KeyError, nxs.NeXusError):
                 scan_in_nexus = False
 
             if (not scan_in_nexus) or (scan.number >= last_scan_in_nexus) \
