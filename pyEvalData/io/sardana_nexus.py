@@ -25,7 +25,7 @@
 
 from numpy.core.records import fromarrays
 import nexusformat.nexus as nxs
-import os.path as path
+import os
 
 from .source import Source
 from .scan import Scan
@@ -95,8 +95,9 @@ class SardanaNeXus(Source):
 
         """
         self.log.info('parse_raw')
-        nxs_file_path = path.join(self.file_path, self.file_name)
+        nxs_file_path = os.path.join(self.file_path, self.file_name)
         try:
+            os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
             nxs_file = nxs.nxload(nxs_file_path, mode='r')
         except nxs.NeXusError:
             raise nxs.NeXusError('Sardana NeXus file \'{:s}\' does not exist!'.format(
@@ -133,6 +134,8 @@ class SardanaNeXus(Source):
                         if self.read_all_data:
                             self.read_scan_data(self.scan_dict[entry_number])
 
+        nxs_file.close()
+
     def read_raw_scan_data(self, scan):
         """read_raw_scan_data
 
@@ -144,8 +147,9 @@ class SardanaNeXus(Source):
         """
         self.log.info('read_raw_scan_data for scan #{:d}'.format(scan.number))
         # try to open the file
-        nxs_file_path = path.join(self.file_path, self.file_name)
+        nxs_file_path = os.path.join(self.file_path, self.file_name)
         try:
+            os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
             nxs_file = nxs.nxload(nxs_file_path, mode='r')
         except nxs.NeXusError:
             raise nxs.NeXusError('Sardana NeXus file \'{:s}\' does not exist!'.format(
@@ -172,3 +176,5 @@ class SardanaNeXus(Source):
             scan.data = fromarrays(data_list, dtype=dtype_list)
         else:
             scan.date = None
+
+        nxs_file.close()
