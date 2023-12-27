@@ -127,6 +127,7 @@ class PalH5(Source):
                                                self.file_name.format(scan_number) + '.h5')
 
                         try:
+                            os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
                             with h5py.File(h5_file, 'r') as h5:
                                 header = h5['R{0:04d}/header'.format(scan_number)]
 
@@ -171,6 +172,7 @@ class PalH5(Source):
                                self.file_name.format(scan.number),
                                self.file_name.format(scan.number) + '.h5')
 
+        os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
         with h5py.File(h5_file, 'r') as h5:
             entry = h5['R{0:04d}'.format(scan.number)]
             # iterate through data fields
