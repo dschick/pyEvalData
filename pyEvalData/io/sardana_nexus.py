@@ -98,43 +98,38 @@ class SardanaNeXus(Source):
         nxs_file_path = os.path.join(self.file_path, self.file_name)
         try:
             os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-            nxs_file = nxs.nxload(nxs_file_path, mode='r')
-        except nxs.NeXusError:
-            raise nxs.NeXusError('Sardana NeXus file \'{:s}\' does not exist!'.format(
-                nxs_file_path))
+            with nxs.nxload(nxs_file_path, mode='r') as nxs_file:
+                for entry in nxs_file:
+                    # check for scan number in given range
+                    entry_number = int(nxs_file[entry].entry_identifier)
+                    if (entry_number >= self.start_scan_number) and \
+                            ((entry_number <= self.stop_scan_number) or
+                                (self.stop_scan_number == -1)):
+                        last_scan_number = self.get_last_scan_number()
+                        # check if Scan needs to be re-created
+                        # if scan is not present, its the last one, or force overwrite
+                        if (entry_number not in self.scan_dict.keys()) or \
+                                (entry_number >= last_scan_number) or \
+                                self.force_overwrite:
+                            # create scan object
+                            init_mopo = {}
+                            for field in nxs_file[entry].measurement.pre_scan_snapshot:
+                                init_mopo[field] = \
+                                    nxs_file[entry]['measurement/pre_scan_snapshot'][field]
 
-        with nxs_file.nxfile:
-            for entry in nxs_file:
-                # check for scan number in given range
-                entry_number = int(nxs_file[entry].entry_identifier)
-                if (entry_number >= self.start_scan_number) and \
-                        ((entry_number <= self.stop_scan_number) or
-                            (self.stop_scan_number == -1)):
-                    last_scan_number = self.get_last_scan_number()
-                    # check if Scan needs to be re-created
-                    # if scan is not present, its the last one, or force overwrite
-                    if (entry_number not in self.scan_dict.keys()) or \
-                            (entry_number >= last_scan_number) or \
-                            self.force_overwrite:
-                        # create scan object
-                        init_mopo = {}
-                        for field in nxs_file[entry].measurement.pre_scan_snapshot:
-                            init_mopo[field] = \
-                                nxs_file[entry]['measurement/pre_scan_snapshot'][field]
-
-                        scan = Scan(int(entry_number),
-                                    cmd=nxs_file[entry].title,
-                                    date=nxs_file[entry].start_time,
-                                    time=nxs_file[entry].start_time,
-                                    int_time=float(0),
-                                    header='',
-                                    init_mopo=init_mopo)
-                        self.scan_dict[entry_number] = scan
-                        # check if the data needs to be read as well
-                        if self.read_all_data:
-                            self.read_scan_data(self.scan_dict[entry_number])
-
-        nxs_file.close()
+                            scan = Scan(int(entry_number),
+                                        cmd=nxs_file[entry].title,
+                                        date=nxs_file[entry].start_time,
+                                        time=nxs_file[entry].start_time,
+                                        int_time=float(0),
+                                        header='',
+                                        init_mopo=init_mopo)
+                            self.scan_dict[entry_number] = scan
+                            # check if the data needs to be read as well
+                            if self.read_all_data:
+                                self.read_scan_data(self.scan_dict[entry_number])
+        except nxs.NeXusError as e:
+            raise nxs.NeXusError(e)
 
     def read_raw_scan_data(self, scan):
         """read_raw_scan_data
@@ -146,35 +141,34 @@ class SardanaNeXus(Source):
 
         """
         self.log.info('read_raw_scan_data for scan #{:d}'.format(scan.number))
+        entry_name = 'entry{:d}'.format(scan.number)
         # try to open the file
         nxs_file_path = os.path.join(self.file_path, self.file_name)
         try:
             os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-            nxs_file = nxs.nxload(nxs_file_path, mode='r')
+            with nxs.nxload(nxs_file_path, mode='r') as nxs_file:
+                # try to enter entry
+                try:
+                    entry = nxs_file[entry_name]
+                except nxs.NeXusError:
+                    self.log.exception('Entry #{:d} not present in NeXus file!'.format(
+                        scan.number))
+                    return
+                # iterate through data fields
+                data_list = []
+                dtype_list = []
+                for field in entry.measurement:
+                    # do not add data which is already in the pre-scan snapshot
+                    # that is tricky if it is in the snapshot and scanned ...
+                    if field != 'pre_scan_snapshot':
+                        data_list.append(entry.measurement[field])
+                        dtype_list.append((field,
+                                          entry.measurement[field].dtype,
+                                          entry.measurement[field].shape))
+                if len(data_list) > 0:
+                    scan.data = fromarrays(data_list, dtype=dtype_list)
+                else:
+                    scan.date = None
         except nxs.NeXusError:
             raise nxs.NeXusError('Sardana NeXus file \'{:s}\' does not exist!'.format(
                 nxs_file_path))
-        entry_name = 'entry{:d}'.format(scan.number)
-        # try to enter entry
-        try:
-            entry = nxs_file[entry_name]
-        except nxs.NeXusError:
-            self.log.exception('Entry #{:d} not present in NeXus file!'.format(scan.number))
-            return
-        # iterate through data fields
-        data_list = []
-        dtype_list = []
-        for field in entry.measurement:
-            # do not add data which is already in the pre-scan snapshot
-            # that is tricky if it is in the snapshot and scanned ...
-            if field != 'pre_scan_snapshot':
-                data_list.append(entry.measurement[field])
-                dtype_list.append((field,
-                                   entry.measurement[field].dtype,
-                                   entry.measurement[field].shape))
-        if len(data_list) > 0:
-            scan.data = fromarrays(data_list, dtype=dtype_list)
-        else:
-            scan.date = None
-
-        nxs_file.close()
