@@ -11,4 +11,4 @@ from . import helpers
 
 __all__ = ['Evaluation', 'io', 'helpers']
 
-__version__ = '1.5.1'
+__version__ = '1.6.0'
