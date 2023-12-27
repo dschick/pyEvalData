@@ -134,8 +134,6 @@ class SardanaNeXus(Source):
                         if self.read_all_data:
                             self.read_scan_data(self.scan_dict[entry_number])
 
-        nxs_file.close()
-
     def read_raw_scan_data(self, scan):
         """read_raw_scan_data
 
@@ -176,5 +174,3 @@ class SardanaNeXus(Source):
             scan.data = fromarrays(data_list, dtype=dtype_list)
         else:
             scan.date = None
-
-        nxs_file.close()
