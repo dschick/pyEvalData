@@ -28,11 +28,9 @@ import logging
 import numpy as np
 import collections
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-import re
 from uncertainties import unumpy
 from tabulate import tabulate
-from .helpers import bin_data
+from .helpers import bin_data, traverse_counters, resolve_counter_name, col_string_to_eval_string
 
 __all__ = ['Evaluation']
 
@@ -87,123 +85,6 @@ class Evaluation(object):
         self.apply_data_filter = False
         self.data_filters = ['evaluatable statement']
 
-    def traverse_counters(self, source_cols=''):
-        """traverse_counters
-
-        Traverse all counters and replace all predefined counter definitions.
-        Returns also a list of the included source counters for error propagation.
-
-        Args:
-            source_cols (list[str], optional): counters in the raw source data.
-
-        Returns:
-            (tuple):
-            - *resolved_counters (list[str])* - resolved counters.
-            - *source_counters (list[str])* - all source counters in the resolved counters.
-
-        """
-        resolved_counters = []
-        source_counters = []
-
-        for counter_name in self.clist:
-            # resolve each counter in the clist
-            counter_string, res_source_counters = \
-                self.resolve_counter_name(counter_name, source_cols)
-
-            resolved_counters.append(counter_string)
-            source_counters.extend(res_source_counters)
-
-        return resolved_counters, list(set(source_counters))
-
-    def resolve_counter_name(self, col_name, source_cols=''):
-        """resolve_counter_name
-
-        Replace all predefined counter definitions in a given counter name.
-        The function works recursively.
-
-        Args:
-            col_name (str): initial counter string.
-            source_cols (list[str], optional): columns in the source data.
-
-        Returns:
-            (tuple):
-            - *col_string (str)* - resolved counter string.
-            - *source_counters (list[str])* - source counters in the col_string
-
-        """
-        recall = False  # boolean to stop recursive calls
-        source_counters = []
-        col_string = col_name
-
-        for find_cdef in self.cdef.keys():
-            # check for all predefined counters
-            search_pattern = r'\b' + find_cdef + r'\b'
-            if re.search(search_pattern, col_string) is not None:
-                if self.cdef[find_cdef] in source_cols:
-                    # this counter definition is a base source counter
-                    source_counters.append(self.cdef[find_cdef])
-                # found a predefined counter
-                # recursive call if predefined counter must be resolved again
-                recall = True
-                # replace the counter definition in the string
-                (col_string, _) = re.subn(search_pattern,
-                                          '(' + self.cdef[find_cdef] + ')', col_string)
-
-        if recall:
-            # do the recursive call
-            col_string, rec_source_counters = self.resolve_counter_name(col_string, source_cols)
-            source_counters.extend(rec_source_counters)
-
-        for find_cdef in source_cols:
-            # check for all base source counters
-            search_pattern = r'\b' + find_cdef + r'\b'
-            if re.search(search_pattern, col_string) is not None:
-                source_counters.append(find_cdef)
-
-        return col_string, source_counters
-
-    def col_string_to_eval_string(self, col_string, array_name='source_data'):
-        """Use regular expressions in order to generate an evaluateable string
-        from the counter string in order to append the new counter to the
-        source data.
-
-        Args:
-            col_string (str) : Definition of the counter.
-            mode (int)      : Flag for different modes
-
-        Returns:
-            eval_string (str): Evaluateable string to add the new counter
-                              to the source data.
-
-        """
-
-        # search for alphanumeric counter names in col_string
-        iterator = re.finditer(
-            '([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', col_string)
-        # these are keys which should not be replaced but evaluated
-        math_keys = list(self.math_keys)
-        keys = math_keys.copy()
-
-        for key in iterator:
-            # traverse all found counter names
-            if len(key.group()) > 0:
-                # the match is > 0
-                if not key.group() in keys:
-                    # the counter name is not in the keys list
-
-                    # remember this counter name in the key list in order
-                    # not to replace it again
-                    keys.append(key.group())
-                    # the actual replacement
-                    (col_string, _) = re.subn(r'\b'+key.group()+r'\b',
-                                              array_name + '[\'' + key.group() + '\']', col_string)
-
-        # add 'np.' prefix to numpy functions/math keys
-        for mk in math_keys:
-            if mk not in self.ignore_keys:
-                (col_string, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, col_string)
-        return col_string
-
     def add_custom_counters(self, source_data, scan_num, source_counters):
         """Add custom counters to the source data array.
         This is a stub for child classes.
@@ -232,8 +113,9 @@ class Evaluation(object):
         """
         res = []
         for data_filter in self.data_filters:
-            name, _ = self.resolve_counter_name(data_filter)
-            idx = eval(self.col_string_to_eval_string(name, array_name='data'))
+            name, _ = resolve_counter_name(self.cdef, data_filter)
+            idx = eval(col_string_to_eval_string(
+                name, self.math_keys, self.ignore_keys, array_name='data'))
             if len(res) == 0:
                 res = idx
             else:
@@ -326,7 +208,9 @@ class Evaluation(object):
 
                 # resolve the clist and retrieve the resolves counters and the
                 # necessary base source counters for error propagation
-                resolved_counters, source_counters = self.traverse_counters(source_cols)
+                resolved_counters, source_counters = traverse_counters(self.clist, 
+                                                                       self.cdef,
+                                                                       source_cols)
 
                 # counter names and resolved strings for further calculations
                 if self.statistic_type == 'poisson' or self.propagate_errors:
@@ -355,8 +239,8 @@ class Evaluation(object):
             for col_string, col_name in zip(col_strings, col_names):
                 # traverse the counters in the clist and append to data if not
                 # already present
-                eval_string = self.col_string_to_eval_string(
-                    col_string, array_name='source_data')
+                eval_string = col_string_to_eval_string(
+                    col_string, self.math_keys, self.ignore_keys,array_name='source_data')
 
                 if len(data) == 0:
                     data = np.array(eval(eval_string), dtype=[(col_name, float)])
@@ -426,15 +310,17 @@ class Evaluation(object):
                                                           np.array(yerr))
 
                     for col_name, col_string in zip(self.clist, resolved_counters):
-                        eval_string = self.col_string_to_eval_string(
-                            col_string, array_name='unc_data_err')
+                        eval_string = col_string_to_eval_string(
+                            col_string, self.math_keys, self.ignore_keys, array_name='unc_data_err'
+                            )
                         temp = eval(eval_string)
 
                         avg_data[col_name] = unumpy.nominal_values(temp)
                         err_data[col_name] = unumpy.std_devs(temp)
 
-                        eval_string = self.col_string_to_eval_string(
-                            col_string, array_name='unc_data_std')
+                        eval_string = col_string_to_eval_string(
+                            col_string, self.math_keys, self.ignore_keys, array_name='unc_data_std'
+                            )
                         temp = eval(eval_string)
                         std_data[col_name] = unumpy.std_devs(temp)
                 else:
@@ -450,8 +336,8 @@ class Evaluation(object):
                                          statistic=bin_stat)
             else:
                 for col_name, col_string in zip(self.clist, resolved_counters):
-                    eval_string = self.col_string_to_eval_string(
-                        col_string, array_name='source_data')
+                    eval_string = col_string_to_eval_string(
+                        col_string, self.math_keys, self.ignore_keys, array_name='source_data')
                     temp = eval(eval_string)
                     avg_data[col_name] = temp
                     avg_data[self.xcol] = concat_data[self.xcol]
@@ -933,361 +819,6 @@ class Evaluation(object):
                     print(report_2[i][counter])
 
         return res, parameters, sequence_data
-
-    # def fit_scan_sequence(self, scan_sequence, mod, pars, ylims=[], xlims=[], fig_size=[],
-    #                       xgrid=[], yerr='std', xerr='std', norm2one=False,
-    #                       binning=True, sequence_type='', label_texts='',
-    #                       title_text='', ytext='', xtext='', select='',
-    #                       fit_report=0, show_single=False, weights=False,
-    #                       fit_method='leastsq', offset_t0=False,
-    #                       plot_separate=False, grid_on=True,
-    #                       last_res_as_par=False, sequence_data=[], fmt='o'):
-    #     """Fit, plot, and return the data of a scan sequence.
-
-    #     Args:
-    #         scan_sequence (List[
-    #             List/Tuple[List[int],
-    #             int/str]])              : Sequence of scan lists and parameters.
-    #         mod (Model[lmfit])          : lmfit model for fitting the data.
-    #         pars (Parameters[lmfit])    : lmfit parameters for fitting the data.
-    #         ylims (Optional[ndarray])   : ylim for the plot.
-    #         xlims (Optional[ndarray])   : xlim for the plot.
-    #         fig_size (Optional[ndarray]) : Figure size of the figure.
-    #         xgrid (Optional[ndarray])   : Grid to bin the data to -
-    #                                       default in empty so use the
-    #                                       x-axis of the first scan.
-    #         yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
-    #                                       default is 'std'.
-    #         xerr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
-    #                                       default is 'std'.
-    #         norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
-    #                                       default is False.
-    #         sequence_type (Optional[str]): Type of the sequence: [fluence, delay,
-    #                                       energy, theta] - default is fluence.
-    #         label_texts (Optional[str])   : list of Labels of the plot - default is none.
-    #         title_text (Optional[str])   : Title of the figure - default is none.
-    #         ytext (Optional[str])       : y-Label of the plot - defaults is none.
-    #         xtext (Optional[str])       : x-Label of the plot - defaults is none.
-    #         select (Optional[str])      : String to evaluate as select statement
-    #                                       for the fit region - default is none
-    #         fit_report (Optional[int])   : Set the fit reporting level:
-    #                                       [0: none, 1: basic, 2: full]
-    #                                       default 0.
-    #         show_single (Optional[bool]) : Plot each fit seperately - default False.
-    #         weights (Optional[bool])    : Use weights for fitting - default False.
-    #         fit_method (Optional[str])   : Method to use for fitting; refer to
-    #                                       lmfit - default is 'leastsq'.
-    #         offset_t0 (Optional[bool])   : Offset time scans by the fitted
-    #                                       t0 parameter - default False.
-    #         plot_separate (Optional[bool]):A single plot for each counter
-    #                                       default False.
-    #         grid_on (Optional[bool])     : Add grid to plot - default is True.
-    #         last_res_as_par (Optional[bool]): Use the last fit result as start
-    #                                        values for next fit - default is False.
-    #         sequence_data (Optional[ndarray]): actual exp. data are externally given.
-    #                                           default is empty
-    #         fmt (Optional[str])         : format string of the plot - defaults is -o.
-
-
-    #     Returns:
-    #         res (Dict[ndarray])        : Fit results.
-    #         parameters (ndarray)       : Parameters of the sequence.
-    #         sequence_data (OrderedDict) : Dictionary of the averaged scan data.equenceData
-
-    #     """
-
-    #     # get the last open figure number
-    #     main_fig_num = self.get_last_fig_number()
-
-    
-    #     # this is the number of different counters
-    #     num_sub_plots = len(self.clist)
-
-    #     # fitting and plotting the data
-    #     l_plot = 1  # counter for single plots
-
-    #     for i, parameter in enumerate(parameters):
-
-    #         j = 0  # counter for counters ;)
-    #         k = 1  # counter for subplots
-    #         for counter in sequence_data:
-    #             # traverse all counters in the sequence
-
-    #             # plot only y counters - next is the coresp. error
-    #             if j >= 2 and j % 2 == 0:
-
-    #                 plt.figure(main_fig_num)  # select the main figure
-
-    #                 if plot_separate:
-    #                     # use subplot for separate plotting
-    #                     plt.subplot((num_sub_plots+num_sub_plots % 2)/2, 2, k)
-
-    #                 # plot the fit and the data as errorbars
-    #                 x2plotFit = np.linspace(
-    #                     np.min(x2plot), np.max(x2plot), 10000)
-    #                 plot = plt.plot(x2plotFit-offsetX,
-    #                                 out.eval(x=x2plotFit), '-', lw=2, alpha=1)
-    #                 plt.errorbar(x2plot-offsetX, y2plot, fmt=fmt, xerr=xerr2plot,
-    #                              yerr=yerr2plot, label=_lt, alpha=0.25, color=plot[0].get_color())
-
-    #                 if len(parameters) > 5:
-    #                     # move the legend outside the plot for more than
-    #                     # 5 sequence parameters
-    #                     plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
-    #                                loc=3, numpoints=1, ncol=3, mode="expand",
-    #                                borderaxespad=0.)
-    #                 else:
-    #                     plt.legend(frameon=True, loc=0, numpoints=1)
-
-    #           
-    #                 # show the single fits and residuals
-    #                 if show_single:
-    #                     plt.figure(main_fig_num+l_plot, figsize=fig_size)
-    #                     gs = mpl.gridspec.GridSpec(
-    #                         2, 1, height_ratios=[1, 3], hspace=0.1)
-    #                     ax1 = plt.subplot(gs[0])
-    #                     markerline, stemlines, baseline = plt.stem(
-    #                         x2plot-offsetX, out.residual, markerfmt=' ',
-    #                         use_line_collection=True)
-    #                     plt.setp(stemlines, 'color',
-    #                              plot[0].get_color(), 'linewidth', 2, alpha=0.5)
-    #                     plt.setp(baseline, 'color', 'k', 'linewidth', 0)
-
-    #                     ax1.xaxis.tick_top()
-    #                     ax1.yaxis.set_major_locator(plt.MaxNLocator(3))
-    #                     plt.ylabel('Residuals')
-    #                     if xlims:
-    #                         plt.xlim(xlims)
-    #                     if ylims:
-    #                         plt.ylim(ylims)
-
-    #                     if len(xtext) > 0:
-    #                         plt.xlabel(xtext)
-
-    #                     if grid_on:
-    #                         plt.grid(True)
-
-    #                     if len(title_text) > 0:
-    #                         if isinstance(title_text, (list, tuple)):
-    #                             plt.title(title_text[k-1])
-    #                         else:
-    #                             plt.title(title_text)
-    #                     else:
-    #                         plt.title(name)
-    #                     ax2 = plt.subplot(gs[1])
-    #                     x2plotFit = np.linspace(
-    #                         np.min(x2plot), np.max(x2plot), 1000)
-    #                     ax2.plot(x2plotFit-offsetX, out.eval(x=x2plotFit),
-    #                              '-', lw=2, alpha=1, color=plot[0].get_color())
-    #                     ax2.errorbar(x2plot-offsetX, y2plot, fmt=fmt, xerr=xerr2plot,
-    #                                  yerr=yerr2plot, label=_lt, alpha=0.25,
-    #                                  color=plot[0].get_color())
-    #                     plt.legend(frameon=True, loc=0, numpoints=1)
-
-    #                     
-
-    #                     l_plot += 1
-    #                 
-
-    #                 k += 1
-
-    #             j += 1
-
-    #     plt.figure(main_fig_num)  # set as active figure
-
-    #     return res, parameters, sequence_data
-
-# move to the end for plotting
-
-    def get_last_fig_number(self):
-        """get_last_fig_number
-
-        Return the last figure number of all opened figures for plotting
-        data in the same figure during for-loops.
-
-        Returns:
-            fig_number (int): last figure number of all opened figures.
-
-        """
-        try:
-            # get the number of all opened figures
-            fig_number = mpl._pylab_helpers.Gcf.get_active().num
-        except Exception:
-            # there are no figures open
-            fig_number = 1
-
-        return fig_number
-
-    def get_next_fig_number(self):
-        """get_next_fig_number
-
-        Return the number of the next available figure.
-
-        Returns:
-            next_fig_number (int): next figure number of all opened figures.
-
-        """
-        return self.get_last_fig_number() + 1
-
-    # def plot_mesh_scan(self, scan_num, skip_plot=False, grid_on=False, ytext='', xtext='',
-    #                    levels=20, cbar=True):
-    #     """Plot a single mesh scan from the source file.
-    #     Various plot parameters are provided.
-    #     The plotted data are returned.
-
-    #     Args:
-    #         scan_num (int)               : Scan number of the source scan.
-    #         skip_plot (Optional[bool])   : Skip plotting, just return data
-    #                                       default is False.
-    #         grid_on (Optional[bool])     : Add grid to plot - default is False.
-    #         ytext (Optional[str])       : y-Label of the plot - defaults is none.
-    #         xtext (Optional[str])       : x-Label of the plot - defaults is none.
-    #         levels (Optional[int])      : levels of contour plot - defaults is 20.
-    #         cbar (Optional[bool])       : Add colorbar to plot - default is True.
-
-    #     Returns:
-    #         xx, yy, zz              : x,y,z data which was plotted
-
-    #     """
-
-    #     from matplotlib.mlab import griddata
-    #     from matplotlib import gridspec
-
-    #     # read data from source file
-    #     try:
-    #         # try to read data of this scan
-    #         source_data = self.get_scan_data(scan_num)
-    #     except Exception:
-    #         print('Scan #' + int(scan_num) + ' not found, skipping')
-
-    #     dt = source_data.dtype
-    #     dt = dt.descr
-
-    #     xmotor = dt[0][0]
-    #     ymotor = dt[1][0]
-
-    #     X = source_data[xmotor]
-    #     Y = source_data[ymotor]
-
-    #     xx = np.sort(np.unique(X))
-    #     yy = np.sort(np.unique(Y))
-
-    #     if len(self.clist) > 1:
-    #         print('WARNING: Only the first counter of the clist is plotted.')
-
-    #     Z = source_data[self.clist[0]]
-
-    #     zz = griddata(X, Y, Z, xx, yy, interp='linear')
-
-    #     if not skip_plot:
-
-    #         if cbar:
-    #             gs = gridspec.GridSpec(4, 2,
-    #                                    width_ratios=[3, 1],
-    #                                    height_ratios=[0.2, 0.1, 1, 3]
-    #                                    )
-    #             k = 4
-    #         else:
-    #             gs = gridspec.GridSpec(2, 2,
-    #                                    width_ratios=[3, 1],
-    #                                    height_ratios=[1, 3]
-    #                                    )
-    #             k = 0
-
-    #         ax1 = plt.subplot(gs[0+k])
-
-    #         plt.plot(xx, np.mean(zz, 0), label='mean')
-
-    #         plt.plot(xx, zz[np.argmax(np.mean(zz, 1)), :], label='peak')
-
-    #         plt.xlim([min(xx), max(xx)])
-    #         plt.legend(loc=0)
-    #         ax1.xaxis.tick_top()
-    #         if grid_on:
-    #             plt.grid(True)
-
-    #         plt.subplot(gs[2+k])
-
-    #         plt.contourf(xx, yy, zz, levels, cmap='viridis')
-
-    #         plt.xlabel(xmotor)
-    #         plt.ylabel(ymotor)
-
-    #         if len(xtext) > 0:
-    #             plt.xlabel(xtext)
-
-    #         if len(ytext) > 0:
-    #             plt.ylabel(ytext)
-
-    #         if grid_on:
-    #             plt.grid(True)
-
-    #         if cbar:
-    #             cb = plt.colorbar(cax=plt.subplot(
-    #                 gs[0]), orientation='horizontal')
-    #             cb.ax.xaxis.set_ticks_position('top')
-    #             cb.ax.xaxis.set_label_position('top')
-
-    #         ax4 = plt.subplot(gs[3+k])
-
-    #         plt.plot(np.mean(zz, 1), yy)
-    #         plt.plot(zz[:, np.argmax(np.mean(zz, 0))], yy)
-    #         plt.ylim([np.min(yy), np.max(yy)])
-
-    #         ax4.yaxis.tick_right()
-    #         if grid_on:
-    #             plt.grid(True)
-
-    #     return xx, yy, zz
-
-    # def export_scan_sequence(self, scan_sequence, path, fileName, yerr='std',
-    #                          xerr='std', xgrid=[], norm2one=False, binning=True):
-    #     """Exports source data for each scan list in the sequence as individual file.
-
-    #     Args:
-    #         scan_sequence (List[
-    #             List/Tuple[List[int],
-    #             int/str]])              : Sequence of scan lists and parameters.
-    #         path (str)                  : Path of the file to export to.
-    #         fileName (str)              : Name of the file to export to.
-    #         yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
-    #                                       default is 'std'.
-    #         xerr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
-    #                                       default is 'std'.
-    #         xgrid (Optional[ndarray])   : Grid to bin the data to -
-    #                                       default in empty so use the
-    #                                       x-axis of the first scan.
-    #         norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
-    #                                       default is False.
-
-    #     """
-    #     # get scan_sequence data without plotting
-    #     sequence_data, parameters, names, label_texts = self.plot_scan_sequence(
-    #         scan_sequence,
-    #         xgrid=xgrid,
-    #         yerr=yerr,
-    #         xerr=xerr,
-    #         norm2one=norm2one,
-    #         binning=binning,
-    #         skip_plot=True)
-
-    #     for i, label_text in enumerate(label_texts):
-    #         # travserse the sequence
-
-    #         header = ''
-    #         saveData = []
-    #         for counter in sequence_data:
-    #             # travserse all counters in the data
-
-    #             # build the file header
-    #             header = header + counter + '\t '
-    #             # build the data matrix
-    #             saveData.append(sequence_data[counter][i])
-
-    #         # save data with header to text file
-    #         np.savetxt('{:s}/{:s}_{:s}.dat'.format(path, fileName,
-    #                                                "".join(x for x in label_text if x.isalnum())),
-    #                    np.r_[saveData].T, delimiter='\t', header=header)
 
     @property
     def clist(self):
