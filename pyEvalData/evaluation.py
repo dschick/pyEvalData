@@ -791,7 +791,7 @@ class Evaluation(object):
 
     def fit_scans(self, scan_list, mod, pars, xgrid=[], yerr='std', xerr='std', norm2one=False,
                   binning=True, label_text='', fmt='o', select='', fit_report=0, weights=False,
-                  fit_method='leastsq', nan_policy='propagate', offset_t0=False,
+                  fit_method='leastsq', nan_policy='propagate', skip_plot=False, offset_t0=False,
                   plot_separate=False):
         """fit_scans
 
@@ -821,6 +821,7 @@ class Evaluation(object):
                 Defaults to False.
             fit_method (str, optional): lmfit's fit method. Defaults to 'leastsq'.
             nan_policy (str, optional): lmfit's NaN policy. Defaults to 'propagate'.
+            skip_plot (bool, optional): Skip plotting. Defaults to False.
             offset_t0 (bool, optional): offset plot by t0 parameter of the fit
                 results. Defaults to False.
             plot_separate (bool, optional): use separate subplots for different
@@ -845,11 +846,13 @@ class Evaluation(object):
         res, report = self._fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, mod, pars, select,
                                       weights, fit_method=fit_method, nan_policy=nan_policy)
 
-        # plot the data and fit
-        self._plot_fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, res, offset_t0=offset_t0,
-                             label_text=label_text, fmt=fmt, plot_separate=plot_separate)
+        if not skip_plot:
+            # plot the data and fit
+            self._plot_fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, res,
+                                 offset_t0=offset_t0, label_text=label_text, fmt=fmt,
+                                 plot_separate=plot_separate)
 
-        plt.legend(frameon=True, loc=0, numpoints=1)
+            plt.legend(frameon=True, loc=0, numpoints=1)
 
         # print the fit report
         if fit_report > 0:
@@ -871,8 +874,8 @@ class Evaluation(object):
     def fit_scan_sequence(self, scan_sequence, mod, pars, xgrid=[], yerr='std', xerr='std',
                           norm2one=False, binning=True, label_format='', fmt='o', select='',
                           fit_report=0, weights=False, fit_method='leastsq',
-                          nan_policy='propagate', last_res_as_par=False, offset_t0=False,
-                          plot_separate=False, show_single=False):
+                          nan_policy='propagate', last_res_as_par=False, skip_plot=False,
+                          offset_t0=False, plot_separate=False, show_single=False):
         """fit_scan_sequence
 
         Args:
@@ -903,6 +906,7 @@ class Evaluation(object):
             nan_policy (str, optional): lmfit's NaN policy. Defaults to 'propagate'.
             last_res_as_par (bool, optional): use last fit result as start value
                 for next fit. Defaults to False.
+            skip_plot (bool, optional): Skip plotting. Defaults to False.
             offset_t0 (bool, optional): offset plot by t0 parameter of the fit
                 results. Defaults to False.
             plot_separate (bool, optional): use separate subplots for different
@@ -928,7 +932,7 @@ class Evaluation(object):
             res[counter] = {}
 
         for i, ((scan_list, parameter), name) in enumerate(zip(scan_sequence, names)):
-            if show_single:
+            if show_single and not skip_plot:
                 plt.figure()
             # get the fit models and fit parameters if they are lists/tupels
             if isinstance(mod, (list, tuple)):
@@ -965,18 +969,19 @@ class Evaluation(object):
                                             select, weights, fit_method=fit_method,
                                             nan_policy=nan_policy)
 
-            # plot the data and fit
-            self._plot_fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, _res,
-                                 offset_t0=offset_t0, label_text=lt, fmt=fmt,
-                                 plot_separate=plot_separate)
+            if not skip_plot:
+                # plot the data and fit
+                self._plot_fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, _res,
+                                     offset_t0=offset_t0, label_text=lt, fmt=fmt,
+                                     plot_separate=plot_separate)
 
-            if show_single:
-                plt.legend(frameon=True, loc=0, numpoints=1)
-                plt.show()
-            else:
-                plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
-                           loc=3, numpoints=1, ncol=3, mode="expand",
-                           borderaxespad=0.)
+                if show_single:
+                    plt.legend(frameon=True, loc=0, numpoints=1)
+                    plt.show()
+                else:
+                    plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
+                               loc=3, numpoints=1, ncol=3, mode="expand",
+                               borderaxespad=0.)
 
             # store the results
             for counter in self.clist:
