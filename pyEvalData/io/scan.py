@@ -32,6 +32,7 @@ __docformat__ = 'restructuredtext'
 import numpy as np
 from numpy.core.records import fromarrays
 
+
 class Scan(object):
     """Scan
 

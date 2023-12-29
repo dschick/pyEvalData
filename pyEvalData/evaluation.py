@@ -90,10 +90,10 @@ class Evaluation(object):
         This is a stub for child classes.
 
         Args:
-            source_data (ndarray) : Data array from the source scan.
-            scan_num (int)  : Scan number of the source scan.
-            source_counters list(str) : List of the source counters and custom counters
-                                     from the clist and xcol.
+            source_data (ndarray): data array from the source scan.
+            scan_num (int): scan number of the source scan.
+            source_counters list(str): List of the source counters and custom
+                counters from the clist and xcol.
 
         Returns:
             source_data (ndarray): Updated data array from the source scan.
@@ -104,11 +104,13 @@ class Evaluation(object):
     def filter_data(self, data):
         """filter_data
 
+        Apply data filter to data.
+
         Args:
-            data (TYPE): DESCRIPTION.
+            data (ndarray): input data.
 
         Returns:
-            TYPE: DESCRIPTION.
+            ndarray: output data.
 
         """
         res = []
@@ -131,13 +133,16 @@ class Evaluation(object):
         return np.core.records.fromarrays(data_list, dtype=dtype_list)
 
     def get_scan_data(self, scan_num):
-        """
+        """get_scan_data
+
+        Get the data for a scan from the source and applying data filters if
+        enabled.
 
         Args:
-            scan_num (TYPE): DESCRIPTION.
+            scan_num (uint): scan number.
 
         Returns:
-            TYPE: DESCRIPTION.
+            ndarray: scan data array.
 
         """
         data, meta = self.source.get_scan_data(scan_num)
@@ -149,10 +154,10 @@ class Evaluation(object):
         """
 
         Args:
-            scan_num (TYPE): DESCRIPTION.
+            scan_list (list[uint]): list of scan numbers.
 
         Returns:
-            TYPE: DESCRIPTION.
+            list[ndarray]: list of scan data arrays.
 
         """
         data_list, meta_list = self.source.get_scan_list_data(scan_list)
@@ -162,21 +167,24 @@ class Evaluation(object):
         return data_list
 
     def avg_N_bin_scans(self, scan_list, xgrid=np.array([]), binning=True):
-        """Averages data defined by the counter list, clist, onto an optional
+        """avg_N_bin_scans
+
+        Averages data defined by the counter list, clist, onto an optional
         xgrid. If no xgrid is given the x-axis data of the first scan in the
         list is used instead.
 
         Args:
-            scan_list (List[int])      : List of scan numbers.
-            xgrid (Optional[ndarray]) : Grid to bin the data to -
-                                        default in empty so use the
-                                        x-axis of the first scan.
+            scan_list (list[int]): list of scan numbers.
+            xgrid (ndarray, optional): grid to bin the data to - default is
+                empty so use the x-axis of the first scan.
+            binning (bool, optional): enable binning of data - default is True
 
         Returns:
-            avg_data (ndarray) : Averaged data for the scan list.
-            std_data (ndarray) : Standart derivation of the data for the scan list.
-            err_data (ndarray) : Error of the data for the scan list.
-            name (str)        : Name of the data set.
+            (tuple):
+            - *avg_data (ndarray)* - averaged data for the scan list.
+            - *std_data (ndarray)* - standard derivation of the data for the scan list.
+            - *err_data (ndarray)* - error of the data for the scan list.
+            - *name (str)* - name of the data set.
 
         """
 
@@ -208,7 +216,7 @@ class Evaluation(object):
 
                 # resolve the clist and retrieve the resolves counters and the
                 # necessary base source counters for error propagation
-                resolved_counters, source_counters = traverse_counters(self.clist, 
+                resolved_counters, source_counters = traverse_counters(self.clist,
                                                                        self.cdef,
                                                                        source_cols)
 
@@ -240,7 +248,7 @@ class Evaluation(object):
                 # traverse the counters in the clist and append to data if not
                 # already present
                 eval_string = col_string_to_eval_string(
-                    col_string, self.math_keys, self.ignore_keys,array_name='source_data')
+                    col_string, self.math_keys, self.ignore_keys, array_name='source_data')
 
                 if len(data) == 0:
                     data = np.array(eval(eval_string), dtype=[(col_name, float)])
@@ -335,6 +343,7 @@ class Evaluation(object):
                                          xgrid_reduced,
                                          statistic=bin_stat)
             else:
+                # no binning
                 for col_name, col_string in zip(self.clist, resolved_counters):
                     eval_string = col_string_to_eval_string(
                         col_string, self.math_keys, self.ignore_keys, array_name='source_data')
@@ -353,16 +362,31 @@ class Evaluation(object):
 
         return avg_data, std_data, err_data, name
 
-    def eval_scans(self, scan_list, xgrid=[], yerr='std', xerr='std', norm2one=False, binning=True):
-        """eval_scans [summary]
+    def eval_scans(self, scan_list, xgrid=[], yerr='std', xerr='std', norm2one=False,
+                   binning=True):
+        """eval_scans
+
+        Evaluate a list of scans for a given set of external parameters.
 
         Args:
-            scan_list ([type]): [description]
-            xgrid (list, optional): [description]. Defaults to [].
-            yerr (str, optional): [description]. Defaults to 'std'.
-            xerr (str, optional): [description]. Defaults to 'std'.
-            norm2one (bool, optional): [description]. Defaults to False.
-            binning (bool, optional): [description]. Defaults to True.
+            scan_list (list[int]): list of scan numbers.
+            xgrid (ndarray, optional): grid to bin the data to - default is
+                empty so use the x-axis of the first scan.
+            yerr (ndarray, optional): type of the errors in y: [err, std, none]
+                default is 'std'.
+            xerr (ndarray, optional): type of the errors in x: [err, std, none]
+                default is 'std'.
+            norm2one (bool, optional): normalize transient data to 1 for t < t0
+                default is False.
+            binning (bool, optional): enable binning of data - default is True
+        Returns:
+             (tuple):
+            - *y2plot (OrderedDict)* - evaluated y-data.
+            - *x2plot (ndarray)* -evaluated x-data.
+            - *yerr2plot (OrderedDict)* - evaluated y-error.
+            - *xerr2plot (ndarray)* - evaluated x-error.
+            - *name (str)* - name of the data set.
+
         """
         # initialize the y-data as ordered dict in order to allow for multiple
         # counters at the same time
@@ -413,25 +437,25 @@ class Evaluation(object):
         Evaluate a sequence of scans for a given set of external parameters.
 
         Args:
-            scan_sequence (List[
-                List/Tuple[List[int],
-                int/str]])              : Sequence of scan lists and parameters.
-            xgrid (Optional[ndarray])   : Grid to bin the data to -
-                                          default in empty so use the
-                                          x-axis of the first scan.
-            yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
-                                          default is 'std'.
-            xerr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
-                                          default is 'std'.
-            norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
-                                          default is False.
+            scan_sequence (list[
+                list/tuple[list[int],
+                int/str]]): sequence of scan lists and parameters.
+            xgrid (ndarray, optional): grid to bin the data to - default is
+                empty so use the x-axis of the first scan.
+            yerr (ndarray, optional): type of the errors in y: [err, std, none]
+                default is 'std'.
+            xerr (ndarray, optional): type of the errors in x: [err, std, none]
+                default is 'std'.
+            norm2one (bool, optional): normalize transient data to 1 for t < t0
+                default is False.
+            binning (bool, optional): enable binning of data - default is True
         Returns:
-            sequence_data (OrderedDict) : Dictionary of the averaged scan data.
-            parameters (List[str, float]) : Parameters of the sequence.
-            names (List[str])          : List of names of each data set.
+             (tuple):
+            - *sequence_data (OrderedDict)* - dictionary of the averaged scan data.
+            - *parameters (list[str, float])* - parameters of the sequence.
+            - *names (list[str])* - list of names of each data set.
 
         """
-
         # initialize the return data
         sequence_data = collections.OrderedDict()
         names = []
@@ -470,6 +494,25 @@ class Evaluation(object):
 
     def _plot_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, label_text='', fmt='-o',
                     plot_separate=False, **kwargs):
+        """_plot_scans
+
+        Internal plotting function for a given data set.
+
+        Args:
+            y2plot (OrderedDict): y-data to plot.
+            x2plot (ndarray): x-data to plot.
+            yerr2plot (OrderedDict): y-error to plot.
+            xerr2plot (ndarray): x-error which was plot.
+            name (str): name of the data set.
+            label_text (str, optional): label of the plot - default is none.
+            fmt (str, optional): format string of the plot - defaults is -o.
+            plot_separate (bool, optional): use separate subplots - default
+                is False.
+
+        Returns:
+            plots (list[PlotObjects]): list of matplotlib plot objects.
+
+        """
         plots = []
         # plot all keys in the clist
         for i, counter in enumerate(self.clist):
@@ -510,28 +553,30 @@ class Evaluation(object):
         """plot_scans
 
         Plot a list of scans from the source file.
-        Various plot parameters are provided.
-        The plotted data are returned.
 
         Args:
-            scan_list (List[int]): List of scan numbers.
-            xgrid (Optional[ndarray]): Grid to bin the data to -
-                default in empty so use the x-axis of the first scan.
-            yerr (Optional[ndarray]): Type of the errors in y: [err, std, none]
+            scan_list (list[int]): list of scan numbers.
+            xgrid (ndarray, optional): grid to bin the data to - default is
+                empty so use the x-axis of the first scan.
+            yerr (ndarray, optional): type of the errors in y: [err, std, none]
                 default is 'std'.
-            xerr (Optional[ndarray]): Type of the errors in x: [err, std, none]
+            xerr (ndarray, optional): type of the errors in x: [err, std, none]
                 default is 'std'.
-            norm2one (Optional[bool]): Norm transient data to 1 for t < t0
+            norm2one (bool, optional): normalize transient data to 1 for t < t0
                 default is False.
-            label_text (Optional[str]): Label of the plot - default is none.
-            fmt (Optional[str]): format string of the plot - defaults is -o.
+            binning (bool, optional): enable binning of data - default is True
+            label_text (str, optional): Label of the plot - default is none.
+            fmt (str, optional): format string of the plot - defaults is -o.
+            plot_separate (bool, optional): use separate subplots - default
+                is False.
 
         Returns:
-            y2plot (OrderedDict): y-data which was plotted.
-            x2plot (ndarray): x-data which was plotted.
-            yerr2plot (OrderedDict): y-error which was plotted.
-            xerr2plot (ndarray): x-error which was plotted.
-            name (str): Name of the data set.
+             (tuple):
+            - *y2plot (OrderedDict)* - y-data which was plotted.
+            - *x2plot (ndarray)* - x-data which was plotted.
+            - *yerr2plot (OrderedDict)* - y-error which was plotted.
+            - *xerr2plot (ndarray)* - x-error which was plotted.
+            - *name (str)* - Name of the data set.
 
         """
 
@@ -547,31 +592,35 @@ class Evaluation(object):
     def plot_scan_sequence(self, scan_sequence, xgrid=np.array([]), yerr='std', xerr='std',
                            norm2one=False, binning=True, label_format='', fmt='-o',
                            plot_separate=False, **kwargs):
-        """Plot a list of scans from the source file.
-        Various plot parameters are provided.
-        The plotted data are returned.
+        """plot_scan_sequence
+
+        Plot a scan sequence from the source file.
 
         Args:
-            scan_sequence (List[
-                List/Tuple[List[int],
-                int/str]])              : Sequence of scan lists and parameters.
-            xgrid (Optional[ndarray])   : Grid to bin the data to -
-                                          default in empty so use the
-                                          x-axis of the first scan.
-            yerr (Optional[ndarray])    : Type of the errors in y: [err, std, none]
-                                          default is 'std'.
-            xerr (Optional[ndarray])    : Type of the errors in x: [err, std, none]
-                                          default is 'std'.
-            norm2one (Optional[bool])   : Norm transient data to 1 for t < t0
-                                          default is False.
-            label_format (Optional[str]): fprintf style format for labels
-            fmt (Optional[str])         : format string of the plot - defaults is -o.
+            scan_sequence (list[
+                list/tuple[list[int],
+                int/str]]): sequence of scan lists and parameters.
+            xgrid (ndarray, optional): grid to bin the data to - default is
+                empty so use the x-axis of the first scan.
+            yerr (ndarray, optional): type of the errors in y: [err, std, none]
+                default is 'std'.
+            xerr (ndarray, optional): type of the errors in x: [err, std, none]
+                default is 'std'.
+            norm2one (bool, optional): normalize transient data to 1 for t < t0
+                default is False.
+            binning (bool, optional): enable binning of data - default is True
+            label_format (str, optional): format string for label text - default
+                is empty.
+            fmt (str, optional): format string of the plot - defaults is -o.
+            plot_separate (bool, optional): use separate subplots - default
+                is False.
 
         Returns:
-            sequence_data (OrderedDict) : Dictionary of the averaged scan data.
-            parameters (List[str, float]) : Parameters of the sequence.
-            names (List[str])          : List of names of each data set.
-            label_texts (List[str])     : List of labels for each data set.
+             (tuple):
+            - *sequence_data (OrderedDict)* - dictionary of the averaged scan data.
+            - *parameters (list[str, float])* - parameters of the sequence.
+            - *names (list[str])* - list of names of each data set.
+            - *label_texts (list[str])* - list of labels for each data set.
 
         """
 
@@ -605,6 +654,25 @@ class Evaluation(object):
 
     def _fit_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, mod, pars, select, weights,
                    fit_method='leastsq', nan_policy='propagate'):
+        """_fit_scans
+
+        Internal method to fit a given data set.
+
+        Args:
+            y2plot (_type_): _description_
+            x2plot (_type_): _description_
+            yerr2plot (_type_): _description_
+            xerr2plot (_type_): _description_
+            mod (_type_): _description_
+            pars (_type_): _description_
+            select (_type_): _description_
+            weights (_type_): _description_
+            fit_method (str, optional): _description_. Defaults to 'leastsq'.
+            nan_policy (str, optional): _description_. Defaults to 'propagate'.
+
+        Returns:
+            _type_: _description_
+        """
         res = {}  # initialize the results dict
         report = []
         report_1 = []
@@ -662,6 +730,22 @@ class Evaluation(object):
 
     def _plot_fit_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, res, offset_t0=False,
                         label_text='', fmt='o', plot_separate=False):
+        """_plot_fit_scans
+
+        Internal function to fit and plot a given data set.
+
+        Args:
+            y2plot (_type_): _description_
+            x2plot (_type_): _description_
+            yerr2plot (_type_): _description_
+            xerr2plot (_type_): _description_
+            name (_type_): _description_
+            res (_type_): _description_
+            offset_t0 (bool, optional): _description_. Defaults to False.
+            label_text (str, optional): _description_. Defaults to ''.
+            fmt (str, optional): _description_. Defaults to 'o'.
+            plot_separate (bool, optional): _description_. Defaults to False.
+        """
         plots = self._plot_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, label_text=label_text,
                                  fmt=fmt, alpha=0.25, plot_separate=plot_separate)
 
@@ -687,12 +771,12 @@ class Evaluation(object):
                      color=plots[i][0].get_color())
 
             # figure formatting
-            if True: # len(parameters)*len(self.clist) > 6:
+            if True:  # len(parameters)*len(self.clist) > 6:
                 # move the legend outside the plot for more than
                 # 5 sequence parameters
                 plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
-                        loc=3, numpoints=1, ncol=3, mode="expand",
-                        borderaxespad=0.)
+                           loc=3, numpoints=1, ncol=3, mode="expand",
+                           borderaxespad=0.)
         else:
             plt.legend(frameon=True, loc=0, numpoints=1)
 
@@ -735,6 +819,31 @@ class Evaluation(object):
                           norm2one=False, binning=True, label_format='', select='', fit_report=0,
                           weights=False, fit_method='leastsq', nan_policy='propagate',
                           last_res_as_par=False, offset_t0=False, plot_separate=False, fmt='o'):
+        """fit_scan_sequence _summary_
+
+        Args:
+            scan_sequence (_type_): _description_
+            mod (_type_): _description_
+            pars (_type_): _description_
+            xgrid (list, optional): _description_. Defaults to [].
+            yerr (str, optional): _description_. Defaults to 'std'.
+            xerr (str, optional): _description_. Defaults to 'std'.
+            norm2one (bool, optional): _description_. Defaults to False.
+            binning (bool, optional): _description_. Defaults to True.
+            label_format (str, optional): _description_. Defaults to ''.
+            select (str, optional): _description_. Defaults to ''.
+            fit_report (int, optional): _description_. Defaults to 0.
+            weights (bool, optional): _description_. Defaults to False.
+            fit_method (str, optional): _description_. Defaults to 'leastsq'.
+            nan_policy (str, optional): _description_. Defaults to 'propagate'.
+            last_res_as_par (bool, optional): _description_. Defaults to False.
+            offset_t0 (bool, optional): _description_. Defaults to False.
+            plot_separate (bool, optional): _description_. Defaults to False.
+            fmt (str, optional): _description_. Defaults to 'o'.
+
+        Returns:
+            _type_: _description_
+        """
         # load data
         sequence_data, parameters, names = self.eval_scan_sequence(
             scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one, binning=binning)

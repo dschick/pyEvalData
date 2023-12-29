@@ -229,7 +229,8 @@ def resolve_counter_name(cdef, col_name, source_cols=''):
             recall = True
             # replace the counter definition in the string
             (col_string, _) = re.subn(search_pattern,
-                                        '(' + cdef[find_cdef] + ')', col_string)
+                                      '(' + cdef[find_cdef] + ')', col_string
+                                      )
 
     if recall:
         # do the recursive call
@@ -253,12 +254,12 @@ def col_string_to_eval_string(col_string, math_keys, ignore_keys, array_name='so
     source data.
 
     Args:
-        col_string (str) : Definition of the counter.
-         math_keys (list[str]): list of keywords which are evaluated as numpy
+        col_string (str): Definition of the counter.
+        math_keys (list[str]): list of keywords which are evaluated as numpy
             functions.
         ignore_keys (list[str]): list of keywords which should not be
             evaluated.
-        array_name (str) : name of the data array. 
+        array_name (str): name of the data array.
 
     Returns:
         eval_string (str): Evaluateable string to add the new counter
@@ -284,7 +285,8 @@ def col_string_to_eval_string(col_string, math_keys, ignore_keys, array_name='so
                 keys.append(key.group())
                 # the actual replacement
                 (col_string, _) = re.subn(r'\b'+key.group()+r'\b',
-                                            array_name + '[\'' + key.group() + '\']', col_string)
+                                          array_name + '[\'' + key.group() + '\']', col_string
+                                          )
 
     # add 'np.' prefix to numpy functions/math keys
     for mk in math_keys:
