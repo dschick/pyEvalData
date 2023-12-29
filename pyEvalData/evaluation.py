@@ -878,6 +878,9 @@ class Evaluation(object):
                           offset_t0=False, plot_separate=False, show_single=False):
         """fit_scan_sequence
 
+        Evaluate, fit, and plot the results of a given scan sequence from the
+        source file.
+
         Args:
             scan_sequence (list[
                 list/tuple[list[int],
