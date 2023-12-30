@@ -464,8 +464,7 @@ class Evaluation(object):
         parameters = []
 
         for i, (scan_list, parameter) in enumerate(scan_sequence):
-            # traverse the scan sequence
-
+            # iterate the scan sequence
             parameters.append(parameter)
             # get the data for the current scan list
             y2plot, x2plot, yerr2plot, xerr2plot, name = self.eval_scans(
@@ -783,7 +782,7 @@ class Evaluation(object):
             if plot_separate:
                 # use subplot for separate plotting
                 plt.subplot(1, len(self.clist), i+1)
-            # plot the fit and the data as errorbars
+            # plot the fit
             x2plotFit = np.linspace(
                 np.min(x2plot), np.max(x2plot), 10000)
             plt.plot(x2plotFit-offsetX, res[counter]['fit'].eval(x=x2plotFit), '-', lw=2, alpha=1,
@@ -1039,3 +1038,162 @@ class Evaluation(object):
         else:
             clist = list(clist)
         self._clist = clist
+
+    def scans(self, scan_list, xgrid=[], yerr='std', xerr='std', norm2one=False, binning=True):
+        y2plot, x2plot, yerr2plot, xerr2plot, name = self.eval_scans(
+            scan_list, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one, binning=binning)
+
+        return Scans(y2plot, x2plot, yerr2plot, xerr2plot, name, self.xcol)
+
+
+class Scans():
+    def __init__(self, y2plot, x2plot, yerr2plot, xerr2plot, name, xcol):
+        """__init__
+
+        Evaluate a list of scans for a given set of external parameters.
+
+        Args:
+            - *y2plot (OrderedDict)* - evaluated y-data.
+            - *x2plot (ndarray)* -evaluated x-data.
+            - *yerr2plot (OrderedDict)* - evaluated y-error.
+            - *xerr2plot (ndarray)* - evaluated x-error.
+            - *name (str)* - name of the data set.
+
+        """
+        self.log = logging.getLogger(__name__)
+        self.y2plot = y2plot
+        self.x2plot = x2plot
+        self.yerr2plot = yerr2plot
+        self.xerr2plot = xerr2plot
+        self.name = name
+        self.xcol = xcol
+        self.fit_result = []
+        self.fit_report = []
+
+    def fit(self, mod, pars, select='', weights=False, fit_method='leastsq',
+            nan_policy='propagate'):
+        """_fit_scans
+
+        Internal method to fit a given data set.
+
+        Args:
+            y2plot (OrderedDict): y-data to plot.
+            x2plot (ndarray): x-data to plot.
+            yerr2plot (OrderedDict): y-error to plot.
+            xerr2plot (ndarray): x-error which was plot.
+            mod (lmfit.Model): fit model.
+            pars (lmfit.parameters): fit parameters.
+            select (str, optional): evaluatable string to select x-range.
+                Defaults to empty string.
+            weights (bool, optional): enable weighting by inverse of errors.
+                Defaults to False.
+            fit_method (str, optional): lmfit's fit method. Defaults to 'leastsq'.
+            nan_policy (str, optional): lmfit's NaN policy. Defaults to 'propagate'.
+
+        Returns:
+            (tuple):
+            - *res (dict)* - fit result dictionary.
+            - *report (list[dict, report])* - list of lmfit's best value
+                dictionary and fit report object
+        """
+        res = {}  # initialize the results dict
+        report_1 = []
+        report_2 = {}
+
+        for counter in self.y2plot:
+            res[counter] = {}
+            # get the fit models and fit parameters if they are lists/tuples
+
+            # evaluate the select statement
+            if select == '':
+                # select all
+                sel = np.ones_like(self.y2plot[counter], dtype=bool)
+            else:
+                sel = eval(select)
+
+            # execute the select statement
+            _y2plot = self.y2plot[counter][sel]
+            _x2plot = self.x2plot[sel]
+            _yerr2plot = self.yerr2plot[counter][sel]
+            _xerr2plot = self.xerr2plot[sel]
+
+            # remove nans
+            _y2plot = _y2plot[~np.isnan(_y2plot)]
+            _x2plot = _x2plot[~np.isnan(_y2plot)]
+            _yerr2plot = _yerr2plot[~np.isnan(_y2plot)]
+            _xerr2plot = _xerr2plot[~np.isnan(_y2plot)]
+
+            # do the fitting with or without weighting the data
+            if weights:
+                out = mod.fit(_y2plot, pars, x=_x2plot, weights=1/_yerr2plot, method=fit_method,
+                              nan_policy=nan_policy)
+            else:
+                out = mod.fit(_y2plot, pars, x=_x2plot, method=fit_method, nan_policy=nan_policy)
+
+            best_values = list(out.best_values.values())
+            best_values.insert(0, counter)
+            report_1.append(best_values)
+
+            report_2[counter] = out.fit_report()
+            # add the fit results to the returns
+            for pname, par in pars.items():
+                res[counter][pname] = out.best_values[pname]
+                res[counter][pname + 'Err'] = out.params[pname].stderr
+
+            res[counter]['chisqr'] = out.chisqr
+            res[counter]['redchi'] = out.redchi
+            res[counter]['CoM'] = sum(_y2plot*_x2plot)/sum(_y2plot)
+            res[counter]['int'] = np.trapz(_y2plot, x=_x2plot)
+            res[counter]['fit'] = out
+
+        self.fit_result = res
+        self.fit_report = [report_1, report_2]
+
+        return self
+
+    def plot(self, label_text='', fmt='-o', plot_separate=False, offset_t0=False, **kwargs):
+        if len(self.fit_result) > 0:
+            fmt = 'o'
+            offsetX = 0
+            if offset_t0:
+                try:
+                    offsetX = self.fit_result['t0']
+                except KeyError:
+                    self.log.warning('No parameter \'t0\' present in model!')
+            else:
+                offsetX = 0
+
+        # plot all keys in the clist
+        for i, counter in enumerate(self.y2plot.keys()):
+            # iterate the counter list
+
+            if plot_separate:
+                # use subplot for separate plotting
+                plt.subplot(1, len(self.clist), i+1)
+
+            if len(label_text) == 0:
+                # if no label_text is given use the counter name
+                lt = counter
+            else:
+                if len(self.y2plot.keys()) > 1:
+                    # for multiple counters add the counter name to the label
+                    lt = label_text + ' | ' + counter
+                else:
+                    # for a single counter just use the label_text
+                    lt = label_text
+
+            # plot the errorbar for each counter
+            if (self.xerr2plot is None) & (self.yerr2plot is None):
+                plot = plt.plot(self.x2plot, self.y2plot[counter], fmt, label=lt, **kwargs)
+            else:
+                plot = plt.errorbar(self.x2plot, self.y2plot[counter], fmt=fmt, label=lt,
+                                    xerr=self.xerr2plot, yerr=self.yerr2plot[counter], **kwargs)
+
+            if len(self.fit_result) > 0:
+                x2plotFit = np.linspace(np.min(self.x2plot), np.max(self.x2plot), 10000)
+                plt.plot(x2plotFit-offsetX, self.fit_result[counter]['fit'].eval(x=x2plotFit), '-',
+                         lw=2, alpha=1, color=plot[0].get_color())
+
+            plt.xlabel(self.xcol)
+            plt.title(self.name)
+        return self
