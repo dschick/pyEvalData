@@ -24,8 +24,10 @@
 
 import numpy as np
 from scipy.stats import binned_statistic
+import re
 
-__all__ = ['edges4grid', 'bin_data']
+__all__ = ['edges4grid', 'bin_data', 'traverse_counters', 'resolve_counter_name',
+           'col_string_to_eval_string']
 
 __docformat__ = 'restructuredtext'
 
@@ -159,3 +161,135 @@ def bin_data(y, x, X, statistic='mean'):
     Xstd = Xstd[n > 0]
 
     return Y, X, Yerr, Xerr, Ystd, Xstd, edges, bins, n
+
+
+def traverse_counters(clist, cdef, source_cols=''):
+    """traverse_counters
+
+    Traverse all counters and replace all predefined counter definitions.
+    Returns also a list of the included source counters for error propagation.
+
+    Args:
+        clist (list[str]): list of counter names to evaluate.
+        cdef (dict{str:str}): dict of predefined counter names and
+            definitions.
+        source_cols (list[str], optional): counters in the raw source data.
+
+    Returns:
+        (tuple):
+        - *resolved_counters (list[str])* - resolved counters.
+        - *source_counters (list[str])* - all source counters in the resolved counters.
+
+    """
+    resolved_counters = []
+    source_counters = []
+
+    for counter_name in clist:
+        # resolve each counter in the clist
+        counter_string, res_source_counters = \
+            resolve_counter_name(cdef, counter_name, source_cols)
+
+        resolved_counters.append(counter_string)
+        source_counters.extend(res_source_counters)
+
+    return resolved_counters, list(set(source_counters))
+
+
+def resolve_counter_name(cdef, col_name, source_cols=''):
+    """resolve_counter_name
+
+    Replace all predefined counter definitions in a given counter name.
+    The function works recursively.
+
+    Args:
+        cdef (dict{str:str}): dict of predefined counter names and
+            definitions.
+        col_name (str): initial counter string.
+        source_cols (list[str], optional): columns in the source data.
+
+    Returns:
+        (tuple):
+        - *col_string (str)* - resolved counter string.
+        - *source_counters (list[str])* - source counters in the col_string
+
+    """
+    recall = False  # boolean to stop recursive calls
+    source_counters = []
+    col_string = col_name
+
+    for find_cdef in cdef.keys():
+        # check for all predefined counters
+        search_pattern = r'\b' + find_cdef + r'\b'
+        if re.search(search_pattern, col_string) is not None:
+            if cdef[find_cdef] in source_cols:
+                # this counter definition is a base source counter
+                source_counters.append(cdef[find_cdef])
+            # found a predefined counter
+            # recursive call if predefined counter must be resolved again
+            recall = True
+            # replace the counter definition in the string
+            (col_string, _) = re.subn(search_pattern,
+                                      '(' + cdef[find_cdef] + ')', col_string
+                                      )
+
+    if recall:
+        # do the recursive call
+        col_string, rec_source_counters = resolve_counter_name(cdef, col_string, source_cols)
+        source_counters.extend(rec_source_counters)
+
+    for find_cdef in source_cols:
+        # check for all base source counters
+        search_pattern = r'\b' + find_cdef + r'\b'
+        if re.search(search_pattern, col_string) is not None:
+            source_counters.append(find_cdef)
+
+    return col_string, source_counters
+
+
+def col_string_to_eval_string(col_string, math_keys, ignore_keys, array_name='source_data'):
+    """col_string_to_eval_string
+
+    Use regular expressions in order to generate an evaluateable string
+    from the counter string in order to append the new counter to the
+    source data.
+
+    Args:
+        col_string (str): Definition of the counter.
+        math_keys (list[str]): list of keywords which are evaluated as numpy
+            functions.
+        ignore_keys (list[str]): list of keywords which should not be
+            evaluated.
+        array_name (str): name of the data array.
+
+    Returns:
+        eval_string (str): Evaluateable string to add the new counter
+            to the source data.
+
+    """
+
+    # search for alphanumeric counter names in col_string
+    iterator = re.finditer(
+        '([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', col_string)
+    # these are keys which should not be replaced but evaluated
+    keys = list(math_keys).copy()
+
+    for key in iterator:
+        # traverse all found counter names
+        if len(key.group()) > 0:
+            # the match is > 0
+            if not key.group() in keys:
+                # the counter name is not in the keys list
+
+                # remember this counter name in the key list in order
+                # not to replace it again
+                keys.append(key.group())
+                # the actual replacement
+                (col_string, _) = re.subn(r'\b'+key.group()+r'\b',
+                                          array_name + '[\'' + key.group() + '\']', col_string
+                                          )
+
+    # add 'np.' prefix to numpy functions/math keys
+    for mk in math_keys:
+        if mk not in ignore_keys:
+            (col_string, _) = re.subn(r'\b' + mk + r'\b', 'np.' + mk, col_string)
+    return col_string
