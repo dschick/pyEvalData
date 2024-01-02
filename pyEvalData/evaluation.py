@@ -1005,8 +1005,6 @@ class Sequence():
         Returns:
             _type_: _description_
         """
-        # report_1 = []
-        # report_2 = []
         for i, scans in enumerate(self.scans_list):
             if isinstance(mod, (list, tuple)):
                 _mod = mod[i]
@@ -1016,8 +1014,9 @@ class Sequence():
             if last_res_as_par and i > 0:
                 # use last results as start values for pars
                 _pars = pars
-                for pname, _ in pars.items():
-                    _pars[pname].value = res[counter][pname][i-1]
+                for counter in self.clist:
+                    for pname, _ in pars.items():
+                        _pars[pname].value = last_scans.fit_result[counter][pname]
             else:
                 if isinstance(pars, (list, tuple)):
                     _pars = pars[i]
@@ -1026,6 +1025,8 @@ class Sequence():
 
             scans.fit(_mod, _pars, select=select, report=0, weights=weights, fit_method=fit_method,
                       nan_policy=nan_policy)
+
+            last_scans = scans # remember for last_res_as_par
 
         #     # store the the report
         #     report_1.append(['>> ' + lt + ' <<'])
