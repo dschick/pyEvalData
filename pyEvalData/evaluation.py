@@ -839,11 +839,6 @@ class Scans():
             else:
                 out = mod.fit(_y2plot, pars, x=_x2plot, method=fit_method, nan_policy=nan_policy)
 
-            best_values = list(out.best_values.values())
-            best_values.insert(0, counter)
-            report_1.append(best_values)
-
-            report_2[counter] = out.fit_report()
             # add the fit results to the returns
             for pname, par in pars.items():
                 res[counter][pname] = out.best_values[pname]
@@ -856,22 +851,11 @@ class Scans():
             res[counter]['fit'] = out
 
         self.fit_result = res
-        self.fit_report = [report_1, report_2]
 
-        # # print the fit report
-        # if report > 0:
-        #     print(tabulate(self.fit_report[0], headers=['counter', *mod.param_names],
-        #                    tablefmt="fancy_grid"))
-        # if report > 1:
-        #     for counter in self.clist:
-        #         head_len = int(len(counter)/2)
-        #         if np.mod(len(counter), 2) != 0:
-        #             fix = 1
-        #         else:
-        #             fix = 0
-
-        #         print('\n' + '='*(39-head_len-fix) + ' {:} '.format(counter) + '='*(39-head_len))
-        #         print(self.fit_report[1][counter])
+        if report == 1:
+            self.print_fit_report(full=False)
+        elif report == 2:
+            self.print_fit_report(full=True)
 
         return self
 
@@ -939,8 +923,47 @@ class Scans():
 
             plt.xlabel(self.xcol)
             plt.title(self.name)
+            plt.legend()
 
         return self
+
+    def print_fit_report(self, full=False):
+        """print_fit_report
+
+        _summary_
+
+        Args:
+            full (bool, optional): _description_. Defaults to False.
+        """
+        tables = []
+        reports = []
+
+        for counter in self.clist:
+            fit = self.fit_result[counter]['fit']
+            tables.append([counter, *fit.best_values.values()])
+            reports.append(fit.fit_report())
+            headers = ['counter', *fit.best_values.keys()]
+
+        if full:
+            # print full fit report including correlations
+            for table, report in zip(tables, reports):
+                print(tabulate([table], headers=headers, tablefmt="fancy_grid"))
+                print(report)
+        else:
+            # print only tabulated fit results
+            print(tabulate(tables, headers=headers, tablefmt="fancy_grid"))
+
+    @property
+    def fit_result(self):
+        if len(self._fit_result) == 0:
+            self.log.warning('No fit result available.\n'
+                             'Call .fit() method in advance.')
+        else:
+            return self._fit_result
+
+    @fit_result.setter
+    def fit_result(self, res):
+        self._fit_result = res
 
 
 class Sequence():
