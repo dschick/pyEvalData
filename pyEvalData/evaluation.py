@@ -522,8 +522,8 @@ class Evaluation(object):
             norm2one (bool, optional): normalize transient data to 1 for t < t0
                 default is False.
             binning (bool, optional): enable binning of data - default is True
-            label_format (str, optional): format string for label text - default
-                is empty.
+            label_format (str, optional): format string to generate labels from
+                parameters. Defaults to empty string.
             fmt (str, optional): format string of the plot - defaults is -o.
             plot_separate (bool, optional): use separate subplots for different
                 counters. Defaults to False.
@@ -540,10 +540,9 @@ class Evaluation(object):
         """
 
         sequence = self.sequence(scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr,
-                                norm2one=norm2one, binning=binning)
+                                 norm2one=norm2one, binning=binning, label_format=label_format)
 
-        sequence.plot(label_format=label_format, fmt=fmt, plot_separate=plot_separate,
-                      show_single=show_single)
+        sequence.plot(fmt=fmt, plot_separate=plot_separate, show_single=show_single)
 
         return sequence.data, sequence.parameters, sequence.names, sequence.label_texts
 
@@ -601,7 +600,9 @@ class Evaluation(object):
         scans.fit(mod, pars, select, report=fit_report, weights=weights, fit_method=fit_method,
                   nan_policy=nan_policy)
 
-        scans.plot(label_text=label_text, fmt=fmt, plot_separate=plot_separate, **kwargs)
+        if not skip_plot:
+            scans.plot(label_text=label_text, fmt=fmt, plot_separate=plot_separate,
+                       offset_t0=offset_t0, **kwargs)
 
         return (scans.fit_result, scans.y2plot, scans.x2plot, scans.yerr2plot, scans.xerr2plot,
                 scans.name)
@@ -630,9 +631,9 @@ class Evaluation(object):
                 default is 'std'.
             norm2one (bool, optional): normalize transient data to 1 for t < t0
                 default is False.
-            binning (bool, optional): enable binning of data - default is True
-            label_format (str, optional): format string for label text - default
-                is empty.
+            binning (bool, optional): enable binning of data. Defaults to True.
+            label_format (str, optional): format string to generate labels from
+                parameters. Defaults to empty string.
             fmt (str, optional): format string of the plot - defaults is -o.
             select (str, optional): evaluatable string to select x-range.
                 Defaults to empty string.
@@ -659,14 +660,14 @@ class Evaluation(object):
 
         """
         sequence = self.sequence(scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr,
-                                 norm2one=norm2one, binning=binning)
+                                 norm2one=norm2one, binning=binning, label_format=label_format)
 
         sequence.fit(mod, pars, select=select, report=fit_report, weights=weights,
                      fit_method=fit_method, nan_policy=nan_policy, last_res_as_par=last_res_as_par)
 
         if not skip_plot:
-            sequence.plot(label_format=label_format, fmt=fmt, plot_separate=plot_separate,
-                          show_single=show_single, offset_t0=offset_t0, **kwargs)
+            sequence.plot(fmt=fmt, plot_separate=plot_separate, show_single=show_single,
+                          offset_t0=offset_t0, **kwargs)
 
         return sequence.fit_results, sequence.parameters, sequence.data
 
@@ -700,13 +701,13 @@ class Evaluation(object):
             scan_list (list[int]): list of scan numbers.
             xgrid (ndarray, optional): grid to bin the data to - default is
                 empty so use the x-axis of the first scan.
-            yerr (ndarray, optional): type of the errors in y: [err, std, none]
-                default is 'std'.
-            xerr (ndarray, optional): type of the errors in x: [err, std, none]
-                default is 'std'.
-            norm2one (bool, optional): normalize transient data to 1 for t < t0
-                default is False.
-            binning (bool, optional): enable binning of data - default is True
+            yerr (ndarray, optional): type of the errors in y: [err, std, none].
+                Defaults to 'std'.
+            xerr (ndarray, optional): type of the errors in x: [err, std, none].
+                Defaults to 'std'.
+            norm2one (bool, optional): normalize transient data to 1 for t < t0.
+                Defaults to False.
+            binning (bool, optional): enable binning of data. Defaults to True.
 
         Returns:
             Scans: object for plotting and fitting.
@@ -718,7 +719,7 @@ class Evaluation(object):
         return Scans(name, self.xcol, y2plot, x2plot, yerr2plot, xerr2plot)
 
     def sequence(self, scan_sequence, xgrid=[], yerr='std', xerr='std', norm2one=False,
-                 binning=True):
+                 binning=True, label_format=''):
         """sequence
 
         Args:
@@ -727,13 +728,15 @@ class Evaluation(object):
                 int/str]]): sequence of scan lists and parameters.
             xgrid (ndarray, optional): grid to bin the data to - default is
                 empty so use the x-axis of the first scan.
-            yerr (ndarray, optional): type of the errors in y: [err, std, none]
-                default is 'std'.
-            xerr (ndarray, optional): type of the errors in x: [err, std, none]
-                default is 'std'.
+            yerr (ndarray, optional): type of the errors in y: [err, std, none].
+                Defaults to 'std'.
+            xerr (ndarray, optional): type of the errors in x: [err, std, none].
+                Defaults to 'std'.
             norm2one (bool, optional): normalize transient data to 1 for t < t0
-                default is False.
-            binning (bool, optional): enable binning of data - default is True
+                Defaults to False.
+            binning (bool, optional): enable binning of data. Defaults to True.
+            label_format (str, optional): format string to generate labels from
+                parameters. Defaults to empty string.
 
         Returns:
             Sequence: object for plotting and fitting.
@@ -750,7 +753,7 @@ class Evaluation(object):
             parameters.append(parameter)
             scans_list.append(scans)
 
-        return Sequence(parameters, scans_list)
+        return Sequence(parameters, scans_list, label_format=label_format)
 
 
 class Scans():
@@ -806,9 +809,6 @@ class Scans():
 
         """
         res = {}  # initialize the results dict
-        report_1 = []
-        report_2 = {}
-
         for counter in self.clist:
             res[counter] = {}
             # get the fit models and fit parameters if they are lists/tuples
@@ -892,16 +892,17 @@ class Scans():
         # plot all keys in the clist
         for i, counter in enumerate(self.clist):
             # iterate the counter list
-
+            title = self.name
             if plot_separate:
                 # use subplot for separate plotting
                 plt.subplot(1, len(self.clist), i+1)
+                title += ' | ' + counter
 
             if len(label_text) == 0:
                 # if no label_text is given use the counter name
                 lt = counter
             else:
-                if len(self.clist) > 1:
+                if len(self.clist) > 1 and not plot_separate:
                     # for multiple counters add the counter name to the label
                     lt = label_text + ' | ' + counter
                 else:
@@ -922,8 +923,8 @@ class Scans():
                          lw=2, alpha=1, color=plot[0].get_color())
 
             plt.xlabel(self.xcol)
-            plt.title(self.name)
-            plt.legend()
+            plt.title(title)
+            plt.legend(frameon=True, loc=0, numpoints=1)
 
         return self
 
@@ -976,17 +977,30 @@ class Sequence():
     plotting evaluated data.
 
     Args:
-        paramteters (list[str]): list of parameters.
+        parameters (list[str]): list of parameters.
         scans_list (list[Scans]): list of `Scans` objects.
+        label_format (str, optional): format string to generate labels from
+            parameters. Defaults to empty string.
 
     """
 
-    def __init__(self, parameters, scans_list):
+    def __init__(self, parameters, scans_list, label_format=''):
         self.log = logging.getLogger(__name__)
         self.parameters = parameters
         self.scans_list = scans_list
+        self.label_format = label_format
         self.xcol = scans_list[0].xcol
         self.clist = scans_list[0].clist
+
+        if len(label_format) > 0:
+            try:
+                self.label_texts = []
+                for parameter in self.parameters:
+                    self.label_texts.append(label_format.format(parameter))
+            except ValueError:
+                self.log.warning('Could not apply \'label_format\' to parameter!')
+        else:
+            self.label_texts = ['#{:02d}'.format(i+1) for i in range(len(parameters))]
 
     def fit(self, mod, pars, select='', report=0, weights=False, fit_method='leastsq',
             nan_policy='propagate', last_res_as_par=False):
@@ -1028,6 +1042,11 @@ class Sequence():
 
             last_scans = scans # remember for last_res_as_par
 
+        if report == 1:
+            self.print_fit_report(full=False)
+        elif report == 2:
+            self.print_fit_report(full=True)
+
         #     # store the the report
         #     report_1.append(['>> ' + lt + ' <<'])
         #     for rep in _report[0]:
@@ -1053,12 +1072,10 @@ class Sequence():
         #             print(report_2[i][counter])
         return self
 
-    def plot(self, label_format='', fmt='-o', plot_separate=False, show_single=False,
-             offset_t0=False, **kwargs):
+    def plot(self, fmt='-o', plot_separate=False, show_single=False, offset_t0=False, **kwargs):
         """plot _summary_
 
         Args:
-            label_format (str, optional): _description_. Defaults to ''.
             fmt (str, optional): _description_. Defaults to '-o'.
             plot_separate (bool, optional): _description_. Defaults to False.
             show_single (bool, optional): _description_. Defaults to False.
@@ -1067,26 +1084,44 @@ class Sequence():
         Returns:
             _type_: _description_
         """
-        label_texts = []
-        for i, (parameter, scans) in enumerate(zip(self.parameters, self.scans_list)):
+        for i, (label, scans) in enumerate(zip(self.label_texts, self.scans_list)):
             if show_single:
                 plt.figure()
-            lt = '#{:d}'.format(i+1)
-            if len(label_format) > 0:
-                try:
-                    lt = label_format.format(parameter)
-                except ValueError:
-                    self.log.warning('Could not apply \'label_format\' to parameter!')
 
-            label_texts.append(lt)
-            scans.plot(label_text=lt, fmt=fmt, plot_separate=plot_separate, offset_t0=offset_t0,
+            scans.plot(label_text=label, fmt=fmt, plot_separate=plot_separate, offset_t0=offset_t0,
                        **kwargs)
 
             if show_single:
-                # plt.legend(frameon=True, loc=0, numpoints=1)
+                plt.legend(frameon=True, loc=0, numpoints=1)
                 plt.show()
-        self.label_texts = label_texts
+
         return self
+
+    def print_fit_report(self, full=False):
+        """print_fit_report
+
+        _summary_
+
+        Args:
+            full (bool, optional): _description_. Defaults to False.
+        """
+        tables = []
+        reports = []
+
+        for counter in self.clist:
+            fit = self.fit_result[counter]['fit']
+            tables.append([counter, *fit.best_values.values()])
+            reports.append(fit.fit_report())
+            headers = ['counter', *fit.best_values.keys()]
+
+        if full:
+            # print full fit report including correlations
+            for table, report in zip(tables, reports):
+                print(tabulate([table], headers=headers, tablefmt="fancy_grid"))
+                print(report)
+        else:
+            # print only tabulated fit results
+            print(tabulate(tables, headers=headers, tablefmt="fancy_grid"))
 
     @property
     def data(self):
@@ -1129,7 +1164,3 @@ class Sequence():
                         res[counter][key] = np.array([scans.fit_result[counter][key]])
 
         return res
-
-    @property
-    def fit_reports(self):
-        return []
