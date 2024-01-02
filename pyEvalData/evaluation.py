@@ -463,60 +463,6 @@ class Evaluation(object):
 
         return sequence.data, sequence.parameters, sequence.names
 
-    # def _plot_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, label_text='', fmt='-o',
-    #                 plot_separate=False, **kwargs):
-    #     """_plot_scans
-
-    #     Internal plotting function for a given data set.
-
-    #     Args:
-    #         y2plot (OrderedDict): y-data to plot.
-    #         x2plot (ndarray): x-data to plot.
-    #         yerr2plot (OrderedDict): y-error to plot.
-    #         xerr2plot (ndarray): x-error which was plot.
-    #         name (str): name of the data set.
-    #         label_text (str, optional): label of the plot - default is none.
-    #         fmt (str, optional): format string of the plot - defaults is -o.
-    #         plot_separate (bool, optional): use separate subplots for different
-    #             counters. Defaults to False.
-
-    #     Returns:
-    #         plots (list[PlotObjects]): list of matplotlib plot objects.
-
-    #     """
-    #     plots = []
-    #     # plot all keys in the clist
-    #     for i, counter in enumerate(self.clist):
-    #         # iterate the counter list
-
-    #         if plot_separate:
-    #             # use subplot for separate plotting
-    #             plt.subplot(1, len(self.clist), i+1)
-
-    #         if len(label_text) == 0:
-    #             # if no label_text is given use the counter name
-    #             lt = counter
-    #         else:
-    #             if len(self.clist) > 1:
-    #                 # for multiple counters add the counter name to the label
-    #                 lt = label_text + ' | ' + counter
-    #             else:
-    #                 # for a single counter just use the label_text
-    #                 lt = label_text
-
-    #         # plot the errorbar for each counter
-    #         if (xerr2plot is None) & (yerr2plot is None):
-    #             plot = plt.plot(x2plot, y2plot[counter], fmt, label=lt, **kwargs)
-    #         else:
-    #             plot = plt.errorbar(x2plot, y2plot[counter], fmt=fmt, label=lt, xerr=xerr2plot,
-    #                                 yerr=yerr2plot[counter], **kwargs)
-    #         plots.append(plot)
-
-    #         plt.xlabel(self.xcol)
-    #         plt.title(name)
-
-        # return plots
-
     def plot_scans(self, scan_list, xgrid=np.array([]), yerr='std', xerr='std', norm2one=False,
                    binning=True, label_text='', fmt='-o', plot_separate=False, **kwargs):
         """plot_scans
@@ -601,132 +547,6 @@ class Evaluation(object):
 
         return sequence.data, sequence.parameters, sequence.names, sequence.label_texts
 
-    # def _fit_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, mod, pars, select='', weights=False,
-    #                fit_method='leastsq', nan_policy='propagate'):
-    #     """_fit_scans
-
-    #     Internal method to fit a given data set.
-
-    #     Args:
-    #         y2plot (OrderedDict): y-data to plot.
-    #         x2plot (ndarray): x-data to plot.
-    #         yerr2plot (OrderedDict): y-error to plot.
-    #         xerr2plot (ndarray): x-error which was plot.
-    #         mod (lmfit.Model): fit model.
-    #         pars (lmfit.parameters): fit parameters.
-    #         select (str, optional): evaluatable string to select x-range.
-    #             Defaults to empty string.
-    #         weights (bool, optional): enable weighting by inverse of errors.
-    #             Defaults to False.
-    #         fit_method (str, optional): lmfit's fit method. Defaults to 'leastsq'.
-    #         nan_policy (str, optional): lmfit's NaN policy. Defaults to 'propagate'.
-
-    #     Returns:
-    #         (tuple):
-    #         - *res (dict)* - fit result dictionary.
-    #         - *report (list[dict, report])* - list of lmfit's best value
-    #             dictionary and fit report object
-    #     """
-    #     res = {}  # initialize the results dict
-    #     report = []
-    #     report_1 = []
-    #     report_2 = {}
-
-    #     for counter in y2plot:
-    #         res[counter] = {}
-    #         # get the fit models and fit parameters if they are lists/tuples
-
-    #         # evaluate the select statement
-    #         if select == '':
-    #             # select all
-    #             sel = np.ones_like(y2plot[counter], dtype=bool)
-    #         else:
-    #             sel = eval(select)
-
-    #         # execute the select statement
-    #         _y2plot = y2plot[counter][sel]
-    #         _x2plot = x2plot[sel]
-    #         _yerr2plot = yerr2plot[counter][sel]
-    #         _xerr2plot = xerr2plot[sel]
-
-    #         # remove nans
-    #         _y2plot = _y2plot[~np.isnan(_y2plot)]
-    #         _x2plot = _x2plot[~np.isnan(_y2plot)]
-    #         _yerr2plot = _yerr2plot[~np.isnan(_y2plot)]
-    #         _xerr2plot = _xerr2plot[~np.isnan(_y2plot)]
-
-    #         # do the fitting with or without weighting the data
-    #         if weights:
-    #             out = mod.fit(_y2plot, pars, x=_x2plot, weights=1/_yerr2plot, method=fit_method,
-    #                           nan_policy=nan_policy)
-    #         else:
-    #             out = mod.fit(_y2plot, pars, x=_x2plot, method=fit_method, nan_policy=nan_policy)
-
-    #         best_values = list(out.best_values.values())
-    #         best_values.insert(0, counter)
-    #         report_1.append(best_values)
-
-    #         report_2[counter] = out.fit_report()
-    #         # add the fit results to the returns
-    #         for pname, par in pars.items():
-    #             res[counter][pname] = out.best_values[pname]
-    #             res[counter][pname + 'Err'] = out.params[pname].stderr
-
-    #         res[counter]['chisqr'] = out.chisqr
-    #         res[counter]['redchi'] = out.redchi
-    #         res[counter]['CoM'] = sum(_y2plot*_x2plot)/sum(_y2plot)
-    #         res[counter]['int'] = np.trapz(_y2plot, x=_x2plot)
-    #         res[counter]['fit'] = out
-
-    #     report = [report_1, report_2]
-
-    #     return res, report
-
-    # def _plot_fit_scans(self, y2plot, x2plot, yerr2plot, xerr2plot, name, res, offset_t0=False,
-    #                     label_text='', fmt='o', plot_separate=False):
-    #     """_plot_fit_scans
-
-    #     Internal function plot scans and fits of a given data set and fit results.
-
-    #     Args:
-    #         y2plot (OrderedDict): y-data to plot.
-    #         x2plot (ndarray): x-data to plot.
-    #         yerr2plot (OrderedDict): y-error to plot.
-    #         xerr2plot (ndarray): x-error which was plot.
-    #         name (str): name of the data set.
-    #         res (dict): fit results.
-    #         offset_t0 (bool, optional): offset plot by t0 parameter of the fit
-    #             results. Defaults to False.
-    #         label_text (str, optional): label of the plot - default is none.
-    #         fmt (str, optional): format string of the plot - defaults is -o.
-    #         plot_separate (bool, optional): use separate subplots for different
-    #             counters. Defaults to False.
-
-    #     """
-    #     plots = self._plot_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, label_text=label_text,
-    #                              fmt=fmt, alpha=0.25, plot_separate=plot_separate)
-
-    #     # set the x-offset for delay scans - offset parameter in
-    #     # the fit must be called 't0'
-    #     offsetX = 0
-    #     if offset_t0:
-    #         try:
-    #             offsetX = res['t0']
-    #         except KeyError:
-    #             self.log.warning('No parameter \'t0\' present in model!')
-    #     else:
-    #         offsetX = 0
-
-    #     for i, counter in enumerate(y2plot):
-    #         if plot_separate:
-    #             # use subplot for separate plotting
-    #             plt.subplot(1, len(self.clist), i+1)
-    #         # plot the fit
-    #         x2plotFit = np.linspace(
-    #             np.min(x2plot), np.max(x2plot), 10000)
-    #         plt.plot(x2plotFit-offsetX, res[counter]['fit'].eval(x=x2plotFit), '-', lw=2, alpha=1,
-    #                  color=plots[i][0].get_color())
-
     def fit_scans(self, scan_list, mod, pars, xgrid=[], yerr='std', xerr='std', norm2one=False,
                   binning=True, label_text='', fmt='o', select='', fit_report=0, weights=False,
                   fit_method='leastsq', nan_policy='propagate', skip_plot=False, offset_t0=False,
@@ -790,7 +610,7 @@ class Evaluation(object):
                           norm2one=False, binning=True, label_format='', fmt='o', select='',
                           fit_report=0, weights=False, fit_method='leastsq',
                           nan_policy='propagate', last_res_as_par=False, skip_plot=False,
-                          offset_t0=False, plot_separate=False, show_single=False):
+                          offset_t0=False, plot_separate=False, show_single=False, **kwargs):
         """fit_scan_sequence
 
         Evaluate, fit, and plot the results of a given scan sequence from the
@@ -838,102 +658,17 @@ class Evaluation(object):
             - *parameters (list[str, float])* - parameters of the sequence.
 
         """
-        # load data
-        sequence_data, parameters, names = self.eval_scan_sequence(
-            scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one, binning=binning)
+        sequence = self.sequence(scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr,
+                                 norm2one=norm2one, binning=binning)
 
-        res = {}
-        report_1 = []
-        report_2 = []
-        label_texts = []
-        for counter in self.clist:
-            res[counter] = {}
+        sequence.fit(mod, pars, select=select, report=fit_report, weights=weights,
+                     fit_method=fit_method, nan_policy=nan_policy, last_res_as_par=last_res_as_par)
 
-        for i, ((scan_list, parameter), name) in enumerate(zip(scan_sequence, names)):
-            if show_single and not skip_plot:
-                plt.figure()
-            # get the fit models and fit parameters if they are lists/tupels
-            if isinstance(mod, (list, tuple)):
-                _mod = mod[i]
-            else:
-                _mod = mod
+        if not skip_plot:
+            sequence.plot(label_format=label_format, fmt=fmt, plot_separate=plot_separate,
+                          show_single=show_single, offset_t0=offset_t0, **kwargs)
 
-            if last_res_as_par and i > 0:
-                # use last results as start values for pars
-                _pars = pars
-                for pname, par in pars.items():
-                    _pars[pname].value = res[counter][pname][i-1]
-            else:
-                if isinstance(pars, (list, tuple)):
-                    _pars = pars[i]
-                else:
-                    _pars = pars
-
-            lt = '#{:d}'.format(i+1)
-            if len(label_format) > 0:
-                try:
-                    lt = label_format.format(parameter)
-                except ValueError:
-                    self.log.warning('Could not apply \'label_format\' to parameter!')
-
-            label_texts.append(lt)
-            # extract clist und xcol from sequence_data
-            y2plot = {c: sequence_data[c][i] for c in self.clist}
-            yerr2plot = {c: sequence_data[c + 'Err'][i] for c in self.clist}
-            x2plot = sequence_data[self.xcol][i]
-            xerr2plot = sequence_data[self.xcol + 'Err'][i]
-            # fit the model and parameters to the data
-            _res, _report = self._fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, _mod, _pars,
-                                            select, weights, fit_method=fit_method,
-                                            nan_policy=nan_policy)
-
-            if not skip_plot:
-                # plot the data and fit
-                self._plot_fit_scans(y2plot, x2plot, yerr2plot, xerr2plot, name, _res,
-                                     offset_t0=offset_t0, label_text=lt, fmt=fmt,
-                                     plot_separate=plot_separate)
-
-                if show_single:
-                    plt.legend(frameon=True, loc=0, numpoints=1)
-                    plt.show()
-                else:
-                    plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
-                               loc=3, numpoints=1, ncol=3, mode="expand",
-                               borderaxespad=0.)
-
-            # store the results
-            for counter in self.clist:
-                for key in _res[counter].keys():
-                    try:
-                        res[counter][key] = np.append(res[counter][key], _res[counter][key])
-                    except KeyError:
-                        res[counter][key] = np.array([_res[counter][key]])
-
-            # store the the report
-            report_1.append(['>> ' + lt + ' <<'])
-            for rep in _report[0]:
-                report_1.append(rep)
-            report_2.append(_report[1])
-
-        # print the basic fit report
-        if fit_report > 0:
-            print(tabulate(report_1, headers=['counter', *mod.param_names],
-                           tablefmt="fancy_grid"))
-        # print the advanced fit report
-        if fit_report > 1:
-            for i, lt in enumerate(label_texts):
-                lt_len = int(len(str(lt))/2)
-                fix = 1 if np.mod(len(lt), 2) != 0 else 0
-                print('\n' + '_'*(39-lt_len-fix) + ' {:} '.format(lt) + '_'*(39-lt_len))
-                for counter in self.clist:
-                    head_len = int(len(counter)/2)
-                    fix = 1 if np.mod(len(counter), 2) != 0 else 0
-
-                    print('\n' + '='*(39-head_len-fix) + ' {:} '.format(counter)
-                          + '='*(39-head_len))
-                    print(report_2[i][counter])
-
-        return res, parameters, sequence_data
+        return sequence.fit_results, sequence.parameters, sequence.data
 
     @property
     def clist(self):
@@ -1039,6 +774,7 @@ class Scans():
         self.log = logging.getLogger(__name__)
         self.name = name
         self.xcol = xcol
+        self.clist = list(y2plot.keys())
         self.y2plot = y2plot
         self.x2plot = x2plot
         self.yerr2plot = yerr2plot
@@ -1073,7 +809,7 @@ class Scans():
         report_1 = []
         report_2 = {}
 
-        for counter in self.y2plot:
+        for counter in self.clist:
             res[counter] = {}
             # get the fit models and fit parameters if they are lists/tuples
 
@@ -1115,27 +851,27 @@ class Scans():
 
             res[counter]['chisqr'] = out.chisqr
             res[counter]['redchi'] = out.redchi
-            res[counter]['CoM'] = sum(_y2plot*_x2plot)/sum(_y2plot)
+            res[counter]['CoM'] = np.sum(_y2plot*_x2plot)/np.sum(_y2plot)
             res[counter]['int'] = np.trapz(_y2plot, x=_x2plot)
             res[counter]['fit'] = out
 
         self.fit_result = res
         self.fit_report = [report_1, report_2]
 
-        # print the fit report
-        if report > 0:
-            print(tabulate(self.fit_report[0], headers=['counter', *mod.param_names],
-                           tablefmt="fancy_grid"))
-        if report > 1:
-            for counter in self.y2plot:
-                head_len = int(len(counter)/2)
-                if np.mod(len(counter), 2) != 0:
-                    fix = 1
-                else:
-                    fix = 0
+        # # print the fit report
+        # if report > 0:
+        #     print(tabulate(self.fit_report[0], headers=['counter', *mod.param_names],
+        #                    tablefmt="fancy_grid"))
+        # if report > 1:
+        #     for counter in self.clist:
+        #         head_len = int(len(counter)/2)
+        #         if np.mod(len(counter), 2) != 0:
+        #             fix = 1
+        #         else:
+        #             fix = 0
 
-                print('\n' + '='*(39-head_len-fix) + ' {:} '.format(counter) + '='*(39-head_len))
-                print(self.fit_report[1][counter])
+        #         print('\n' + '='*(39-head_len-fix) + ' {:} '.format(counter) + '='*(39-head_len))
+        #         print(self.fit_report[1][counter])
 
         return self
 
@@ -1170,7 +906,7 @@ class Scans():
                 offsetX = 0
 
         # plot all keys in the clist
-        for i, counter in enumerate(self.y2plot.keys()):
+        for i, counter in enumerate(self.clist):
             # iterate the counter list
 
             if plot_separate:
@@ -1181,7 +917,7 @@ class Scans():
                 # if no label_text is given use the counter name
                 lt = counter
             else:
-                if len(self.y2plot.keys()) > 1:
+                if len(self.clist) > 1:
                     # for multiple counters add the counter name to the label
                     lt = label_text + ' | ' + counter
                 else:
@@ -1226,16 +962,29 @@ class Sequence():
         self.log = logging.getLogger(__name__)
         self.parameters = parameters
         self.scans_list = scans_list
-        self.label_texts = []
+        self.xcol = scans_list[0].xcol
+        self.clist = scans_list[0].clist
 
-    def fit(self, mod, pars, fmt='o', select='', report=0, weights=False, fit_method='leastsq',
+    def fit(self, mod, pars, select='', report=0, weights=False, fit_method='leastsq',
             nan_policy='propagate', last_res_as_par=False):
-        res = {}
-        report_1 = []
-        report_2 = []
-        for counter in self.scans_list[0].y2plot.keys():
-            res[counter] = {}
-        for i, (parameter, scans) in enumerate(zip(self.parameters, self.scans_list)):
+        """fit _summary_
+
+        Args:
+            mod (_type_): _description_
+            pars (_type_): _description_
+            select (str, optional): _description_. Defaults to ''.
+            report (int, optional): _description_. Defaults to 0.
+            weights (bool, optional): _description_. Defaults to False.
+            fit_method (str, optional): _description_. Defaults to 'leastsq'.
+            nan_policy (str, optional): _description_. Defaults to 'propagate'.
+            last_res_as_par (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        # report_1 = []
+        # report_2 = []
+        for i, scans in enumerate(self.scans_list):
             if isinstance(mod, (list, tuple)):
                 _mod = mod[i]
             else:
@@ -1244,7 +993,7 @@ class Sequence():
             if last_res_as_par and i > 0:
                 # use last results as start values for pars
                 _pars = pars
-                for pname, par in pars.items():
+                for pname, _ in pars.items():
                     _pars[pname].value = res[counter][pname][i-1]
             else:
                 if isinstance(pars, (list, tuple)):
@@ -1255,40 +1004,45 @@ class Sequence():
             scans.fit(_mod, _pars, select=select, report=0, weights=weights, fit_method=fit_method,
                       nan_policy=nan_policy)
 
-        #     # store the results
-        #     for counter in self.clist:
-        #         for key in _res[counter].keys():
-        #             try:
-        #                 res[counter][key] = np.append(res[counter][key], _res[counter][key])
-        #             except KeyError:
-        #                 res[counter][key] = np.array([_res[counter][key]])
-
         #     # store the the report
         #     report_1.append(['>> ' + lt + ' <<'])
         #     for rep in _report[0]:
         #         report_1.append(rep)
         #     report_2.append(_report[1])
 
-        # print the basic fit report
-        if report > 0:
-            print(tabulate(report_1, headers=['counter', *mod.param_names],
-                           tablefmt="fancy_grid"))
-        # print the advanced fit report
-        if report > 1:
-            for i, lt in enumerate(self.label_texts):
-                lt_len = int(len(str(lt))/2)
-                fix = 1 if np.mod(len(lt), 2) != 0 else 0
-                print('\n' + '_'*(39-lt_len-fix) + ' {:} '.format(lt) + '_'*(39-lt_len))
-                for counter in self.clist:
-                    head_len = int(len(counter)/2)
-                    fix = 1 if np.mod(len(counter), 2) != 0 else 0
+        # # print the basic fit report
+        # if report > 0:
+        #     print(tabulate(report_1, headers=['counter', *mod.param_names],
+        #                    tablefmt="fancy_grid"))
+        # # print the advanced fit report
+        # if report > 1:
+        #     for i, lt in enumerate(self.label_texts):
+        #         lt_len = int(len(str(lt))/2)
+        #         fix = 1 if np.mod(len(lt), 2) != 0 else 0
+        #         print('\n' + '_'*(39-lt_len-fix) + ' {:} '.format(lt) + '_'*(39-lt_len))
+        #         for counter in self.clist:
+        #             head_len = int(len(counter)/2)
+        #             fix = 1 if np.mod(len(counter), 2) != 0 else 0
 
-                    print('\n' + '='*(39-head_len-fix) + ' {:} '.format(counter)
-                          + '='*(39-head_len))
-                    print(report_2[i][counter])
+        #             print('\n' + '='*(39-head_len-fix) + ' {:} '.format(counter)
+        #                   + '='*(39-head_len))
+        #             print(report_2[i][counter])
         return self
 
-    def plot(self, label_format='', fmt='-o', plot_separate=False, show_single=False, **kwargs):
+    def plot(self, label_format='', fmt='-o', plot_separate=False, show_single=False,
+             offset_t0=False, **kwargs):
+        """plot _summary_
+
+        Args:
+            label_format (str, optional): _description_. Defaults to ''.
+            fmt (str, optional): _description_. Defaults to '-o'.
+            plot_separate (bool, optional): _description_. Defaults to False.
+            show_single (bool, optional): _description_. Defaults to False.
+            offset_t0 (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
         label_texts = []
         for i, (parameter, scans) in enumerate(zip(self.parameters, self.scans_list)):
             if show_single:
@@ -1301,41 +1055,37 @@ class Sequence():
                     self.log.warning('Could not apply \'label_format\' to parameter!')
 
             label_texts.append(lt)
-            scans.plot(label_text=lt, fmt=fmt, plot_separate=plot_separate, **kwargs)
+            scans.plot(label_text=lt, fmt=fmt, plot_separate=plot_separate, offset_t0=offset_t0,
+                       **kwargs)
 
             if show_single:
                 # plt.legend(frameon=True, loc=0, numpoints=1)
                 plt.show()
-        #     else:
-        #         plt.legend(bbox_to_anchor=(0., 1.08, 1, .102), frameon=True,
-        #                    loc=3, numpoints=1, ncol=3, mode="expand",
-        #                    borderaxespad=0.)
         self.label_texts = label_texts
         return self
 
     @property
     def data(self):
-        sequence_data = collections.OrderedDict()
+        data = collections.OrderedDict()
+        # create a list of all counters from the scan and append the xcol
+        sequence_counters = self.clist + [self.xcol]
         for scans in self.scans_list:
-            # create a list of all counters from the scan and append the xcol
-            sequence_counters = list(scans.y2plot.keys())
-            sequence_counters.append(scans.xcol)
             for counter in sequence_counters:
                 # traverse all counters in the data set
-                if counter not in sequence_data.keys():
+                if counter not in data.keys():
                     # if the counter is not in the return data dict - add the key
-                    sequence_data[counter] = []
-                    sequence_data[counter + 'Err'] = []
+                    data[counter] = []
+                    data[counter + 'Err'] = []
 
                 # add the counter data to the return data dict
                 try:
-                    sequence_data[counter].append(scans.y2plot[counter])
-                    sequence_data[counter + 'Err'].append(scans.yerr2plot[counter])
+                    data[counter].append(scans.y2plot[counter])
+                    data[counter + 'Err'].append(scans.yerr2plot[counter])
                 except KeyError:
-                    sequence_data[counter].append(scans.x2plot)
-                    sequence_data[counter + 'Err'].append(scans.xerr2plot)
+                    data[counter].append(scans.x2plot)
+                    data[counter + 'Err'].append(scans.xerr2plot)
 
-        return sequence_data
+        return data
 
     @property
     def names(self):
@@ -1343,4 +1093,19 @@ class Sequence():
 
     @property
     def fit_results(self):
-        pass
+        res = {}
+        for counter in self.clist:
+            res[counter] = {}
+            for scans in self.scans_list:
+                for key in scans.fit_result[counter].keys():
+                    try:
+                        res[counter][key] = np.append(
+                            res[counter][key], scans.fit_result[counter][key])
+                    except KeyError:
+                        res[counter][key] = np.array([scans.fit_result[counter][key]])
+
+        return res
+
+    @property
+    def fit_reports(self):
+        return []
