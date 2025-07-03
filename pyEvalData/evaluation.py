@@ -273,8 +273,7 @@ class Evaluation(object):
             TYPE: DESCRIPTION.
 
         """
-        data, meta = self.source.get_scan_data(scan_num)
-        print(meta)
+        data, _ = self.source.get_scan_data(scan_num)
         if self.apply_data_filter:
             data = self.filter_data(data)
         return data
@@ -293,7 +292,7 @@ class Evaluation(object):
         if self.apply_data_filter:
             for i, data in enumerate(data_list):
                 data_list[i] = self.filter_data(data)
-        return data_list
+        return data_list, meta_list
 
     def avg_N_bin_scans(self, scan_list, xgrid=np.array([]), binning=True):
         """Averages data defined by the counter list, clist, onto an optional
@@ -332,7 +331,7 @@ class Evaluation(object):
         source_cols = []
         concat_data = np.array([])
 
-        data_list = self.get_scan_list_data(scan_list)
+        data_list, _ = self.get_scan_list_data(scan_list)
 
         for i, (spec_data, scan_num) in enumerate(zip(data_list, scan_list)):
             # traverse the scan list and read data
@@ -342,10 +341,10 @@ class Evaluation(object):
             # except Exception:
             #     raise
             #     print('Scan #' + scan_num + ' not found, skipping')
-
             if i == 0 or len(source_cols) == 0:  # we need to evaluate this only once
                 # these are the base spec counters which are present in the data
                 # file plus custom counters
+
                 source_cols = list(
                     set(list(spec_data.dtype.names) + self.custom_counters))
 

@@ -184,7 +184,8 @@ class PalH5(Source):
                 # check for external h5 links
                 obj = entry['scan_dat'].get(key, getlink=True)
                 if isinstance(obj, h5py.ExternalLink):
-                    self.log.debug(f'Key \'{key}\' links to an external h5 file \'{obj.filename}\'')
+                    self.log.debug(f'Key \'{key}\' links to an external h5 file '
+                                   f'\'{obj.filename}\'')
                     if not self.follow_links:
                         # following external links is not enables
                         continue
