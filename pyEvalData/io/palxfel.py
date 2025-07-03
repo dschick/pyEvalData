@@ -45,6 +45,7 @@ class PalH5(Source):
         file_name (str): file name including extension,
           can include regex pattern.
         file_path (str, optional): file path - defaults to ``./``.
+        follow_links (bool): follow links to external h5 files.
 
     Keyword Args:
         start_scan_number (uint): start of scan numbers to parse.
@@ -86,9 +87,10 @@ class PalH5(Source):
           re-generated of nexus file.
 
     """
-    def __init__(self, name, file_name, file_path, **kwargs):
+    def __init__(self, name, file_name, file_path, follow_links=False, **kwargs):
         super().__init__(file_name, file_path, **kwargs)
         self.name = name
+        self.follow_links = follow_links
 
     def parse_raw(self):
         """parse_raw
@@ -179,11 +181,18 @@ class PalH5(Source):
             data_list = []
             dtype_list = []
             for key in entry['scan_dat'].keys():
-                if '_raw' not in key:
-                    data_list.append(entry['scan_dat'][key])
-                    dtype_list.append((key,
-                                      entry['scan_dat'][key].dtype,
-                                      entry['scan_dat'][key].shape))
+                # check for external h5 links
+                obj = entry['scan_dat'].get(key, getlink=True)
+                if isinstance(obj, h5py.ExternalLink):
+                    self.log.debug(f'Key \'{key}\' links to an external h5 file \'{obj.filename}\'')
+                    if not self.follow_links:
+                        # following external links is not enables
+                        continue
+
+                data_list.append(entry['scan_dat'][key])
+                dtype_list.append((key,
+                                   entry['scan_dat'][key].dtype,
+                                   entry['scan_dat'][key].shape))
             if len(data_list) > 0:
                 scan.data = fromarrays(data_list, dtype=dtype_list)
             else:
