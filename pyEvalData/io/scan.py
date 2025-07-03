@@ -30,6 +30,7 @@ __all__ = ['Scan']
 __docformat__ = 'restructuredtext'
 
 import numpy as np
+from numpy.core.records import fromarrays
 
 
 class Scan(object):
@@ -176,6 +177,20 @@ class Scan(object):
 
     @property
     def data(self):
+        if (self._data is not None) and ('Pt_No' not in self._data.dtype.names):
+            # iterate through data fields
+            data_list = []
+            dtype_list = []
+            for field in self._data.dtype.names:
+                data_list.append(self._data[field])
+                dtype_list.append((field, self._data[field].dtype, self._data[field].shape))
+
+            data_list.append(np.arange(self._data[field].shape[0])+1)
+            dtype_list.append(('Pt_No', int, self._data[field].shape))
+
+            if len(data_list) > 0:
+                self._data = fromarrays(data_list, dtype=dtype_list)
+
         return self._data
 
     @data.setter

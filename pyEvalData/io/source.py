@@ -65,7 +65,7 @@ class Source(object):
     Attributes:
         log (logging.logger): logger instance from logging.
         name (str): name of the source
-        scan_dict (dict(scan)): dict of scan objects with
+        scan_dict (dict{uint:Scan}): dict of scan objects with
           key being the scan number.
         start_scan_number (uint): start of scan numbers to parse.
         stop_scan_number (uint): stop of scan numbers to parse.
