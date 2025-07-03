@@ -494,7 +494,6 @@ class Evaluation(object):
             - *name (str)* - Name of the data set.
 
         """
-
         scans = self.scans(scan_list, xgrid=xgrid, yerr=yerr, xerr=xerr, norm2one=norm2one,
                            binning=binning)
 
@@ -538,11 +537,22 @@ class Evaluation(object):
             - *label_texts (list[str])* - list of labels for each data set.
 
         """
+        try:
+            sequence_type = kwargs.pop('sequence_type')
+        except KeyError:
+            pass
+
+        if len(sequence_type) > 0 and len(label_format) == 0:
+            # use sequence_type to generate label_format for backwards compatibility
+            if sequence_type == 'temperature':
+                label_format = '{:d K}'
+        elif len(sequence_type) > 0 and len(label_format) > 0:
+            self.log.warning('sequence_type parameter is ignored for label_format')
 
         sequence = self.sequence(scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr,
                                  norm2one=norm2one, binning=binning, label_format=label_format)
 
-        sequence.plot(fmt=fmt, plot_separate=plot_separate, show_single=show_single)
+        sequence.plot(fmt=fmt, plot_separate=plot_separate, show_single=show_single, **kwargs)
 
         return sequence.data, sequence.parameters, sequence.names, sequence.label_texts
 
@@ -609,9 +619,9 @@ class Evaluation(object):
 
     def fit_scan_sequence(self, scan_sequence, mod, pars, xgrid=[], yerr='std', xerr='std',
                           norm2one=False, binning=True, label_format='', fmt='o', select='',
-                          fit_report=0, weights=False, fit_method='leastsq',
-                          nan_policy='propagate', last_res_as_par=False, skip_plot=False,
-                          offset_t0=False, plot_separate=False, show_single=False, **kwargs):
+                          fit_report=0, weights=False, fit_method='leastsq', nan_policy='propagate',
+                          last_res_as_par=False, skip_plot=False, offset_t0=False,
+                          plot_separate=False, show_single=False, **kwargs):
         """fit_scan_sequence
 
         Evaluate, fit, and plot the results of a given scan sequence from the
@@ -659,6 +669,20 @@ class Evaluation(object):
             - *parameters (list[str, float])* - parameters of the sequence.
 
         """
+        try:
+            sequence_type = kwargs.pop('sequence_type')
+        except KeyError:
+            pass
+
+        if len(sequence_type) > 0 and len(label_format) == 0:
+            # use sequence_type to generate label_format for backwards compatibility
+            if sequence_type == 'temperature':
+                label_format = '{:d K}'
+            elif sequence_type == 'text':
+                label_format = '{:s}'
+        elif len(sequence_type) > 0 and len(label_format) > 0:
+            self.log.warning('sequence_type parameter is ignored for label_format')
+
         sequence = self.sequence(scan_sequence, xgrid=xgrid, yerr=yerr, xerr=xerr,
                                  norm2one=norm2one, binning=binning, label_format=label_format)
 
