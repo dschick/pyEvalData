@@ -194,7 +194,7 @@ class Evaluation(object):
 
         # search for alphanumeric counter names in col_string
         iterator = re.finditer(
-            '([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', col_string)
+            r'([0-9]*[a-zA-Z\_]+[0-9]*[a-zA-Z]*)*', col_string)
         # these are keys which should not be replaced but evaluated
         math_keys = list(self.math_keys)
         keys = math_keys.copy()
@@ -274,6 +274,7 @@ class Evaluation(object):
 
         """
         data, meta = self.source.get_scan_data(scan_num)
+        print(meta)
         if self.apply_data_filter:
             data = self.filter_data(data)
         return data
