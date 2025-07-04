@@ -28,6 +28,7 @@ import logging
 from .scan import Scan
 
 import os.path as path
+import numpy as np
 from numpy.core.records import fromarrays
 import nexusformat.nexus as nxs
 
@@ -324,6 +325,21 @@ class Source(object):
 
         return scans
 
+    def add_init_mopo_to_data(self, data, init_mopo):
+        mopo_names = [x for x in init_mopo.keys() if x not in data.dtype.names]
+        for mopo_name in mopo_names:
+            mopo_data = init_mopo[mopo_name]
+            new_dtype = data.dtype.descr + [(mopo_name, 'f4')]
+            new_arr = np.rec.array(np.empty(data.shape, dtype=new_dtype))
+            # Copy existing data
+            for name in data.dtype.names:
+                new_arr[name] = data[name]
+
+            new_arr[mopo_name] = mopo_data
+            data = new_arr
+
+        return data
+
     def get_scan_data(self, scan_number):
         """get_scan_data
 
@@ -348,6 +364,10 @@ class Source(object):
         meta = scan.meta.copy()
         if self.read_and_forget:
             scan.clear_data()
+
+        # add init_mopo to data
+        data = self.add_init_mopo_to_data(data, meta['init_mopo'])
+
         return data, meta
 
     def get_scan_list_data(self, scan_number_list):
@@ -369,8 +389,13 @@ class Source(object):
         data_list = []
         meta_list = []
         for scan in self.get_scan_list(scan_number_list):
-            data_list.append(scan.data.copy())
-            meta_list.append(scan.meta.copy())
+            data = scan.data.copy()
+            meta = scan.meta.copy()
+            # add init_mopo to data
+            data = self.add_init_mopo_to_data(data, meta['init_mopo'])
+
+            data_list.append(data)
+            meta_list.append(meta)
             if self.read_and_forget:
                 scan.clear_data()
         return data_list, meta_list
