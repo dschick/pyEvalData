@@ -74,6 +74,7 @@ class PalH5(Source):
         file_name (str): file name including extension,
           can include regex pattern.
         file_path (str, optional): file path - defaults to ``./``.
+        follow_links (bool): follow links to external h5 files.
         nexus_file_name (str): name for generated nexus file.
         nexus_file_name_postfix (str): postfix for nexus file name.
         nexus_file_path (str): path for generated nexus file.
